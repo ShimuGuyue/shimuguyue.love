@@ -62,19 +62,23 @@ watch(previewImage, async (img) => {
 })
 
 onMounted(async () => {
-  // 个人介绍和权限与图片加载并行
-  const profilePromise = fetch('/api/profile').then(r => r.ok ? r.json() : null).catch(() => null)
-  const permsPromise = auth.isLoggedIn && auth.id !== null
-    ? fetch(`/api/user/permissions?user_id=${auth.id}`).then(r => r.ok ? r.json() : null).catch(() => null)
-    : null
+  // 先加载个人介绍
+  try {
+    const r = await fetch('/api/profile')
+    if (r.ok) profile.value = await r.json()
+  } catch { /* 静默 */ }
 
-  const loadPromise = loadImages()
+  if (auth.isLoggedIn && auth.id !== null) {
+    try {
+      const resp = await fetch(`/api/user/permissions?user_id=${auth.id}`)
+      if (resp.ok) {
+        const data = await resp.json()
+        permissions.value = data.permissions || []
+      }
+    } catch { /* 静默 */ }
+  }
 
-  const [pf, pm] = await Promise.all([profilePromise, permsPromise])
-  if (pf) profile.value = pf
-  if (pm?.permissions) permissions.value = pm.permissions
-
-  await loadPromise
+  await loadImages()
 })
 
 onUnmounted(() => {

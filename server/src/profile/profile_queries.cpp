@@ -13,15 +13,19 @@ namespace profile {
 auto get_profile(pqxx::connection& conn) -> nlohmann::json
 {
     pqxx::work txn{ conn };
-    const auto row = txn.exec(
+    const auto rows = txn.exec(
         "SELECT title, subtitle, bio FROM profile WHERE id = 1"
-    ).one_row();
-    txn.commit();
+    );
 
     nlohmann::json j;
-    j["title"]    = row["title"].as<std::string>();
-    j["subtitle"] = row["subtitle"].as<std::string>();
-    j["bio"]      = row["bio"].as<std::string>();
+    if (!rows.empty())
+    {
+        const auto& row = rows[0];
+        j["title"]    = row["title"].as<std::string>();
+        j["subtitle"] = row["subtitle"].as<std::string>();
+        j["bio"]      = row["bio"].as<std::string>();
+    }
+    txn.commit();
     return j;
 }
 
