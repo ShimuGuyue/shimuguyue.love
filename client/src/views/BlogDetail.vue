@@ -130,10 +130,36 @@ const headings = computed<TocItem[]>(() => {
   return buildTree(flat)
 })
 
+/** 自定义平滑滚动，支持控制滚动时长 */
+function smoothScrollTo(el: HTMLElement, duration = 1000) {
+  // 减去 100px 偏移以匹配 scroll-margin-top，避免标题被 navbar 遮挡
+  const offset = 100
+  const targetTop = el.getBoundingClientRect().top + window.scrollY - offset
+  const startTop = window.scrollY
+  const distance = targetTop - startTop
+  const startTime = performance.now()
+
+  function easeInOutCubic(t: number): number {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+  }
+
+  function step(currentTime: number) {
+    const elapsed = currentTime - startTime
+    const progress = Math.min(elapsed / duration, 1)
+    window.scrollTo(0, startTop + distance * easeInOutCubic(progress))
+    if (progress < 1) {
+      requestAnimationFrame(step)
+    }
+  }
+
+  requestAnimationFrame(step)
+}
+
 function scrollToHeading(slug: string) {
   const path = findPathToSlug(headings.value, slug)
   activeSlugs.value = new Set(path.map(item => item.slug))
-  document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const el = document.getElementById(slug)
+  if (el) smoothScrollTo(el)
 }
 
 const activeSlugs = ref<Set<string>>(new Set())
