@@ -241,15 +241,22 @@ onMounted(async () => {
   }
   window.addEventListener('scroll', scrollHandler)
 
-  // 拦截标题锚点 # 链接的点击，使用 scrollToHeading 统一滚动逻辑
+  // 拦截标题及其锚点链接的点击，使用 scrollToHeading 统一滚动逻辑
   document.querySelector('.blog-detail__content')?.addEventListener('click', (e) => {
     const target = e.target as HTMLElement
+    // 优先检查锚点链接
     const anchor = target.closest('.heading-anchor')
-    if (!anchor) return
-    e.preventDefault()
-    const href = anchor.getAttribute('href')
-    if (href?.startsWith('#')) {
-      scrollToHeading(href.slice(1))
+    if (anchor) {
+      e.preventDefault()
+      const href = anchor.getAttribute('href')
+      if (href?.startsWith('#')) scrollToHeading(href.slice(1))
+      return
+    }
+    // 再检查标题本身
+    const heading = target.closest('h1, h2, h3, h4, h5, h6')
+    if (heading && heading.id) {
+      e.preventDefault()
+      scrollToHeading(heading.id)
     }
   })
 
