@@ -300,6 +300,10 @@ async function saveBlog() {
 }
 
 /* ── 中间 ── */
+.blog-edit__main {
+  min-width: 0;       /* 防止 grid 列被内容撑大 */
+  overflow: hidden;   /* 裁剪溢出内容 */
+}
 .blog-edit__content {
   width: 100%;
   min-height: calc(100vh - 226px);
@@ -309,6 +313,8 @@ async function saveBlog() {
   border: none;
   outline: none;
   white-space: pre-wrap;
+  word-break: break-all;
+  max-width: 100%;
   tab-size: 4;
 }
 .blog-edit__content:empty::before {
