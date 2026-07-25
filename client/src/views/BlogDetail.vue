@@ -469,6 +469,7 @@ watch(renderedContent, async () => {
 
 /* ── 中间正文 ── */
 .blog-detail__content {
+  min-width: 0;
   min-height: calc(100vh - 177px);
 }
 
