@@ -260,7 +260,9 @@ html.dark
   padding: 1em;
   margin: 0;
   overflow-x: auto;
+  scrollbar-width: none;
 }
+.blog-detail__content pre::-webkit-scrollbar { display: none; }
 .blog-detail__content pre code {
   padding: 0;
   background: none;
