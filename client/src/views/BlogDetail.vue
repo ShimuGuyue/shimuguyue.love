@@ -248,6 +248,13 @@ watch(renderedContent, async () => {
   padding: 32px 24px 32px;
 }
 
+.blog-detail__title,
+.blog-detail__desc {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+}
+
 .blog-detail__status {
   text-align: center;
   padding: 64px 0;
