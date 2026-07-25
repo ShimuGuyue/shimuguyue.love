@@ -213,6 +213,18 @@ onMounted(async () => {
   }
   window.addEventListener('scroll', scrollHandler)
 
+  // 拦截标题锚点 # 链接的点击，使用 scrollToHeading 统一滚动逻辑
+  document.querySelector('.blog-detail__content')?.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement
+    const anchor = target.closest('.heading-anchor')
+    if (!anchor) return
+    e.preventDefault()
+    const href = anchor.getAttribute('href')
+    if (href?.startsWith('#')) {
+      scrollToHeading(href.slice(1))
+    }
+  })
+
   // 获取当前用户权限
   if (auth.isLoggedIn && auth.id !== null) {
     try {
