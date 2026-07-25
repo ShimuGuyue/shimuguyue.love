@@ -131,6 +131,8 @@ const headings = computed<TocItem[]>(() => {
 })
 
 function scrollToHeading(slug: string) {
+  const path = findPathToSlug(headings.value, slug)
+  activeSlugs.value = new Set(path.map(item => item.slug))
   document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
@@ -157,33 +159,19 @@ function updateActiveHeading() {
     return
   }
 
-  let activeId = ''
-  let minDist = Infinity
+  const threshold = 120
 
-  // 遍历标题，找出最接近视口顶部的那个
+  // 经典 scroll-spy：取最后一个顶部已越过阈值的标题
+  let activeId = ''
   for (const el of headingEls) {
-    const rect = el.getBoundingClientRect()
-    // 如果标题已进入视口（顶部在视口顶部或以上）
-    if (rect.top <= 0) {
-      // 若该标题底部仍在视口内，则认为它是当前活跃的（优先选最靠上的）
-      if (rect.bottom > 0) {
-        activeId = el.id
-        break
-      } else {
-        // 已完全滚出视口，但可能后面还有，暂记下最接近顶部的
-        const dist = Math.abs(rect.top)
-        if (dist < minDist) {
-          minDist = dist
-          activeId = el.id
-        }
-      }
-    } else {
-      // 标题在视口下方，取最接近顶部的
-      if (rect.top < minDist) {
-        minDist = rect.top
-        activeId = el.id
-      }
+    if (el.getBoundingClientRect().top <= threshold) {
+      activeId = el.id
     }
+  }
+
+  // 若没有任何标题越过阈值（页面顶部），回退到第一个标题
+  if (!activeId && headingEls.length > 0) {
+    activeId = headingEls[0]!.id || ''
   }
 
   if (activeId) {
