@@ -213,32 +213,33 @@ watch(renderedContent, async () => {
       <article v-if="blog.content" class="blog-detail__content glass" v-html="renderedContent"></article>
 
       <!-- 右侧：目录 -->
-      <nav v-if="headings.length" class="blog-detail__toc glass">
+      <nav class="blog-detail__toc glass">
         <h4 class="toc-title">目录</h4>
-        <ul class="toc-list">
-          <template v-for="h in headings" :key="h.slug">
-            <li class="toc-item">
-              <span class="toc-text" @click.stop="scrollToHeading(h.slug)">{{ h.text }}</span>
-              <ul v-if="h.children.length" class="toc-sublist">
-                <li v-for="c2 in h.children" :key="c2.slug" class="toc-item">
-                  <span class="toc-text" @click.stop="scrollToHeading(c2.slug)">{{ c2.text }}</span>
-                  <ul v-if="c2.children.length" class="toc-sublist">
-                    <li v-for="c3 in c2.children" :key="c3.slug" class="toc-item">
-                      <span class="toc-text" @click.stop="scrollToHeading(c3.slug)">{{ c3.text }}</span>
-                      <ul v-if="c3.children.length" class="toc-sublist">
-                        <li v-for="c4 in c3.children" :key="c4.slug" class="toc-item">
-                          <span class="toc-text" @click.stop="scrollToHeading(c4.slug)">{{ c4.text }}</span>
-                        </li>
-                      </ul>
-                    </li>
-                  </ul>
-                </li>
-              </ul>
-            </li>
-          </template>
-        </ul>
+        <div v-if="headings.length">
+          <ul class="toc-list">
+            <template v-for="h in headings" :key="h.slug">
+              <li class="toc-item">
+                <span class="toc-text" @click.stop="scrollToHeading(h.slug)">{{ h.text }}</span>
+                <ul v-if="h.children.length" class="toc-sublist">
+                  <li v-for="c2 in h.children" :key="c2.slug" class="toc-item">
+                    <span class="toc-text" @click.stop="scrollToHeading(c2.slug)">{{ c2.text }}</span>
+                    <ul v-if="c2.children.length" class="toc-sublist">
+                      <li v-for="c3 in c2.children" :key="c3.slug" class="toc-item">
+                        <span class="toc-text" @click.stop="scrollToHeading(c3.slug)">{{ c3.text }}</span>
+                        <ul v-if="c3.children.length" class="toc-sublist">
+                          <li v-for="c4 in c3.children" :key="c4.slug" class="toc-item">
+                            <span class="toc-text" @click.stop="scrollToHeading(c4.slug)">{{ c4.text }}</span>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </template>
+          </ul>
+        </div>
       </nav>
-      <div v-else class="blog-detail__right-placeholder"></div>
     </div>
   </main>
 </template>
@@ -273,7 +274,7 @@ watch(renderedContent, async () => {
 /* ── 左侧 ── */
 .blog-detail__left {
   position: sticky;
-  top: 120px;
+  top: 110px;
   align-self: start;
 }
 
@@ -336,6 +337,18 @@ watch(renderedContent, async () => {
   max-height: calc(100vh - 120px);
   overflow-y: auto;
   margin-top: 8px;
+  min-height: 300px;
+}
+
+.toc-empty {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  text-align: center;
+  padding: 20px 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toc-title {
