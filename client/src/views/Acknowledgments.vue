@@ -82,6 +82,16 @@
         </a>
         协助进行服务器部署测试
       </p>
+      <p>
+        感谢
+        <a href="https://github.com/bob1145"
+           title="yan wenyu"
+           target="_blank"
+           rel="noopener noreferrer">
+          yan wenyu
+        </a>
+        协助进行服务器渗透测试
+      </p>
     </div>
   </main>
 </template>
