@@ -2,85 +2,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import MarkdownIt from 'markdown-it'
-import taskLists from 'markdown-it-task-lists'
-import markdownItGitHubAlerts from 'markdown-it-github-alerts'
-import hljs from 'highlight.js'
-import 'highlight.js/styles/github.css'
-import katex from 'katex'
-import 'katex/dist/katex.min.css'
-
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-
-// ── Markdown 预览渲染器（与详情页完全一致） ──
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
-  .use(taskLists, { enabled: true, label: true, labelAfter: true })
-  .use(markdownItGitHubAlerts)
-
-md.enable('strikethrough')
-
-/** 自定义 fence 渲染：在代码块上显示语言标签 */
-const rawFence = md.renderer.rules.fence!
-md.renderer.rules.fence = (tokens, idx, options, env, self): string => {
-  const token = tokens[idx]!
-  const lang = token.info.trim().split(/\s+/)[0] ?? ''
-  const body = rawFence(tokens, idx, options, env, self)
-  if (!lang) return body
-  return `<div class="code-block"><div class="code-block__lang">${md.utils.escapeHtml(lang)}</div>${body}</div>`
-}
-
-/** 自定义 heading_open：添加锚点 id 和 # 链接 */
-const fallbackOpen = (tokens: any, idx: any, options: any, env: any, self: any) => self.renderToken(tokens, idx, options)
-const rawHeadingOpen = md.renderer.rules.heading_open || fallbackOpen
-md.renderer.rules.heading_open = (tokens, idx, options, env, self): string => {
-  const token = tokens[idx]!
-  const nextToken = tokens[idx + 1]
-  let slug = ''
-  if (nextToken && nextToken.type === 'inline') {
-    slug = nextToken.content.replace(/[^a-zA-Z0-9\u4e00-\u9fff]+/g, '-').replace(/^-|-$/g, '').toLowerCase()
-    token!.attrSet('id', slug)
-  }
-  const html = rawHeadingOpen(tokens, idx, options, env, self)
-  return slug ? html + '<a class="heading-anchor" href="#' + slug + '">#</a>' : html
-}
-
-/** 自定义 image 渲染：alt 文字作为图片下方说明 */
-const rawImage = md.renderer.rules.image!
-md.renderer.rules.image = (tokens, idx, options, env, self): string => {
-  const token = tokens[idx]!
-  const src = token.attrGet('src') ?? ''
-  const alt = token.content
-  const img = rawImage(tokens, idx, options, env, self)
-  if (!alt) return img
-  const escapedAlt = md.utils.escapeHtml(alt)
-  return `<figure><img src="${md.utils.escapeHtml(src)}" alt="${escapedAlt}" loading="lazy"><figcaption>${escapedAlt}</figcaption></figure>`
-}
-
-/// 编辑器原始文本（@input 同步）
-const rawContent = ref('')
-
-/// 渲染后的 HTML 预览
-const previewHtml = computed(() => {
-  let text = rawContent.value
-  if (!text) return ''
-  text = text.replace(/\$\$([^$]+)\$\$/g, (_, f) => renderKatexPreview(f, true))
-  text = text.replace(/\$([^$]+)\$/g, (_, f) => renderKatexPreview(f, false))
-  return md.render(text)
-})
-
-function renderKatexPreview(formula: string, display: boolean): string {
-  try {
-    return katex.renderToString(formula, { displayMode: display, throwOnError: false })
-  } catch {
-    return display ? `$${formula}$` : `$${formula}$$`
-  }
-}
-
-function onEditorInput() {
-  rawContent.value = editorRef.value?.innerText ?? ''
-}
 
 /// 是否为编辑模式（路由含 file_path 参数）
 const isEditing = computed(() => !!route.params.file_path)
@@ -133,7 +57,6 @@ onMounted(async () => {
           let content = data.content || ''
           content = content.replace(/\t/g, '    ').replace(/[ \t]+$/gm, '')
           editorRef.value.textContent = content
-          onEditorInput()
         }
       }
     } catch (e) {
@@ -182,7 +105,6 @@ async function importFile() {
         let content = data.content || ''
         content = content.replace(/\t/g, '    ').replace(/[ \t]+$/gm, '')
         editorRef.value.textContent = content
-        onEditorInput()
       }
     } catch (e) {
       // 后端不可用时本地解析
@@ -320,12 +242,9 @@ async function saveBlog() {
             class="blog-edit__content"
             contenteditable="true"
             placeholder="在此编辑博客 Markdown 文本..."
-            @input="onEditorInput"
           ></div>
       </section>
-      <aside class="blog-edit__right">
-        <article class="blog-detail__content glass" v-html="previewHtml"></article>
-      </aside>
+      <aside class="blog-edit__right"></aside>
     </div>
   </main>
 </template>
@@ -340,7 +259,7 @@ async function saveBlog() {
   max-width: 1400px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 300px 1fr 300px;
   gap: 40px;
   align-items: start;
   overflow: visible;
