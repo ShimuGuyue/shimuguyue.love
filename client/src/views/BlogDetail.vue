@@ -381,7 +381,7 @@ watch(renderedContent, async () => {
   text-align: center;
   padding: 64px 0;
   font-size: 1rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
 }
 
 .blog-detail__layout {
@@ -414,13 +414,13 @@ watch(renderedContent, async () => {
 .blog-detail__desc {
   margin: 0;
   font-size: 0.95rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   line-height: 1.6;
 }
 
 .blog-detail__time {
   font-size: 0.8rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
 }
 
 .blog-detail__actions {
@@ -462,7 +462,7 @@ watch(renderedContent, async () => {
 }
 
 .toc-empty {
-  color: var(--color-text-secondary);
+  color: var(--color-text);
   font-size: 0.9rem;
   text-align: center;
   padding: 20px 0;
