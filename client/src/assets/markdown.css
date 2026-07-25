@@ -251,6 +251,9 @@ html.dark
 }
 
 /* 代码块 */
+.blog-detail__content code {
+  scrollbar-width: none;
+}
 .blog-detail__content .code-block pre,
 .blog-detail__content pre {
   font-family: "仿宋", FangSong, serif;
@@ -260,9 +263,7 @@ html.dark
   padding: 1em;
   margin: 0;
   overflow-x: auto;
-  scrollbar-width: none;
 }
-.blog-detail__content pre::-webkit-scrollbar { display: none; }
 .blog-detail__content pre code {
   padding: 0;
   background: none;
