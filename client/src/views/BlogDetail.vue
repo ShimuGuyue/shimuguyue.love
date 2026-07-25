@@ -16,6 +16,7 @@ const auth = useAuthStore()
 
 const permissions = ref<string[]>([])
 const canDrop = computed(() => permissions.value.includes('drop'))
+const canEdit = computed(() => permissions.value.includes('edit'))
 
 const md = new MarkdownIt({
   html: true,
@@ -272,6 +273,14 @@ onMounted(async () => {
       }
     } catch { /* 权限获取失败静默 */ }
   }
+
+  // Alt+Z 切换代码块自动换行
+  document.addEventListener('keydown', (e) => {
+    if (e.altKey && e.key === 'z') {
+      e.preventDefault()
+      document.documentElement.toggleAttribute('data-wrap-code')
+    }
+  })
 })
 
 onUnmounted(() => {
@@ -279,6 +288,16 @@ onUnmounted(() => {
     window.removeEventListener('scroll', scrollHandler)
   }
 })
+
+/// 跳转到编辑页面
+function editBlog() {
+  if (!canEdit.value) {
+    alert('当前用户无 edit 权限，无法编辑博客')
+    return
+  }
+  const fp = route.params.file_path as string
+  router.push({ name: 'blog-edit', params: { file_path: fp } })
+}
 
 /// 删除当前博客
 async function deleteBlog() {
@@ -327,6 +346,7 @@ watch(renderedContent, async () => {
           <time class="blog-detail__time">{{ blog.update_time }}</time>
         </aside>
         <div class="blog-detail__actions">
+          <button class="blog-detail__edit-btn" @click="editBlog">编辑博客</button>
           <button class="blog-detail__delete-btn" @click="deleteBlog">删除博客</button>
         </div>
       </div>
@@ -390,7 +410,7 @@ watch(renderedContent, async () => {
   max-width: 1400px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 300px 1fr 300px;;
+  grid-template-columns: 1fr 2fr 1fr;
   gap: 40px;
 }
 
@@ -432,23 +452,32 @@ watch(renderedContent, async () => {
   margin-top: 16px;
 }
 
+.blog-detail__edit-btn,
 .blog-detail__delete-btn {
   padding: 8px 0;
   width: 100%;
   border: none;
   border-radius: 4px;
-  background: #d44;
-  color: #fff;
   font-size: 0.85rem;
   cursor: pointer;
   transition: opacity 0.15s;
 }
+.blog-detail__edit-btn {
+  background: var(--pink-soft);
+  color: #fff;
+}
+.blog-detail__delete-btn {
+  background: #d44;
+  color: #fff;
+}
+.blog-detail__edit-btn:hover,
 .blog-detail__delete-btn:hover {
   opacity: 0.85;
 }
 
 /* ── 中间正文 ── */
 .blog-detail__content {
+  min-width: 0;
   min-height: calc(100vh - 177px);
 }
 

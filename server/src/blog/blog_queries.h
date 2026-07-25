@@ -141,4 +141,32 @@ struct BlogQuery
     std::string_view                date)
 -> std::string;
 
+/**
+ * @brief 更新已有博客及关联元数据，同时覆盖 .md 文件。
+ *        若 new_file_path 与 old_file_path 不同，会删除旧 md 并写入新路径。
+ * @param conn                数据库连接。
+ * @param title               标题。
+ * @param description         描述。
+ * @param category_name       分类名（不存在则新建）。
+ * @param tag_names           标签名列表（不存在则新建）。
+ * @param old_file_path       查找博客的旧文件路径。
+ * @param file_path_category  新文件路径分类目录部分。
+ * @param file_path_name      新文件路径文件名部分。
+ * @param content             博客正文（Markdown）。
+ * @param date                更新日期（YYYY-MM-DD 格式）。
+ * @return 错误消息字符串（空表示成功）。
+ */
+[[nodiscard]] auto update_blog(
+    pqxx::connection&               conn,
+    std::string_view                title,
+    std::string_view                description,
+    std::string_view                category_name,
+    const std::vector<std::string>& tag_names,
+    std::string_view                old_file_path,
+    std::string_view                file_path_category,
+    std::string_view                file_path_name,
+    std::string_view                content,
+    std::string_view                date)
+-> std::string;
+
 } // namespace blog

@@ -24,6 +24,7 @@ const router = createRouter({
     { path: '/login/password', name: 'login-password', component: LoginPassword },
     { path: '/profile', name: 'profile', component: Profile },
     { path: '/blog-edit/new', name: 'blog-edit-new', component: BlogEdit },
+    { path: '/blog-edit/:file_path(.*)', name: 'blog-edit', component: BlogEdit },
     { path: '/blogs/:file_path(.*)', name: 'blog-detail', component: BlogDetail },
   ],
 })

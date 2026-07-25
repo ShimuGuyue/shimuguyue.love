@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-
 const auth = useAuthStore()
+const route = useRoute()
 const router = useRouter()
+
+/// 是否为编辑模式（路由含 file_path 参数）
+const isEditing = computed(() => !!route.params.file_path)
 
 const title = ref('')
 const description = ref('')
@@ -12,6 +15,10 @@ const category = ref('')
 const tags = ref('')
 const pathCategory = ref('')
 const pathName = ref('')
+/// 编辑模式下的原始 file_path（新建时为 null）
+const editFilePath = ref<string | null>(
+  isEditing.value ? String(route.params.file_path) : null
+)
 const editorRef = ref<HTMLDivElement | null>(null)
 const savedSuccessfully = ref(false)
 
@@ -31,8 +38,31 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('beforeunload', onBeforeUnload)
+
+  // 编辑模式：加载已有博客数据
+  if (isEditing.value && editFilePath.value) {
+    try {
+      const resp = await fetch('/api/blog?file_path=' + encodeURIComponent(editFilePath.value))
+      if (resp.ok) {
+        const data = await resp.json()
+        title.value = data.title || ''
+        description.value = data.description || ''
+        category.value = data.category || ''
+        tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : ''
+        pathCategory.value = data.file_path?.split('/').slice(0, -1).join('/') || ''
+        pathName.value = data.file_path?.split('/').pop() || ''
+        if (editorRef.value) {
+          let content = data.content || ''
+          content = content.replace(/\t/g, '    ').replace(/[ \t]+$/gm, '')
+          editorRef.value.textContent = content
+        }
+      }
+    } catch (e) {
+      console.error('加载博客失败:', e)
+    }
+  }
 })
 
 onUnmounted(() => {
@@ -102,27 +132,23 @@ async function saveBlog() {
     return
   }
 
-  // 元信息特殊字符校验
-  const META_RE = /[<>&"'\\|*?\/]/
+  // 元信息特殊字符校验：禁止空格、标点、路径分隔符等
+  const META_RE = /[<>"'\\|*?\/ .!@#$%^&()+=[]{};:'"`,.<>?~\-]/
 
   if (META_RE.test(title.value)) {
-    alert('标题 含有特殊字符（< > & " \' \\ | * ? /）');
+    alert('标题 含有特殊字符');
     return;
   }
   if (META_RE.test(description.value)) {
-    alert('描述 含有特殊字符（< > & " \' \\ | * ? /）');
+    alert('描述 含有特殊字符');
     return;
   }
   if (META_RE.test(category.value)) {
-    alert('分类 含有特殊字符（< > & " \' \\ | * ? /）');
+    alert('分类 含有特殊字符');
     return;
   }
   if (META_RE.test(pathCategory.value) || META_RE.test(pathName.value)) {
-    alert('文件路径 含有特殊字符（< > & " \' \\ | * ? /）');
-    return;
-  }
-  if (pathCategory.value.includes('..') || pathName.value.includes('..')) {
-    alert('文件路径 含有非法路径 ".."');
+    alert('文件路径 含有特殊字符');
     return;
   }
   if (!tagList.every(tag => {
@@ -132,15 +158,25 @@ async function saveBlog() {
     }
     return true;
   })) return;
+  const isEdit = isEditing.value && editFilePath.value != null
+  const newFilePath = `${pathCategory.value}/${pathName.value}`
 
-
-  const resp = await fetch('/api/blog/save', {
-    method: 'POST',
+  const resp = await fetch(isEdit ? '/api/blog/update' : '/api/blog/save', {
+    method: isEdit ? 'PUT' : 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${auth.token}`,
+      'Authorization': `Bearer ${auth.token}`
     },
-    body: JSON.stringify({
+    body: JSON.stringify(isEdit ? {
+      title: title.value,
+      description: description.value,
+      category: category.value,
+      tags: tagList,
+      file_path_category: pathCategory.value,
+      file_path_name: pathName.value,
+      old_file_path: editFilePath.value,
+      content,
+    } : {
       title: title.value,
       description: description.value,
       category: category.value,
@@ -157,9 +193,8 @@ async function saveBlog() {
     return
   }
   savedSuccessfully.value = true
-  const filePath = `${pathCategory.value}/${pathName.value}`
   if (window.confirm('保存成功！是否立即跳转到博客页面？')) {
-    router.push({ name: 'blog-detail', params: { file_path: filePath } })
+    router.push({ name: 'blog-detail', params: { file_path: newFilePath } })
   }
 }
 </script>
@@ -188,9 +223,11 @@ async function saveBlog() {
           <div class="blog-edit__field">
             <label class="blog-edit__label">文件路径</label>
             <div class="blog-edit__path-row">
-              <input v-model="pathCategory" class="blog-edit__input blog-edit__path-input" placeholder="分类目录" />
+              <input v-model="pathCategory" class="blog-edit__input blog-edit__path-input"
+                placeholder="分类目录" />
               <span class="blog-edit__path-sep">/</span>
-              <input v-model="pathName" class="blog-edit__input blog-edit__path-input" placeholder="文件名" />
+              <input v-model="pathName" class="blog-edit__input blog-edit__path-input"
+                placeholder="文件名" />
             </div>
           </div>
         </div>
@@ -200,12 +237,12 @@ async function saveBlog() {
         </div>
       </aside>
       <section class="blog-edit__main glass">
-        <div
-          ref="editorRef"
-          class="blog-edit__content"
-          contenteditable="true"
-          placeholder="在此编辑博客 Markdown 文本..."
-        ></div>
+          <div
+            ref="editorRef"
+            class="blog-edit__content"
+            contenteditable="true"
+            placeholder="在此编辑博客 Markdown 文本..."
+          ></div>
       </section>
       <aside class="blog-edit__right"></aside>
     </div>
@@ -222,7 +259,7 @@ async function saveBlog() {
   max-width: 1400px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
+  grid-template-columns: 300px 1fr 300px;
   gap: 40px;
   align-items: start;
   overflow: visible;
@@ -230,8 +267,9 @@ async function saveBlog() {
 
 /* ── 左侧 ── */
 .blog-edit__left {
-  max-height: calc(100vh - 140px);
-  overflow-y: auto;
+  position: sticky;
+  top: 118px;
+  align-self: start;
 }
 .blog-edit__field {
   margin-bottom: 16px;
@@ -300,6 +338,10 @@ async function saveBlog() {
 }
 
 /* ── 中间 ── */
+.blog-edit__main {
+  min-width: 0;
+  overflow: hidden;
+}
 .blog-edit__content {
   width: 100%;
   min-height: calc(100vh - 226px);
@@ -309,6 +351,8 @@ async function saveBlog() {
   border: none;
   outline: none;
   white-space: pre-wrap;
+  word-break: break-all;
+  max-width: 100%;
   tab-size: 4;
 }
 .blog-edit__content:empty::before {
@@ -316,10 +360,23 @@ async function saveBlog() {
   color: #999;
   pointer-events: none;
 }
+.blog-edit__hint {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  opacity: 0.7;
+}
+
+/* ── 右侧预览 ── */
+.blog-edit__right {
+  min-width: 0;
+}
 </style>
 
 <style>
 @import "@/assets/blog-layout.css";
+@import "@/assets/blog.css";
 @import "@/assets/pink-theme.css";
 @import "@/assets/glass.css";
+@import "@/assets/markdown.css";
 </style>

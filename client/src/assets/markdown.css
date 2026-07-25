@@ -251,6 +251,9 @@ html.dark
 }
 
 /* 代码块 */
+.blog-detail__content code {
+  scrollbar-width: none;
+}
 .blog-detail__content .code-block pre,
 .blog-detail__content pre {
   font-family: "仿宋", FangSong, serif;
@@ -485,4 +488,10 @@ html.dark .blog-detail__content tr:nth-child(even) td {
 }
 .blog-detail__content .markdown-alert-caution .markdown-alert-title {
   color: #cf222e;
+}
+
+/* Alt+Z 切换代码块自动换行 */
+html[data-wrap-code] .blog-detail__content pre code {
+  white-space: pre-wrap !important;
+  word-break: break-all !important;
 }
