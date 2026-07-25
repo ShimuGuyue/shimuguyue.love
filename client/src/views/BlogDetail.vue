@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import MarkdownIt from 'markdown-it'
@@ -134,6 +134,68 @@ function scrollToHeading(slug: string) {
   document.getElementById(slug)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+const activeSlugs = ref<Set<string>>(new Set())
+
+function findPathToSlug(tree: TocItem[], target: string): TocItem[] {
+  for (const node of tree) {
+    if (node.slug === target) return [node]
+    if (node.children.length) {
+      const found = findPathToSlug(node.children, target)
+      if (found.length) return [node, ...found]
+    }
+  }
+  return []
+}
+
+function updateActiveHeading() {
+  const contentEl = document.querySelector('.blog-detail__content')
+  if (!contentEl) return
+  // 获取所有标题元素（仅限 h1~h4，与目录层级保持一致）
+  const headingEls = contentEl.querySelectorAll('h1, h2, h3, h4')
+  if (!headingEls.length) {
+    activeSlugs.value = new Set()
+    return
+  }
+
+  let activeId = ''
+  let minDist = Infinity
+
+  // 遍历标题，找出最接近视口顶部的那个
+  for (const el of headingEls) {
+    const rect = el.getBoundingClientRect()
+    // 如果标题已进入视口（顶部在视口顶部或以上）
+    if (rect.top <= 0) {
+      // 若该标题底部仍在视口内，则认为它是当前活跃的（优先选最靠上的）
+      if (rect.bottom > 0) {
+        activeId = el.id
+        break
+      } else {
+        // 已完全滚出视口，但可能后面还有，暂记下最接近顶部的
+        const dist = Math.abs(rect.top)
+        if (dist < minDist) {
+          minDist = dist
+          activeId = el.id
+        }
+      }
+    } else {
+      // 标题在视口下方，取最接近顶部的
+      if (rect.top < minDist) {
+        minDist = rect.top
+        activeId = el.id
+      }
+    }
+  }
+
+  if (activeId) {
+    const path = findPathToSlug(headings.value, activeId)
+    activeSlugs.value = new Set(path.map(item => item.slug))
+  } else {
+    activeSlugs.value = new Set()
+  }
+}
+
+let scrollHandler: (() => void) | null = null
+
 onMounted(async () => {
   try {
     const fp = route.params.file_path as string
@@ -146,6 +208,23 @@ onMounted(async () => {
     loading.value = false
   }
 
+  // 初次更新（确保初始高亮正确）
+  await nextTick()
+  updateActiveHeading()
+
+  // 监听滚动事件（使用节流优化）
+  let ticking = false
+  scrollHandler = () => {
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        updateActiveHeading()
+        ticking = false
+      })
+      ticking = true
+    }
+  }
+  window.addEventListener('scroll', scrollHandler)
+
   // 获取当前用户权限
   if (auth.isLoggedIn && auth.id !== null) {
     try {
@@ -155,6 +234,12 @@ onMounted(async () => {
         permissions.value = data.permissions || []
       }
     } catch { /* 权限获取失败静默 */ }
+  }
+})
+
+onUnmounted(() => {
+  if (scrollHandler) {
+    window.removeEventListener('scroll', scrollHandler)
   }
 })
 
@@ -218,16 +303,16 @@ watch(renderedContent, async () => {
         <div v-if="headings.length">
           <ul class="toc-list">
             <template v-for="h in headings" :key="h.slug">
-              <li class="toc-item">
+              <li class="toc-item" :class="{ active: activeSlugs.has(h.slug) }">
                 <span class="toc-text" @click.stop="scrollToHeading(h.slug)">{{ h.text }}</span>
                 <ul v-if="h.children.length" class="toc-sublist">
-                  <li v-for="c2 in h.children" :key="c2.slug" class="toc-item">
+                  <li v-for="c2 in h.children" :key="c2.slug" class="toc-item" :class="{ active: activeSlugs.has(c2.slug) }">
                     <span class="toc-text" @click.stop="scrollToHeading(c2.slug)">{{ c2.text }}</span>
                     <ul v-if="c2.children.length" class="toc-sublist">
-                      <li v-for="c3 in c2.children" :key="c3.slug" class="toc-item">
+                      <li v-for="c3 in c2.children" :key="c3.slug" class="toc-item" :class="{ active: activeSlugs.has(c3.slug) }">
                         <span class="toc-text" @click.stop="scrollToHeading(c3.slug)">{{ c3.text }}</span>
                         <ul v-if="c3.children.length" class="toc-sublist">
-                          <li v-for="c4 in c3.children" :key="c4.slug" class="toc-item">
+                          <li v-for="c4 in c3.children" :key="c4.slug" class="toc-item" :class="{ active: activeSlugs.has(c4.slug) }">
                             <span class="toc-text" @click.stop="scrollToHeading(c4.slug)">{{ c4.text }}</span>
                           </li>
                         </ul>
@@ -239,6 +324,7 @@ watch(renderedContent, async () => {
             </template>
           </ul>
         </div>
+        <div v-else class="toc-empty">暂无章节</div>
       </nav>
     </div>
   </main>
@@ -390,8 +476,7 @@ watch(renderedContent, async () => {
   pointer-events: none;
 }
 
-/* 当鼠标 hover 到任意层级时，高亮当前层及所有上级父线条 */
-.toc-item:hover > ::before,
+.toc-item.active::before,
 .toc-item:hover::before {
   background-color: var(--pink-hot, #FF77CC);
 }
@@ -406,8 +491,10 @@ watch(renderedContent, async () => {
   transition: color var(--transition-speed, 0.2s);
 }
 
+.toc-item.active > .toc-text,
 .toc-item:hover > .toc-text {
   color: var(--pink-hot, #FF77CC);
+  font-weight: 500;
 }
 
 /* 全局覆盖防样式干扰 */
