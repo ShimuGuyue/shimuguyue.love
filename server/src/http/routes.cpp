@@ -411,15 +411,23 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
 
-            if (!req.has_param("user_id")) {
-                res.status = 400;
-                res.set_content(R"({"error":"缺少 user_id 参数"})", "application/json");
+            // Session 验证：仅返回已登录用户自身的权限
+            std::string token;
+            if (req.has_header("Authorization")) {
+                const auto& auth_hdr = req.get_header_value("Authorization");
+                constexpr std::string_view PREFIX = "Bearer ";
+                if (auth_hdr.size() > PREFIX.size() &&
+                    auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
+                    token = auth_hdr.substr(PREFIX.size());
+            }
+            const auto session = auth::validate_session(conn, token);
+            if (!session) {
+                res.status = 401;
+                res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
                 return;
             }
 
-            const int uid = std::stoi(req.get_param_value("user_id"));
-            auto perms = auth::get_permissions(conn, uid);
-            res.set_content(nlohmann::json{{"permissions", perms}}.dump(), "application/json");
+            res.set_content(nlohmann::json{{"permissions", session->permissions}}.dump(), "application/json");
         }
     );
 
