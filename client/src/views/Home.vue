@@ -516,6 +516,7 @@ function imgStyle(img: ImageItem) {
               :src="`/image/${img.path}`"
               :alt="img.description"
               draggable="false"
+              :style="{ border: `5px solid ${theme.isDark ? '#000' : '#fff'}` }"
             />
             <button
               v-if="editMode"
