@@ -184,7 +184,7 @@ cd ${PROJECT_PATH}
     ！拿到值后请立刻删除语句。
     
     ```cpp
-    std:cout << *crypto::Argon2id::hash_with_random_salt("${KEY}") << std::endl;     ///< 密钥哈希值
+    std:cout << *crypto::Argon2id::hash_with_random_salt("${KEY}")     << std::endl; ///< 密钥哈希值
     std:cout << *crypto::Argon2id::hash_with_fixed_salt("${PASSWORD}") << std::endl; ///< 密码哈希值
     ```
     
@@ -214,7 +214,7 @@ cd ${PROJECT_PATH}
     INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 3); 
     ```
 
-### 可选
+### 自动化（可选）
 
 本条目下若代码块开头无 `cd` 指令，默认在 `${PROJECT_PATH}/tools` 目录下执行。
 
