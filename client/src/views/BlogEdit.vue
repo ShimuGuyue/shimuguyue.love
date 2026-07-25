@@ -349,7 +349,7 @@ async function saveBlog() {
 /* ── 左侧 ── */
 .blog-edit__left {
   position: sticky;
-  top: 110px;
+  top: 118px;
   align-self: start;
 }
 .blog-edit__field {
