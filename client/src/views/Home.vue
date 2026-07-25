@@ -935,7 +935,6 @@ function imgStyle(img: ImageItem) {
   padding: 8px;
   resize: none;
   font-weight: 600;
-  color: var(--title-color, #3451b2);
   outline: none;
   font-family: "仿宋", FangSong, serif;
   font-weight: bold;
