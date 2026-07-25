@@ -31,6 +31,9 @@ SYNC_REMOTE="${SYNC_REMOTE:-origin}"
 SYNC_BRANCH="${SYNC_BRANCH:-auto}"
 STATE_FILE="${SYNC_STATE_FILE:-/tmp/auto-sync-blogs.state}"
 
+# 设置时区为东八区（UTC+8），影响日志和 Git 提交时间
+export TZ="Asia/Shanghai"
+
 DRY_RUN=false
 FORCE=false
 for arg in "${@}"; do
