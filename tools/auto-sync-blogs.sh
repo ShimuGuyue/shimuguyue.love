@@ -10,7 +10,7 @@
 #   2. 本脚本需要有对 $DOC_PATH/blogs 的写权限
 #   3. git 已配置 user.name 和 user.email（用于 auto-commit）
 #
-# 环境变量（可选）：
+# 环境变量：
 #   DOC_PATH          — server 使用的博客内容根目录
 #   SYNC_REMOTE       — 推送到的远程仓库名（默认 origin）
 #   SYNC_BRANCH       — 推送到的分支名（默认 auto）
@@ -31,7 +31,7 @@ SYNC_REMOTE="${SYNC_REMOTE:-origin}"
 SYNC_BRANCH="${SYNC_BRANCH:-auto}"
 STATE_FILE="${SYNC_STATE_FILE:-/tmp/auto-sync-blogs.state}"
 
-# 设置时区为东八区（UTC+8），影响日志和 Git 提交时间
+# 设置时区为东八区
 export TZ="Asia/Shanghai"
 
 DRY_RUN=false
