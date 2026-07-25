@@ -217,7 +217,7 @@ auto get_blog_by_file_path(
     pqxx::work txn{ conn };
 
     const auto row = txn.exec(
-        "SELECT b.id, b.title, b.description, b.content, "
+        "SELECT b.id, b.title, b.description, b.content, b.file_path, "
         "TO_CHAR(b.update_time, 'YYYY-MM-DD') AS update_time, "
         "c.name AS category_name "
         "FROM blogs b "
@@ -243,6 +243,9 @@ auto get_blog_by_file_path(
     if (!row[0]["category_name"].is_null())
         item.category = row[0]["category_name"].as<std::string>();
 
+    if (!row[0]["file_path"].is_null())
+        item.file_path = row[0]["file_path"].as<std::string>();
+
     // 查询标签
     const auto tag_rows = txn.exec(
         "SELECT t.name "
@@ -262,6 +265,44 @@ auto get_blog_by_file_path(
     return item;
 }
 
+/// 校验单个字段，禁止所有标点 / 空格 / 特殊字符，返回错误消息（空表示通过）
+static auto validate_field(std::string_view field_name, std::string_view value) -> std::string
+{
+    // 禁止：HTML 实体字符、路径分隔符、空格、点号、常见标点
+    constexpr std::string_view BAD = "<>&\"'\\|*?/ .!@#$%^&*()+=[]{};:'\",.<>?/`~";
+
+    if (value.find_first_of(BAD) != std::string::npos)
+        return std::string{field_name} + " 含有特殊字符";
+    return {};
+}
+
+/// 校验所有元信息字段，返回错误消息（空表示通过）
+static auto validate_all_fields(
+    std::string_view                title,
+    std::string_view                description,
+    std::string_view                category_name,
+    const std::vector<std::string>& tag_names,
+    std::string_view                file_path_category,
+    std::string_view                file_path_name)
+-> std::string
+{
+    if (auto err = validate_field("标题", title); !err.empty())
+        return err;
+    if (auto err = validate_field("描述", description); !err.empty())
+        return err;
+    if (auto err = validate_field("分类", category_name); !err.empty())
+        return err;
+    for (const auto& tag : tag_names) {
+        if (auto err = validate_field("标签", tag); !err.empty())
+            return err;
+    }
+    if (auto err = validate_field("文件路径", file_path_category); !err.empty())
+        return err;
+    if (auto err = validate_field("文件路径", file_path_name); !err.empty())
+        return err;
+    return {};
+}
+
 auto save_blog(
     pqxx::connection&              conn,
     std::string_view               title,
@@ -275,26 +316,8 @@ auto save_blog(
  -> std::string
 {
     // 元信息特殊字符校验
-    {
-        constexpr std::string_view BAD = "<>&\"'\\|*?/";
-
-        if (title.find_first_of(BAD) != std::string::npos)
-            return "标题 含有特殊字符（< > & \" ' \\ | * ? /）";
-        if (description.find_first_of(BAD) != std::string::npos)
-            return "描述 含有特殊字符（< > & \" ' \\ | * ? /）";
-        if (category_name.find_first_of(BAD) != std::string::npos)
-            return "分类 含有特殊字符（< > & \" ' \\ | * ? /）";
-        if (file_path_category.find_first_of(BAD) != std::string::npos ||
-            file_path_name.find_first_of(BAD) != std::string::npos)
-            return "文件路径 含有特殊字符（< > & \" ' \\ | * ? /）";
-        if (file_path_category.find("..") != std::string::npos ||
-            file_path_name.find("..") != std::string::npos)
-            return "文件路径 含有非法字符 \"..\"";
-        for (const auto& tag : tag_names) {
-            if (tag.find_first_of(BAD) != std::string::npos)
-                return "标签 含有特殊字符（< > & \" ' \\ | * ? /）";
-        }
-    }
+    if (auto err = validate_all_fields(title, description, category_name, tag_names, file_path_category, file_path_name); !err.empty())
+        return err;
 
     const std::string file_path = std::string{file_path_category} + "/" + std::string{file_path_name};
 
@@ -473,6 +496,178 @@ auto delete_blog(
         };
         std::filesystem::remove(md_path, ec);
         std::filesystem::remove(md_path.parent_path(), ec);
+    }
+
+    return {};
+}
+
+auto update_blog(
+    pqxx::connection&              conn,
+    std::string_view               title,
+    std::string_view               description,
+    std::string_view               category_name,
+    const std::vector<std::string>& tag_names,
+    std::string_view               old_file_path,
+    std::string_view               file_path_category,
+    std::string_view               file_path_name,
+    std::string_view               content,
+    std::string_view               date)
+ -> std::string
+{
+    // 元信息特殊字符校验
+    if (auto err = validate_all_fields(title, description, category_name, tag_names, file_path_category, file_path_name); !err.empty())
+        return err;
+
+    const std::string new_file_path{ std::format("{}/{}", file_path_category, file_path_name) };
+    const bool path_changed = (old_file_path != new_file_path);
+
+    pqxx::work txn{ conn };
+
+    // 1. 查找已有博客
+    const auto blog_row = txn.exec(
+        "SELECT id, category_id FROM blogs WHERE file_path = $1",
+        pqxx::params{ std::string{old_file_path} });
+    if (blog_row.empty())
+        return "博客不存在";
+
+    const int blog_id    = blog_row[0]["id"].as<int>();
+    const int old_cat_id = blog_row[0]["category_id"].is_null() ? 0 : blog_row[0]["category_id"].as<int>();
+
+    // 记录旧标签，用于后续清理
+    const auto old_tags = txn.exec(
+        "SELECT tag_id FROM blog_tags WHERE blog_id = $1",
+        pqxx::params{ blog_id });
+    std::vector<int> old_tag_ids;
+    for (const auto& tr : old_tags)
+    {
+        old_tag_ids.push_back(tr["tag_id"].as<int>());
+    }
+
+    // 2. 处理分类（同 save 逻辑）
+    int category_id{ 0 };
+    {
+        pqxx::result r = txn.exec(
+            "INSERT INTO categories (name) VALUES ($1) "
+            "ON CONFLICT (name) DO NOTHING RETURNING id",
+            pqxx::params{ std::string{category_name} });
+        if (!r.empty())
+        {
+            category_id = r[0]["id"].as<int>();
+        }
+        else
+        {
+            r = txn.exec("SELECT id FROM categories WHERE name = $1",
+                         pqxx::params{ std::string{category_name} });
+            if (r.empty())
+                return "创建分类失败";
+            category_id = r[0]["id"].as<int>();
+        }
+    }
+
+    // 3. 处理标签
+    std::vector<int> new_tag_ids;
+    for (const auto& tn : tag_names)
+    {
+        pqxx::result r = txn.exec(
+            "INSERT INTO tags (name, category_id) VALUES ($1, $2) "
+            "ON CONFLICT (name, category_id) DO NOTHING RETURNING id",
+            pqxx::params{ tn, category_id });
+        if (!r.empty())
+        {
+            new_tag_ids.push_back(r[0]["id"].as<int>());
+        }
+        else
+        {
+            r = txn.exec("SELECT id FROM tags WHERE name = $1 AND category_id = $2",
+                         pqxx::params{ tn, category_id });
+            if (!r.empty())
+                new_tag_ids.push_back(r[0]["id"].as<int>());
+        }
+    }
+
+    // 4. 若路径变更，检查新路径是否已存在
+    if (path_changed)
+    {
+        auto dup = txn.exec("SELECT 1 FROM blogs WHERE file_path = $1",
+                            pqxx::params{ std::string{new_file_path} });
+        if (!dup.empty())
+            return "新文件路径已被其他博客占用";
+    }
+
+    // 5. 更新博客记录
+    std::string dt{ date };
+    txn.exec(
+        "UPDATE blogs SET title = $1, description = $2, content = $3, "
+        "update_time = $4::date, category_id = $5, file_path = $6 WHERE id = $7",
+        pqxx::params{ std::string{title}, std::string{description},
+                      std::string{content}, dt, category_id,
+                      std::string{new_file_path}, blog_id });
+
+    // 6. 重建 blog_tags 关联
+    txn.exec("DELETE FROM blog_tags WHERE blog_id = $1", pqxx::params{ blog_id });
+    for (int tid : new_tag_ids)
+    {
+        txn.exec("INSERT INTO blog_tags (blog_id, tag_id) VALUES ($1, $2) "
+                 "ON CONFLICT DO NOTHING",
+                 pqxx::params{blog_id, tid});
+    }
+
+    // 7. 清理不再使用的旧标签
+    for (int tid : old_tag_ids)
+    {
+        const auto ref = txn.exec(
+            "SELECT 1 FROM blog_tags WHERE tag_id = $1 LIMIT 1",
+            pqxx::params{ tid });
+        if (ref.empty())
+            txn.exec("DELETE FROM tags WHERE id = $1", pqxx::params{ tid });
+    }
+
+    // 8. 清理旧分类（若已无博客使用）
+    if (old_cat_id > 0 && old_cat_id != category_id)
+    {
+        const auto cat_ref = txn.exec(
+            "SELECT 1 FROM blogs WHERE category_id = $1 LIMIT 1",
+            pqxx::params{ old_cat_id });
+        if (cat_ref.empty())
+            txn.exec("DELETE FROM categories WHERE id = $1", pqxx::params{ old_cat_id });
+    }
+
+    txn.commit();
+
+    // 9. 处理 md 文件：路径变更时先删旧文件
+    if (path_changed)
+    {
+        std::error_code ec;
+        std::filesystem::path old_md{ std::format("{}/blogs/{}.md", md::doc_path(), old_file_path) };
+        std::filesystem::remove(old_md, ec);
+        std::filesystem::remove(old_md.parent_path(), ec);
+    }
+
+    // 10. 写入新 md 文件
+    {
+        std::ostringstream fm;
+        fm << "---\n";
+        fm << "title: " << title << "\n";
+        fm << "description: " << description << "\n";
+        fm << "category: " << category_name << "\n";
+        fm << "tags: [";
+        for (std::size_t i{ 0 }; i < tag_names.size(); ++i)
+        {
+            if (i > 0)
+                fm << ", ";
+            fm << tag_names[i];
+        }
+        fm << "]\n";
+        fm << "update_time: " << date << "\n";
+        fm << "file_path: " << new_file_path << "\n";
+        fm << "---\n\n";
+        fm << content;
+
+        std::filesystem::path out_path{ std::format("{}/blogs/{}.md", md::doc_path(), new_file_path) };
+        std::filesystem::create_directories(out_path.parent_path());
+        std::ofstream ofs{ out_path, std::ios::binary };
+        if (!ofs) return "写入文件失败！";
+        ofs << fm.str();
     }
 
     return {};

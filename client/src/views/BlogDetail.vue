@@ -16,6 +16,7 @@ const auth = useAuthStore()
 
 const permissions = ref<string[]>([])
 const canDrop = computed(() => permissions.value.includes('drop'))
+const canEdit = computed(() => permissions.value.includes('edit'))
 
 const md = new MarkdownIt({
   html: true,
@@ -280,6 +281,16 @@ onUnmounted(() => {
   }
 })
 
+/// 跳转到编辑页面
+function editBlog() {
+  if (!canEdit.value) {
+    alert('当前用户无 edit 权限，无法编辑博客')
+    return
+  }
+  const fp = route.params.file_path as string
+  router.push({ name: 'blog-edit', params: { file_path: fp } })
+}
+
 /// 删除当前博客
 async function deleteBlog() {
   if (!canDrop.value) {
@@ -327,6 +338,7 @@ watch(renderedContent, async () => {
           <time class="blog-detail__time">{{ blog.update_time }}</time>
         </aside>
         <div class="blog-detail__actions">
+          <button class="blog-detail__edit-btn" @click="editBlog">编辑博客</button>
           <button class="blog-detail__delete-btn" @click="deleteBlog">删除博客</button>
         </div>
       </div>
@@ -432,17 +444,25 @@ watch(renderedContent, async () => {
   margin-top: 16px;
 }
 
+.blog-detail__edit-btn,
 .blog-detail__delete-btn {
   padding: 8px 0;
   width: 100%;
   border: none;
   border-radius: 4px;
-  background: #d44;
-  color: #fff;
   font-size: 0.85rem;
   cursor: pointer;
   transition: opacity 0.15s;
 }
+.blog-detail__edit-btn {
+  background: var(--pink-soft);
+  color: #fff;
+}
+.blog-detail__delete-btn {
+  background: #d44;
+  color: #fff;
+}
+.blog-detail__edit-btn:hover,
 .blog-detail__delete-btn:hover {
   opacity: 0.85;
 }

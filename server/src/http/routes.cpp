@@ -377,6 +377,90 @@ static void handle_blog_save(
     res.set_content(R"({"ok":true})", "application/json");
 }
 
+/**
+ * @brief 处理 PUT /api/blog/update 请求。
+ */
+static void handle_blog_update(
+    const httplib::Request& req,
+    httplib::Response&      res,
+    pqxx::connection&        conn,
+    const std::string&       allowed)
+{
+    std::lock_guard<std::mutex> lock{ g_db_mutex };
+    res.set_header("Access-Control-Allow-Origin", allowed);
+    res.set_header("Content-Type", "application/json");
+
+    const auto body = nlohmann::json::parse(req.body, nullptr, false);
+    if (body.is_discarded()) {
+        res.status = 400;
+        res.set_content(R"({"error":"无效的 JSON"})", "application/json");
+        return;
+    }
+
+    // Session 验证
+    std::string token;
+    if (req.has_header("Authorization")) {
+        const auto& auth_hdr = req.get_header_value("Authorization");
+        constexpr std::string_view PREFIX = "Bearer ";
+        if (auth_hdr.size() > PREFIX.size() &&
+            auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
+            token = auth_hdr.substr(PREFIX.size());
+    }
+    const auto session = auth::validate_session(conn, token);
+    if (!session) {
+        res.status = 401;
+        res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+        return;
+    }
+
+    // 权限检查
+    const auto& perms = session->permissions;
+    if (std::find(perms.begin(), perms.end(), "edit") == perms.end()) {
+        res.status = 403;
+        res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
+        return;
+    }
+
+    const auto title       = body.value("title", "");
+    const auto description = body.value("description", "");
+    const auto category    = body.value("category", "");
+    const auto content     = body.value("content", "");
+    const auto pathCat     = body.value("file_path_category", "");
+    const auto pathName    = body.value("file_path_name", "");
+    const auto old_file_path = body.value("old_file_path", "");
+    const auto tagsJson    = body.value("tags", nlohmann::json::array());
+
+    if (title.empty() || description.empty() || category.empty() ||
+        pathCat.empty() || pathName.empty() || old_file_path.empty() || content.empty()) {
+        res.status = 400;
+        res.set_content(R"({"error":"所有字段均为必填"})", "application/json");
+        return;
+    }
+
+    std::vector<std::string> tagList;
+    if (tagsJson.is_array())
+        for (const auto& t : tagsJson)
+            if (t.is_string()) tagList.push_back(t.get<std::string>());
+
+    std::time_t now = std::time(nullptr);
+    char buf[16];
+    std::strftime(buf, sizeof buf, "%Y-%m-%d", std::localtime(&now));
+
+    const auto err = blog::update_blog(
+        conn, title, description, category, tagList,
+        old_file_path, pathCat, pathName, content, buf);
+
+    if (!err.empty()) {
+        res.status = 500;
+        nlohmann::json j;
+        j["error"] = err;
+        res.set_content(j.dump(), "application/json");
+        return;
+    }
+
+    res.set_content(R"({"ok":true})", "application/json");
+}
+
 // ── 路由注册 ──
 
 void setup_routes(httplib::Server& svr, pqxx::connection& conn)
@@ -484,6 +568,8 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             item["update_time"]  = blog->update_time;
             item["category"]    = blog->category.has_value()
                 ? nlohmann::json(*blog->category) : nlohmann::json(nullptr);
+            item["file_path"]   = blog->file_path.has_value()
+                ? nlohmann::json(*blog->file_path) : nlohmann::json(nullptr);
             item["tags"]        = blog->tags;
             res.set_content(item.dump(), "application/json");
         }
@@ -676,6 +762,14 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
         [&conn, allowed](const auto& req, auto& res)
         {
             handle_blog_save(req, res, conn, allowed);
+        }
+    );
+
+    // PUT /api/blog/update — 编辑已有博客
+    svr.Put("/api/blog/update",
+        [&conn, allowed](const auto& req, auto& res)
+        {
+            handle_blog_update(req, res, conn, allowed);
         }
     );
 
