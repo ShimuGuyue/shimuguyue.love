@@ -6,223 +6,256 @@
 
 ## 开始使用
 
+项目测试环境为 `Ubuntu-24.04` 和 `Ubuntu-26.04`。
+
 说明：以下出现所有 `${NAME}` 格式的变量为用户的**个性化配置**，而非环境变量。
 
 ### 克隆仓库
 
-克隆仓库并进入目录
+克隆仓库。
 
 ```bash
+# 使用 SSH 克隆是为了可自动化拉取新更改并重新部署
+# 如不需要服务器自动化更新，也可用 HTTP 克隆
 git clone git@github.com:${USER_NAME}/${REPO_NAME}.git ${PROJECT_PATH}
-
 cd ${PROJECT_PATH}
 ```
 
 ### 前端
 
-设置环境变量 `${FRONTEND_ORIGIN}`
+本条目下操作默认在 `${PROJECT_PATH}/client` 目录下执行。
 
-```bash
-echo 'export FRONTEND_ORIGIN=${FRONTEND_ORIGIN}' >> ~/.bashrc
-source ~/.bashrc
-```
++   安装 `Node.js` 和 `npm`
 
-安装 `Node.js` 和 `npm`
+    ```bash
+    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+    apt install -y nodejs
+    ```
 
-```bash
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-apt install -y nodejs
-```
++   安装 `npm` 项目依赖
 
-安装 `npm` 依赖
+    ```bash
+    npm install
+    ```
 
-```bash
-cd ${PROJECT_PATH}/client/
-npm install
-```
++   设置环境变量
 
-设置构建目录环境变量 `${BUILD_DIR_CLIENT}`
+    ```bash
+    echo 'export FRONTEND_ORIGIN=${FRONTEND_ORIGIN}' >> ~/.bashrc # 前端访问地址
+    echo 'export BUILD_DIR=${BUILD_DIR_CLIENT}'      >> ~/.bashrc # 前端构建文件目录
+    source ~/.bashrc
+    ```
 
-```bash
-echo 'export BUILD_DIR=${BUILD_DIR_CLIENT}' >> ~/.bashrc
-source ~/.bashrc
-```
++   构建生成版本，生成 `dist` 目录
 
-构建生成版本，生成 `dist` 目录
-
-```bash
-cd ${PROJECT_PATH}/client/
-npm run build
-```
+    ```bash
+    npm run build
+    ```
 
 ### Nginx
 
-安装 `nginx`
++   安装 `nginx`
 
-```bash
-apt install nginx
-```
+    ```bash
+    apt install nginx
+    ```
 
-新建站点文件配置
++   新建站点文件配置
 
-```bash
-nano /etc/nginx/sites-available/${PROJECT_NAME}
-```
+    ```bash
+    nano /etc/nginx/sites-available/${PROJECT_NAME}
+    ```
 
-启用站点配置
++   启用站点配置
 
-```bash
-ln -s /etc/nginx/sites-available/${PROJECT_NAME} /etc/nginx/sites-enabled/
-```
+    ```bash
+    ln -s /etc/nginx/sites-available/${PROJECT_NAME} /etc/nginx/ sites-enabled/
+    nginx -t && systemctl reload nginx
+    ```
 
 ### 数据库
 
-安装 `postgresql`
+本条目下操作默认在 `${PROJECT_PATH}/sql` 目录下执行。
 
-```bash
-apt install postgresql
-```
++   安装 `postgresql`
 
-设置环境变量 `${PGPORT}`, `${PGHOST}`, `${PGPASSWORD}`, `${PGUSER}`, `${PGDATABASE}` 并创建对应用户和数据库
+    ```bash
+    apt install postgresql
+    ```
 
-```bash
-echo 'export SPGPORT=${SPGPORT}' >> ~/.bashrc
-echo 'export PGHOST=${PGHOST}' >> ~/.bashrc
-echo 'export PGUSER=${PGUSER}' >> ~/.bashrc
-echo 'export PGPASSWORD=${PGPASSWORD}' >> ~/.bashrc
-echo 'export PGDATABASE=${PGDATABASE}' >> ~/.bashrc
-source ~/.bashrc
-```
++   创建数据库和用户并设置权限，设置环境变量
 
-```postgresql
-CREATE USER ${PGUSER} WITH ENCRYPTED PASSWORD ${PGPASSWORD};
-CREATE DATABASE ${PGDATABASE} OWNER ${PGUSER};
-GRANT ALL PRIVILEGES ON DATABASE ${PGDATABASE} TO ${PGUSER};
-```
+    ```bash
+    sudo -u postgres psql
+    ```
 
-创建所需数据库表
+    ```postgresql
+    CREATE USER ${PGUSER} WITH ENCRYPTED PASSWORD '${PGPASSWORD}';
+    CREATE DATABASE ${PGDATABASE} OWNER ${PGUSER};
+    GRANT ALL PRIVILEGES ON DATABASE ${PGDATABASE} TO ${PGUSER};
+    \q
+    ```
 
-```bash
-cd ${PROJECT_PATH}/sql/
-psql -f ./create_users.sql       # 角色表
-psql -f ./create_permissions.sql # 权限表
-psql -f ./create_blogs.sql       # 角色-权限关联表
-psql -f ./create_sessions.sql    # session表
-psql -f ./create_images.sql      # 图片表
-psql -f ./create_profile.sql     # 个人简介表
-```
+    ```bash
+    echo 'export PGHOST=${PGHOST}'         >> ~/.bashrc # 数据库主机
+    echo 'export PGPORT=${PGPORT}'         >> ~/.bashrc # 数据库端口
+    echo 'export PGDATABASE=${PGDATABASE}' >> ~/.bashrc # 数据库
+    echo 'export PGUSER=${PGUSER}'         >> ~/.bashrc # 数据库用户
+    echo 'export PGPASSWORD=${PGPASSWORD}' >> ~/.bashrc # 数据库密码
+    source ~/.bashrc
+    ```
+
++   创建所需数据库表
+
+    ```bash
+    cd ${PROJECT_PATH}/sql/
+    psql -f ./create_users.sql       # 角色表
+    psql -f ./create_permissions.sql # 权限表 + 角色-权限关联表
+    psql -f ./create_blogs.sql       # 博客表 + 分类表 + 标签表 + 博客-标签关联表
+    psql -f ./create_sessions.sql    # session表
+    psql -f ./create_images.sql      # 图片表
+    psql -f ./create_profile.sql     # 个人简介表
+    ```
 
 ### 后端
 
-设置环境变量 `${SERVER_HOST}` 和 `${SERVER_PORT}`
+本条目下操作默认在 `${PROJECT_PATH}/server` 目录下执行。
 
-```bash
-echo 'export SERVER_HOST=${SERVER_HOST}' >> ~/.bashrc
-echo 'export SERVER_PORT=${SERVER_PORT}' >> ~/.bashrc
-source ~/.bashrc
-```
++   安装 `CMake`
 
-安装 `CMake`
+    ```bash
+    apt install cmake
+    ```
 
-```bash
-apt install cmake
-```
++   安装 `vcpkg` 并设置环境变量
 
-安装 `vcpkg` 并添加到环境变量，设置环境变量 `${VCPKG_ROOT}`
+    ```bash
+    git clone https://github.com/Microsoft/vcpkg.git ${VCPKG_ROOT}
+    ./vcpkg/bootstrap-vcpkg.sh
 
-```bash
-cd ${LIB_PATH}
-git clone https://github.com/Microsoft/vcpkg.git
-./vcpkg/bootstrap-vcpkg.sh
+    echo 'export VCPKG_ROOT=${VCPKG_ROOT}' >> ~/.bashrc
+    echo 'export PATH="$PATH:$VCPKG_ROOT"' >> ~/.bashrc
+    source ~/.bashrc
+    ```
 
-echo 'export VCPKG_ROOT=${LIB_PATH}/vcpkg' >> ~/.bashrc
-echo 'export PATH="$PATH:/$VCPKG_ROOT"' >> ~/.bashrc
-source ~/.bashrc
-```
++   安装 `pkg-config`
 
-安装 `pkg-config`
+    ```bash
+    apt install pkg-config
+    ```
 
-```bash
-apt install pkg-config
-```
++   使用 `vcpkg` 安装所需的库及库运行所需的包
 
-使用 `vcpkg` 安装所需的库
+    ```bash
+    apt install bison flex autoconf autoconf-archive automake libtool
 
-```bash
-apt install bison flex autoconf autoconf-archive automake libtool
+    vcpkg install libpqxx:x64-linux
+    vcpkg install libsodium:x64-linux
+    vcpkg install cpp-httplib:x64-linux
+    vcpkg install nlohmann-json:x64-linux
+    vcpkg install yaml-cpp:x64-linux
+    ```
 
-vcpkg install libpqxx:x64-linux
-vcpkg install libsodium:x64-linux
-vcpkg install cpp-httplib:x64-linux
-vcpkg install nlohmann-json:x64-linux
-vcpkg install yaml-cpp:x64-linux
-```
++   设置环境变量
 
-构建并运行 `C++` 应用程序
+    ```bash
+    echo 'export SERVER_HOST=${SERVER_HOST}' >> ~/.bashrc  # 服务端主机
+    echo 'export SERVER_PORT=${SERVER_PORT}' >> ~/.bashrc  # 服务端端口
+    echo 'export DOC_PATH=${DOC_PATH}'       >> ~/.bashrc  # 文档文件保存目录
+    echo 'export IMAGE_PATH=${IMAGE_PATH}'   >> ~/.bashrc  # 图片文件保存目录
+    echo 'export README_DIR=${README_DIR}'   >> ~/.bashrc  # 关于我 页面 README 文件存放路径
+    source ~/.bashrc
+    ```
 
-```bash
-cd ${PROJECT_PATH}/server/
-cmake -B ${BUILD_DIR_SERVER} --preset default
-cmake --build ${BUILD_DIR_SERVER}
-${BUILD_DIR_SERVER}/server
-```
++   构建并运行 `C++` 应用程序
+
+    ```bash
+    cmake -B build --preset default
+    cmake --build build
+    ./build/server
+    ```
 
 ### 项目配置
 
-设置“关于我”页面读取的 `README.md` 文件目录，并放置对应文件
++   为自己创建超级管理员帐号
 
-```bash
-echo 'export README_DIR=${README_DIR}' >> ~/.bashrc
-```
+    首先在 `server/main.cpp` 添加以下代码并运行为自己的密钥/密码拿到哈希值
 
-设置文件保存目录环境变量
-
-```bash
-echo 'export DOC_PATH=${DOC_PATH}' >> ~/.bashrc     # 文档文件保存目录
-echo 'export IMAGE_PATH=${IMAGE_PATH}' >> ~/.bashrc # 图片文件保存目录
-source ~/.bashrc
-```
-
-为自己创建用户并赋予权限
-
-```postgresql
-# create
-# drop
-# edit
-```
+    ！拿到值后请立刻删除语句。
+    
+    ```cpp
+    std:cout << *crypto::Argon2id::hash_with_random_salt("${KEY}") << std::endl;     ///< 密钥哈希值
+    std:cout << *crypto::Argon2id::hash_with_fixed_salt("${PASSWORD}") << std::endl; ///< 密码哈希值
+    ```
+    
+    在数据库创建管理员用户。
+    
+    ```postgresql
+    # 默认当前数据库表均为空，则对应条目的 id 可知
+    
+    # 添加管理员用户信息
+    INSERT INTO users (key_hash, key_enabled, username, password_hash)
+    VALUES (
+        '${KEY_HASH}',      # 密钥哈希值
+        'FALSE',            # 密钥可用状态
+        # 若后端代码公开，密钥的哈希算法中固定盐值被公开，不安全，生产环境建议废弃管理员密钥
+        '${USERNAME}',      # 用户名
+        '${PASSWORD_HASH}', # 密码哈希值
+    ); # id 为 1
+    
+    # 添加权限列表
+    INSERT INTO permissions (name) VALUES ('create'); #id 为 1
+    INSERT INTO permissions (name) VALUES ('edit');   #id 为 2
+    INSERT INTO permissions (name) VALUES ('drop');   #id 为 3
+    
+    # 为管理员授予权限
+    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 1);
+    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 2); 
+    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 3); 
+    ```
 
 ### 可选
 
+本条目下若代码块开头无 `cd` 指令，默认在 `${PROJECT_PATH}/tools` 目录下执行。
+
 #### 博客自动同步
 
-博客保存目录连接远程仓库并创建 `auto` 分支
++   博客保存目录连接远程仓库并创建 `auto` 分支
 
-```bash
-cd ${DOC_PATH}/blogs
-git init
-git remote add origin ${REPO_URL}
-git checkout -b auto
-git commit --allow-empty -m "initial empty commit"
-git push -u origin auto
-```
+    ```bash
+    cd ${DOC_PATH}/blogs
+    git init
+    git remote add origin ${REPO_URL}
+    git checkout -b auto
+    git commit --allow-empty -m "initial empty commit"
+    git push -u origin auto
+    ```
 
-设置定时执行
++   设置定时同步（每分钟一次）
 
-```bash
-chmod +x ${PROJECT_PATH}/tools/auto-sync-blogs.sh
+    ```bash
+    chmod +x ./auto-sync-blogs.sh
+    
+    crontab -e
+    * * * * * export DOC_PATH=${DOC_PATH} && /bin/bash ${PROJECT_PATH}/tools/auto-sync-blogs.sh >> ${PROJECT_PATH}/tools/auto-sync-blogs.log 2>&1
+    ```
 
-crontab -e
-* * * * * export DOC_PATH=${DOC_PATH} && /bin/bash ${PROJECT_PATH}/tools/auto-sync-blogs.sh >> ${PROJECT_PATH}/tools/auto-sync-blogs.log 2>&1
-```
+#### README文件自动拉取
 
-#### 关于我页面自动拉取Github
++   README 目录连接远程仓库
 
-定时执行拉取
+    ```bash
+    cd ${README_DIR}
+    git init
+    git remote add origin ${REPO_URL}
+    ```
 
-```bash
-chmod +x ${PROJECT_PATH}/tools/pull-readme.sh
++   设置定时拉取（每天一次）
 
-crontab -e
-0 4 * * * export GITHUB_USER=${GITHUB_USER} README_DIR=${README_DIR} && /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
-```
+    ```bash
+    chmod +x ./pull-readme.sh
+    
+    crontab -e
+    0 4 * * * export GITHUB_USER=${GITHUB_USER} && export README_DIR=${README_DIR} && /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
+    ```
 
