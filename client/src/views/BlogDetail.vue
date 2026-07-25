@@ -158,6 +158,8 @@ function smoothScrollTo(el: HTMLElement, duration = 1000) {
 function scrollToHeading(slug: string) {
   const path = findPathToSlug(headings.value, slug)
   activeSlugs.value = new Set(path.map(item => item.slug))
+  // 同步更新 URL hash
+  router.replace({ hash: '#' + slug })
   const el = document.getElementById(slug)
   if (el) smoothScrollTo(el)
 }
