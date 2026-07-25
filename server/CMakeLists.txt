@@ -17,6 +17,7 @@ find_package(yaml-cpp          CONFIG REQUIRED)
 # 源文件
 add_executable(${PROJECT_NAME}
     main.cpp
+    src/about/about_init.cpp
     src/db/connection.cpp
     src/crypto/argon2id.cpp
     src/auth/login.cpp

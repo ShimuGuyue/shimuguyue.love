@@ -14,6 +14,9 @@
 #include <algorithm>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
+#include <filesystem>
+#include <format>
 #include <iostream>
 #include <mutex>
 #include <sstream>
@@ -829,6 +832,29 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             }
 
             res.set_content(R"({"ok":true})", "application/json");
+        }
+    );
+
+    // GET /api/about — 获取 README.md 内容
+    svr.Get("/api/about",
+        [allowed](const auto&, auto& res)
+        {
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+
+            const char* readme_dir = std::getenv("README_DIR");
+            std::filesystem::path md_path = readme_dir
+                ? std::filesystem::path{readme_dir} / "README.md"
+                : std::filesystem::path{std::format("{}/../README/README.md", md::doc_path())};
+            std::ifstream ifs{ md_path, std::ios::binary };
+            if (!ifs) {
+                res.status = 404;
+                res.set_content(R"({"error":"README 不存在"})", "application/json");
+                return;
+            }
+            std::ostringstream oss;
+            oss << ifs.rdbuf();
+            res.set_content(nlohmann::json{{"content", oss.str()}}.dump(), "application/json");
         }
     );
 
