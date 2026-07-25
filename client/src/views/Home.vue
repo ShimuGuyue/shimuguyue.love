@@ -70,7 +70,9 @@ onMounted(async () => {
 
   if (auth.isLoggedIn && auth.id !== null) {
     try {
-      const resp = await fetch(`/api/user/permissions?user_id=${auth.id}`)
+      const resp = await fetch('/api/user/permissions', {
+        headers: { 'Authorization': 'Bearer ' + auth.token }
+      })
       if (resp.ok) {
         const data = await resp.json()
         permissions.value = data.permissions || []
