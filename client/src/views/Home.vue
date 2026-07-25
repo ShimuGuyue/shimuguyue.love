@@ -516,6 +516,7 @@ function imgStyle(img: ImageItem) {
               :src="`/image/${img.path}`"
               :alt="img.description"
               draggable="false"
+              :style="{ border: `5px solid ${theme.isDark ? '#000' : '#fff'}` }"
             />
             <button
               v-if="editMode"
@@ -952,6 +953,7 @@ function imgStyle(img: ImageItem) {
   padding: 8px;
   box-sizing: border-box;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 </style>
 
