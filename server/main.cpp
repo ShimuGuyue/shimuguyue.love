@@ -4,7 +4,6 @@
 
 #include <iostream>
 
-#include "about/about_init.h"
 #include "db/connection.h"
 #include "http/routes.h"
 #include "image/image_queries.h"
@@ -13,8 +12,6 @@
 int main(int argc, char* argv[])
 {
     std::ios::sync_with_stdio(false);
-
-    about::check_readme_dir();
 
     const std::string host = http::read_host_or_exit();
     const int         port = http::read_port_or_exit();

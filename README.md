@@ -115,6 +115,7 @@ cd ${PROJECT_PATH}
     psql -f ./create_sessions.sql    # session表
     psql -f ./create_images.sql      # 图片表
     psql -f ./create_profile.sql     # 个人简介表
+    psql -f ./create_about.sql      # 关于我 页面 README 内容表
     ```
 
 ### 后端
@@ -163,7 +164,6 @@ cd ${PROJECT_PATH}
     echo 'export SERVER_PORT=${SERVER_PORT}' >> ~/.bashrc  # 服务端端口
     echo 'export DOC_PATH=${DOC_PATH}'       >> ~/.bashrc  # 文档文件保存目录
     echo 'export IMAGE_PATH=${IMAGE_PATH}'   >> ~/.bashrc  # 图片文件保存目录
-    echo 'export README_DIR=${README_DIR}'   >> ~/.bashrc  # 关于我 页面 README 文件存放路径
     source ~/.bashrc
     ```
 
@@ -240,9 +240,9 @@ cd ${PROJECT_PATH}
     * * * * * export DOC_PATH=${DOC_PATH} && /bin/bash ${PROJECT_PATH}/tools/auto-sync-blogs.sh >> ${PROJECT_PATH}/tools/auto-sync-blogs.log 2>&1
     ```
 
-#### README文件自动拉取
+#### README内容自动拉取
 
-+   README 目录连接远程仓库
++   创建目录连接 README 远程仓库
 
     ```bash
     cd ${README_DIR}
@@ -250,12 +250,12 @@ cd ${PROJECT_PATH}
     git remote add origin ${REPO_URL}
     ```
 
-+   设置定时拉取（每天一次）
++   设置定时拉取并同步到数据库（每天一次）
 
     ```bash
     chmod +x ./pull-readme.sh
     
     crontab -e
-    0 4 * * * export GITHUB_USER=${GITHUB_USER} && export README_DIR=${README_DIR} && /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
+    0 4 * * * export GITHUB_USER=${GITHUB_USER} && export README_DIR=${README_DIR} && export PGHOST=${PGHOST} && export PGPORT=${PGPORT} && export PGDATABASE=${PGDATABASE} && export PGUSER=${PGUSER} && export PGPASSWORD=${PGPASSWORD} && /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
     ```
 
