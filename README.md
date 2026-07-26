@@ -115,6 +115,7 @@ cd ${PROJECT_PATH}
     psql -f ./create_sessions.sql    # session表
     psql -f ./create_images.sql      # 图片表
     psql -f ./create_profile.sql     # 个人简介表
+    psql -f ./create_about.sql      # 关于我 页面 README 内容表
     ```
 
 ### 后端
@@ -163,7 +164,6 @@ cd ${PROJECT_PATH}
     echo 'export SERVER_PORT=${SERVER_PORT}' >> ~/.bashrc  # 服务端端口
     echo 'export DOC_PATH=${DOC_PATH}'       >> ~/.bashrc  # 文档文件保存目录
     echo 'export IMAGE_PATH=${IMAGE_PATH}'   >> ~/.bashrc  # 图片文件保存目录
-    echo 'export README_DIR=${README_DIR}'   >> ~/.bashrc  # 关于我 页面 README 文件存放路径
     source ~/.bashrc
     ```
 

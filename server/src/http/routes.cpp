@@ -5,6 +5,7 @@
 
 #include "http/routes.h"
 #include "http/rate_limit.h"
+#include "about/about_queries.h"
 #include "auth/login.h"
 #include "auth/session.h"
 #include "blog/blog_queries.h"
@@ -858,26 +859,14 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
         }
     );
 
-    // GET /api/about — 获取 README.md 内容
+    // GET /api/about — 获取《关于我》README 内容（从数据库读取）
     svr.Get("/api/about",
-        [allowed](const auto&, auto& res)
+        [&conn, allowed](const auto&, auto& res)
         {
+            std::lock_guard<std::mutex> lock{ g_db_mutex };
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-
-            const char* readme_dir = std::getenv("README_DIR");
-            std::filesystem::path md_path = readme_dir
-                ? std::filesystem::path{readme_dir} / "README.md"
-                : std::filesystem::path{std::format("{}/../README/README.md", md::doc_path())};
-            std::ifstream ifs{ md_path, std::ios::binary };
-            if (!ifs) {
-                res.status = 404;
-                res.set_content(R"({"error":"README 不存在"})", "application/json");
-                return;
-            }
-            std::ostringstream oss;
-            oss << ifs.rdbuf();
-            res.set_content(nlohmann::json{{"content", oss.str()}}.dump(), "application/json");
+            res.set_content(nlohmann::json{{"content", about::get_about(conn)}}.dump(), "application/json");
         }
     );
 
