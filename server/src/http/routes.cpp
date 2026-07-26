@@ -4,6 +4,7 @@
  */
 
 #include "http/routes.h"
+#include "http/rate_limit.h"
 #include "auth/login.h"
 #include "auth/session.h"
 #include "blog/blog_queries.h"
@@ -109,6 +110,15 @@ static void handle_login_key(
         return;
     }
 
+    // 登录频率限制检查
+    const auto& ip = req.remote_addr;
+    if (rate_limit::is_rate_limited(ip))
+    {
+        res.status = 429;
+        res.set_content(R"({"error":"登录尝试过于频繁，请稍后再试"})", "application/json");
+        return;
+    }
+
     // 调用登录逻辑
     const auto key = body.value("key", "");
     auto result = auth::login_by_key(conn, key);
@@ -117,11 +127,13 @@ static void handle_login_key(
     if (!result)
     {
         res.status = 401;
+        rate_limit::record_failure(ip);
         nlohmann::json err;
         err["error"] = result.error();
         res.set_content(err.dump(), "application/json");
         return;
     }
+    rate_limit::clear(ip);
     nlohmann::json resp;
     resp["id"] = result->id;
     resp["username"] = result->username.has_value()
@@ -153,6 +165,15 @@ static void handle_login_password(
         return;
     }
 
+    // 登录频率限制检查
+    const auto& ip = req.remote_addr;
+    if (rate_limit::is_rate_limited(ip))
+    {
+        res.status = 429;
+        res.set_content(R"({"error":"登录尝试过于频繁，请稍后再试"})", "application/json");
+        return;
+    }
+
     // 调用登录逻辑
     const auto username = body.value("username", "");
     const auto pwd      = body.value("password", "");
@@ -162,9 +183,11 @@ static void handle_login_password(
     if (!result)
     {
         res.status = 401;
+        rate_limit::record_failure(ip);
         res.set_content(R"({"error":"用户名或密码错误"})", "application/json");
         return;
     }
+    rate_limit::clear(ip);
     nlohmann::json resp;
     resp["id"]          = result->id;
     resp["username"]    = *result->username;
