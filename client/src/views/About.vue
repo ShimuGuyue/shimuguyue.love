@@ -8,6 +8,11 @@ import 'highlight.js/styles/github.css'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
 
+import '@/assets/blog-layout.css'
+import '@/assets/markdown.css'
+import '@/assets/glass.css'
+import '@/assets/pink-theme.css'
+
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
   .use(taskLists, { enabled: true, label: true, labelAfter: true })
   .use(markdownItGitHubAlerts)
@@ -107,8 +112,3 @@ onMounted(async () => {
 }
 </style>
 
-<style>
-@import "@/assets/blog-layout.css";
-@import "@/assets/markdown.css";
-@import "@/assets/glass.css";
-</style>

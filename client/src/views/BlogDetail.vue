@@ -8,6 +8,12 @@ import markdownItGitHubAlerts from 'markdown-it-github-alerts'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import katex from 'katex'
+
+import '@/assets/blog-layout.css'
+import '@/assets/blog.css'
+import '@/assets/glass.css'
+import '@/assets/markdown.css'
+import '@/assets/pink-theme.css'
 import 'katex/dist/katex.min.css'
 
 const route = useRoute()
@@ -569,12 +575,4 @@ watch(renderedContent, async () => {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
 }
-</style>
-
-<style>
-@import "@/assets/blog-layout.css";
-@import "@/assets/blog.css";
-@import "@/assets/glass.css";
-@import "@/assets/markdown.css";
-@import "katex/dist/katex.min.css";
 </style>

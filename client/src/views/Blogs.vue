@@ -2,6 +2,8 @@
 import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router'
 
+import '@/assets/blog.css'
+
 const router = useRouter()
 const route = useRoute()
 
@@ -452,6 +454,3 @@ onMounted(async () => {
 
 </style>
 
-<style>
-@import "@/assets/blog.css";
-</style>

@@ -2,6 +2,12 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+
+import '@/assets/blog-layout.css'
+import '@/assets/blog.css'
+import '@/assets/pink-theme.css'
+import '@/assets/glass.css'
+import '@/assets/markdown.css'
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
@@ -373,10 +379,3 @@ async function saveBlog() {
 }
 </style>
 
-<style>
-@import "@/assets/blog-layout.css";
-@import "@/assets/blog.css";
-@import "@/assets/pink-theme.css";
-@import "@/assets/glass.css";
-@import "@/assets/markdown.css";
-</style>
