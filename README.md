@@ -240,9 +240,9 @@ cd ${PROJECT_PATH}
     * * * * * export DOC_PATH=${DOC_PATH} && /bin/bash ${PROJECT_PATH}/tools/auto-sync-blogs.sh >> ${PROJECT_PATH}/tools/auto-sync-blogs.log 2>&1
     ```
 
-#### README文件自动拉取
+#### README内容自动拉取
 
-+   README 目录连接远程仓库
++   创建目录连接 README 远程仓库
 
     ```bash
     cd ${README_DIR}
@@ -250,12 +250,12 @@ cd ${PROJECT_PATH}
     git remote add origin ${REPO_URL}
     ```
 
-+   设置定时拉取（每天一次）
++   设置定时拉取并同步到数据库（每天一次）
 
     ```bash
     chmod +x ./pull-readme.sh
     
     crontab -e
-    0 4 * * * export GITHUB_USER=${GITHUB_USER} && export README_DIR=${README_DIR} && /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
+    0 4 * * * export GITHUB_USER=${GITHUB_USER} && export README_DIR=${README_DIR} && export PGHOST=${PGHOST} && export PGPORT=${PGPORT} && export PGDATABASE=${PGDATABASE} && export PGUSER=${PGUSER} && export PGPASSWORD=${PGPASSWORD} && /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
     ```
 

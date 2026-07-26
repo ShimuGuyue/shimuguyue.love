@@ -2,13 +2,15 @@
 # ============================================================
 # pull-readme.sh — 个人介绍 README 自动拉取脚本
 # ============================================================
-# 用途：从 GitHub 拉取 $GITHUB_USER/$GITHUB_USER 仓库到本地，供 About 页面渲染。
+# 用途：从 GitHub 拉取 $GITHUB_USER/$GITHUB_USER 仓库到本地，
+#       并通过 psql 将 README.md 内容同步到数据库 about 表。
 # 部署：由 crontab 或 systemd timer 每天定时调用一次。
 #
 # 前置条件：
 #   1. 目标仓库公开可访问（无需认证）。
 #   2. 本脚本对 $README_DIR 目录有写权限。
 #   3. git 已安装。
+#   4. psql 已安装并配置好数据库连接环境变量（PGHOST 等）。
 #
 # 环境变量：
 #   GITHUB_USER    — GitHub 用户名，仓库地址为 github.com/$GITHUB_USER/$GITHUB_USER
@@ -18,7 +20,8 @@
 # 工作原理：
 #   首次运行时 clone 仓库到 $README_DIR。
 #   之后每次运行执行 git fetch + reset --hard 获取最新内容。
-#   服务器 GET /api/about 读取 $README_DIR/README.md 返回前端。
+#   拉取成功后通过 psql 将内容写入数据库 about 表。
+#   前端 GET /api/about 从数据库直接读取，不再依赖文件系统。
 # ============================================================
 
 set -euo pipefail
@@ -42,5 +45,27 @@ else
     git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$README_DIR"
     echo "[pull-readme] 已 clone README 仓库。"
 fi
+
+# 同步内容到数据库
+README_FILE="$README_DIR/README.md"
+if [[ ! -f "$README_FILE" ]]; then
+    echo "[pull-readme] 错误：$README_FILE 不存在！" >&2
+    exit 1
+fi
+
+echo "[pull-readme] 正在同步 README 内容到数据库..."
+TMP_SQL=$(mktemp)
+{
+    printf "UPDATE about SET content = \$content\$"
+    cat "$README_FILE"
+    printf "\$content\$ WHERE id = 1;\n"
+} > "$TMP_SQL"
+
+if psql -f "$TMP_SQL" > /dev/null 2>&1; then
+    echo "[pull-readme] 已同步 README 内容到数据库。"
+else
+    echo "[pull-readme] 警告：同步到数据库失败！" >&2
+fi
+rm -f "$TMP_SQL"
 
 echo "[pull-readme] $(date '+%Y-%m-%d %H:%M') 完成。"
