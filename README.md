@@ -115,7 +115,7 @@ cd ${PROJECT_PATH}
     psql -f ./create_sessions.sql    # session表
     psql -f ./create_images.sql      # 图片表
     psql -f ./create_profile.sql     # 个人简介表
-    psql -f ./create_about.sql      # 关于我 页面 README 内容表
+    psql -f ./create_about.sql       # README页面内容表
     ```
 
 ### 后端
@@ -132,7 +132,7 @@ cd ${PROJECT_PATH}
 
     ```bash
     git clone https://github.com/Microsoft/vcpkg.git ${VCPKG_ROOT}
-    ./vcpkg/bootstrap-vcpkg.sh
+    ${VCPKG_ROOT}/bootstrap-vcpkg.sh
 
     echo 'export VCPKG_ROOT=${VCPKG_ROOT}' >> ~/.bashrc
     echo 'export PATH="$PATH:$VCPKG_ROOT"' >> ~/.bashrc
