@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import NavBar from '@/components/NavBar.vue'
+import '@/assets/background.css'
 </script>
 
 <template>
@@ -53,6 +54,3 @@ html::-webkit-scrollbar {
 
 </style>
 
-<style>
-@import "@/assets/background.css";
-</style>

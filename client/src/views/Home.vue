@@ -3,6 +3,9 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
+import '@/assets/glass.css'
+import '@/assets/pink-theme.css'
+
 const auth = useAuthStore()
 const theme = useThemeStore()
 
@@ -958,7 +961,3 @@ function imgStyle(img: ImageItem) {
 }
 </style>
 
-<style>
-@import "@/assets/glass.css";
-@import "@/assets/pink-theme.css";
-</style>

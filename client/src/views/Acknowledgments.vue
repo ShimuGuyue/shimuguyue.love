@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import '@/assets/glass.css'
+import '@/assets/pink-theme.css'
 </script>
 
 <template>
@@ -140,7 +142,3 @@ html.dark .thanks__card a:hover {
 }
 </style>
 
-<style>
-@import "@/assets/glass.css";
-@import "@/assets/pink-theme.css";
-</style>
