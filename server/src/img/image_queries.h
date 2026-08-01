@@ -11,7 +11,8 @@
 #include <string_view>
 #include <vector>
 
-namespace img {
+namespace img
+{
 
 /**
  * @brief 初始化：读取 IMAGE_PATH 环境变量，不存在则 exit(1)。

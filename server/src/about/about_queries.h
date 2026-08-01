@@ -8,7 +8,8 @@
 
 #include <string>
 
-namespace about {
+namespace about
+{
 
 /**
  * @brief 获取《关于我》页面的 README 内容。

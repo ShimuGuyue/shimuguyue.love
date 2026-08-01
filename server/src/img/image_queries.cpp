@@ -15,7 +15,8 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-namespace img {
+namespace img
+{
 
 static std::string IMAGE_PATH;
 
