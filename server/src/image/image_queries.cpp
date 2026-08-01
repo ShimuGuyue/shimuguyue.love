@@ -5,6 +5,8 @@
 
 #include "image/image_queries.h"
 
+#include "config/env.h"
+
 #include <cstdlib>
 #include <filesystem>
 #include <format>
@@ -18,21 +20,11 @@ static std::string IMAGE_PATH;
 
 void init()
 {
-    std::cout << "正在获取 IMAGE_PATH..." << std::endl;
-    const char* p = std::getenv("IMAGE_PATH");
-    if (!p)
-    {
-        std::cerr << "错误：缺少必需的环境变量 IMAGE_PATH！" << std::endl;
-        std::exit(1);
-    }
-    IMAGE_PATH = p;
+    IMAGE_PATH = config::get_env("IMAGE_PATH");
 
-    // 确保 home 子目录存在
+    // 确保子目录存在
     std::error_code ec;
-    std::filesystem::create_directories(
-        std::format("{}/home", IMAGE_PATH), ec);
-
-    std::cout << "IMAGE_PATH 获取成功。\n" << std::endl;
+    std::filesystem::create_directories(std::format("{}/home", IMAGE_PATH), ec);
 }
 
 auto image_path() -> const std::string&

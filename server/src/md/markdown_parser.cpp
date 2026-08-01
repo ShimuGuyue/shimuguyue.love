@@ -5,29 +5,23 @@
 
 #include "md/markdown_parser.h"
 
+#include "config/env.h"
+
 #include <yaml-cpp/yaml.h>
 #include <nlohmann/json.hpp>
 #include <regex>
 #include <string>
-
 #include <cstdlib>
-#include <iostream>
+#include <spdlog/spdlog.h>
 
-namespace md {
+namespace md
+{
 
 static std::string DOC_PATH;
 
 void init()
 {
-    /*log*/std::cout << "正在获取 DOC_PATH..." << std::endl;
-    const char* p = std::getenv("DOC_PATH");
-    if (!p)
-    {
-        /*log*/std::cerr << "错误：缺少必需的环境变量 DOC_PATH！" << std::endl;
-        std::exit(1);
-    }
-    DOC_PATH = p;
-    /*log*/std::cout << "DOC_PATH 获取成功。\n" << std::endl;
+    DOC_PATH = config::get_env("DOC_PATH");
 }
 
 auto doc_path() -> const std::string&

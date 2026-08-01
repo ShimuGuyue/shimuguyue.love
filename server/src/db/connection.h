@@ -9,13 +9,14 @@
 namespace db {
 
 /**
- * @brief 从环境变量读取数据库连接参数，建立并返回一个 pqxx::connection。
- *
- * 依次读取 PGHOST、PGPORT、PGDATABASE、PGUSER、PGPASSWORD 环境变量，
- * 若未设置则打印缺失信息并中断程序。
- *
+ * @brief 初始化数据库连接。
+ */
+void init();
+
+/**
+ * @brief 获取数据库连接的 pqxx::connection
  * @return 已打开的 pqxx::connection。
  */
-[[nodiscard]] auto connect() -> pqxx::connection;
+[[nodiscard]] auto connection() -> pqxx::connection&;
 
 } // namespace db

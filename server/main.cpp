@@ -3,6 +3,7 @@
  */
 
 #include <iostream>
+#include <spdlog/spdlog.h>
 
 #include "db/connection.h"
 #include "http/routes.h"
@@ -11,20 +12,18 @@
 
 int main(int argc, char* argv[])
 {
-    std::ios::sync_with_stdio(false);
+    spdlog::set_level(spdlog::level::trace);
+    spdlog::info("项目初始化进行中...");
 
-    const std::string host = http::read_host_or_exit();
-    const int         port = http::read_port_or_exit();
-
-    pqxx::connection conn = db::connect();
-
+    http::init();
+    db::init();
     md::init();
     img::init();
 
     httplib::Server svr;
-    http::setup_routes(svr, conn);
+    http::setup_routes(svr, db::connection());
 
-    svr.listen(host, port);
+    spdlog::info("项目初始化完成。\n");
 
-    return 0;
+    svr.listen(http::server_host(), http::server_port());
 }
