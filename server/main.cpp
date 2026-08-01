@@ -16,9 +16,9 @@ int main(int argc, char* argv[])
     spdlog::info("项目初始化进行中...");
 
     http::init();
-    db::init();
-    md::init();
-    img::init();
+    db::  init();
+    md::  init();
+    img:: init();
 
     httplib::Server svr;
     http::setup_routes(svr, db::connection());

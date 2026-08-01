@@ -10,7 +10,8 @@
 #include <string>
 #include <string_view>
 
-namespace profile {
+namespace profile
+{
 
 /**
  * @brief 获取个人介绍。

@@ -7,26 +7,27 @@
 
 #include <nlohmann/json.hpp>
 #include <pqxx/pqxx>
+#include <spdlog/spdlog.h>
 
-namespace profile {
+namespace profile
+{
 
 auto get_profile(pqxx::connection& conn) -> nlohmann::json
 {
+    spdlog::info("正在从数据库获取个人简介...");
     pqxx::work txn{ conn };
     const auto rows = txn.exec(
         "SELECT title, subtitle, bio FROM profile WHERE id = 1"
     );
+    const auto& row = rows[0];
 
-    nlohmann::json j;
-    if (!rows.empty())
-    {
-        const auto& row = rows[0];
-        j["title"]    = row["title"].as<std::string>();
-        j["subtitle"] = row["subtitle"].as<std::string>();
-        j["bio"]      = row["bio"].as<std::string>();
-    }
+    nlohmann::json json;
+    json["title"]    = row["title"]   .as<std::string>();
+    json["subtitle"] = row["subtitle"].as<std::string>();
+    json["bio"]      = row["bio"]     .as<std::string>();
     txn.commit();
-    return j;
+    spdlog::info("获取个人简介成功。");
+    return json;
 }
 
 auto update_profile(
@@ -36,16 +37,18 @@ auto update_profile(
     std::string_view  bio)
 -> std::string
 {
+    spdlog::info("正在向数据库更新个人简介...");
     pqxx::work txn{ conn };
     txn.exec(
         "UPDATE profile SET title = $1, subtitle = $2, bio = $3 WHERE id = 1",
         pqxx::params{
-            std::string{title},
-            std::string{subtitle},
-            std::string{bio}
+            std::string{ title },
+            std::string{ subtitle },
+            std::string{ bio }
         }
     );
     txn.commit();
+    spdlog::info("更新个人简介成功。");
     return {};
 }
 
