@@ -12,17 +12,10 @@
 #include <string>
 #include <spdlog/spdlog.h>
 
-namespace
-{
-
-pqxx::connection connection_;
-
-} // namespace
-
-
-
 namespace db
 {
+
+static pqxx::connection connection_;
 
 void init()
 {
@@ -45,7 +38,7 @@ void init()
         spdlog::error("连接至 PostgreSQL 失败！");
         exit(1);
     }
-    spdlog::info("成功连接至 PostgreSQL。\n");
+    spdlog::info("成功连接至 PostgreSQL。");
 }
 
 const auto connection() -> pqxx::connection&

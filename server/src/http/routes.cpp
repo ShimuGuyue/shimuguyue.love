@@ -25,20 +25,15 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-namespace
+namespace http
 {
 
-std::string front_origin_;
-std::string server_host_;
-int         server_port_;
+static std::string front_origin_;
+static std::string server_host_;
+static int         server_port_;
 
 /// libpqxx connection 非线程安全，所有数据库操作串行化
 static std::mutex g_db_mutex;
-
-}
-
-namespace http
-{
 
 void init()
 {
