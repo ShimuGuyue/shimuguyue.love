@@ -174,14 +174,18 @@ static void handle_login_password(
     {
         res.status = 401;
         rate_limit::record_failure(ip);
-        res.set_content(R"({"error":"用户名或密码错误"})", "application/json");
+        nlohmann::json err;
+        err["error"] = result.error();
+        res.set_content(err.dump(), "application/json");
         return;
     }
     rate_limit::clear(ip);
     nlohmann::json resp;
-    resp["id"]          = result->id;
-    resp["username"]    = *result->username;
-    resp["token"]       = auth::create_session(conn, result->id, result->permissions);
+    resp["id"] = result->id;
+    resp["username"] = result->username.has_value()
+        ? nlohmann::json(*result->username)
+        : nlohmann::json(nullptr);
+    resp["token"] = auth::create_session(conn, result->id, result->permissions);
     res.set_content(resp.dump(), "application/json");
 }
 

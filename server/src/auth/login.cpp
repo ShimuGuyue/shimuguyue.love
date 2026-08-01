@@ -7,6 +7,7 @@
 #include "crypto/argon2id.h"
 
 #include <pqxx/pqxx>
+#include <spdlog/spdlog.h>
 
 namespace auth {
 
@@ -44,13 +45,20 @@ auto login_by_key(
     pqxx::connection& conn, std::string_view key)
 -> std::expected<LoginResult, std::string>
 {
+    spdlog::info("正在进行密钥登录...");
     if (key.empty())
-        return std::unexpected(std::string{"密钥不能为空"});
+    {
+        spdlog::info("登录失败：密钥为空。");
+        return std::unexpected(std::string{ "密钥不能为空" });
+    }
 
     // 使用固定盐值对 key 做一次哈希，然后数据库精确查找
     const auto hash = crypto::Argon2id::hash_with_fixed_salt(key);
     if (!hash)
-        return std::unexpected(std::string{"系统出了点问题，请稍后再试"});
+    {
+        spdlog::error("系统错误：密钥哈希失败！");
+        return std::unexpected(std::string{ "系统出了点问题，请稍后再试" });
+    }
 
     pqxx::work txn{ conn };
 
@@ -58,14 +66,68 @@ auto login_by_key(
     const auto row = txn.exec(
         "SELECT id, username, key_enabled "
         "FROM users "
-        "WHERE key_hash = $1",
+        "WHERE key_hash = $1 AND key_enabled = true",
         pqxx::params{ *hash }
     );
 
     if (row.empty())
-        return std::unexpected(std::string{"不存在的密钥"});
-    if (!row[0]["key_enabled"].as<bool>())
-        return std::unexpected(std::string{"该密钥已被废弃"});
+    {
+        spdlog::info("登录失败：无效的密钥。");
+        return std::unexpected(std::string{ "无效的密钥" });
+    }
+
+    LoginResult result;
+    result.id = row[0]["id"].as<int>();
+    if (!row[0]["username"].is_null())
+        result.username = row[0]["username"].as<std::string>();
+    result.permissions = fetch_permissions(txn, result.id);
+    txn.commit();
+    spdlog::info("密钥登录完成。");
+    return result;
+}
+
+auto login_by_password(
+    pqxx::connection& conn,
+    std::string_view  username,
+    std::string_view  password)
+-> std::expected<LoginResult, std::string>
+{
+    spdlog::info("正在进行密码登录...");
+    if (username.empty() || password.empty())
+    {
+        spdlog::info("登录失败：用户名或密码为空。");
+        return std::unexpected(std::string{ "用户名或密码不能为空" });
+    }
+
+    pqxx::work txn{ conn };
+
+    const auto row = txn.exec( 
+        "SELECT id, username, password_hash "
+        "FROM users "
+        "WHERE username = $1",
+        pqxx::params{ std::string{ username } }
+    );
+
+    if (row.empty())
+    {
+        spdlog::info("登录失败：用户 {} 不存在。", username);
+        return std::unexpected(std::string{ "用户名或密码错误" });
+    }
+
+    const auto hash = row[0]["password_hash"];
+
+    if (hash.is_null())
+    {
+        spdlog::info("登录失败：用户 {} 未设置密码。", username);
+        return std::unexpected(std::string{ "用户名或密码错误" });
+    }
+
+    const auto hash_str = hash.as<std::string>();
+    if (!crypto::Argon2id::verify(password, hash_str))
+    {
+        spdlog::info("登录失败：用户 {} 密码错误。", username);
+        return std::unexpected(std::string{ "用户名或密码错误" });
+    }
 
     LoginResult result;
     result.id = row[0]["id"].as<int>();
@@ -75,45 +137,7 @@ auto login_by_key(
     }
     result.permissions = fetch_permissions(txn, result.id);
     txn.commit();
-    return result;
-}
-
-auto login_by_password(
-    pqxx::connection& conn,
-    std::string_view  username,
-    std::string_view  password)
--> std::optional<LoginResult>
-{
-    if (username.empty() || password.empty())
-        return std::nullopt;
-
-    pqxx::work txn{ conn };
-
-    const auto row = txn.exec(
-        "SELECT id, password_hash "
-        "FROM users "
-        "WHERE username = $1",
-        pqxx::params{ std::string{username} }
-    );
-
-    if (row.empty())
-        return std::nullopt;
-
-    const auto hash = row[0]["password_hash"];
-
-    // 用户可能只通过 key 认证，未设置密码
-    if (hash.is_null())
-        return std::nullopt;
-
-    const auto hash_str = hash.as<std::string>();
-    if (!crypto::Argon2id::verify(password, hash_str))
-        return std::nullopt;
-
-    LoginResult result;
-    result.id = row[0]["id"].as<int>();
-    result.username = std::string{username};
-    result.permissions = fetch_permissions(txn, result.id);
-    txn.commit();
+    spdlog::info("密码登录完成。");
     return result;
 }
 

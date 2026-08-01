@@ -46,13 +46,13 @@ struct LoginResult
  * @param conn     数据库连接。
  * @param username 用户名。
  * @param password 明文密码。
- * @return 成功返回 LoginResult，失败返回 std::nullopt。
+ * @return 成功返回 LoginResult；失败返回错误消息字符串。
  */
 [[nodiscard]] auto login_by_password(
     pqxx::connection& conn,
     std::string_view  username,
     std::string_view  password)
--> std::optional<LoginResult>;
+-> std::expected<LoginResult, std::string>;
 
 /**
  * @brief 查询用户的权限列表。
