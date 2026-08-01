@@ -19,61 +19,110 @@
 #include <fstream>
 #include <filesystem>
 #include <format>
-#include <iostream>
 #include <mutex>
 #include <sstream>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
-namespace http {
+namespace
+{
+
+std::string front_origin_;
+std::string server_host_;
+int         server_port_;
 
 /// libpqxx connection 非线程安全，所有数据库操作串行化
 static std::mutex g_db_mutex;
 
 // ── 环境变量读取 ──
 
-auto read_port_or_exit() -> int
+/**
+ * @brief 从环境变量 FRONTEND_ORIGIN 读取允许的前端地址。
+ *        未设置则打印错误并调用 std::exit(1)。
+ * @return 前端 origin（如 "http://localhost:5173"）。
+ */
+void read_frontend_origin()
 {
-    /*log*/std::cout << "正在获取 SERVER_PORT..." << std::endl;
+    spdlog::info("正在获取环境变量 FRONTEND_ORIGIN...");
+    const char* origin = std::getenv("FRONTEND_ORIGIN");
+    if (origin == nullptr)
+    {
+        spdlog::error("缺少必需的环境变量 FRONTEND_ORIGIN！");
+        std::exit(1);
+    }
+    spdlog::info("环境变量 FRONTEND_ORIGIN 获取成功。\n");
+    front_origin_ = origin;
+}
+
+/**
+ * @brief 从环境变量 SERVER_HOST 读取监听地址。
+ *        未设置则打印错误并调用 std::exit(1)。
+ * @return 监听地址（如 "127.0.0.1" 或 "0.0.0.0"）。
+ */
+void read_server_host()
+{
+    spdlog::info("正在获取环境变量 SERVER_HOST...");
+    const char* host = std::getenv("SERVER_HOST");
+    if (host == nullptr)
+    {
+        spdlog::error("缺少必需的环境变量 SERVER_HOST！");
+        std::exit(1);
+    }
+    spdlog::info("环境变量 SERVER_HOST 获取成功。\n");
+    server_host_ = host;
+}
+
+/**
+ * @brief 从环境变量 SERVER_PORT 读取端口号。
+ *        未设置或无效则打印错误并调用 std::exit(1)。
+ * @return 有效的端口号。
+ */
+void read_server_port()
+{
+    spdlog::info("正在获取环境变量 SERVER_PORT...");
     const char* port_str = std::getenv("SERVER_PORT");
     if (port_str == nullptr)
     {
-        /*log*/std::cerr << "错误：缺少必需的环境变量 SERVER_PORT！" << std::endl;
+        spdlog::error("缺少必需的环境变量 SERVER_PORT！");
         std::exit(1);
     }
     const int port = std::atoi(port_str);
     if (port <= 0)
     {
-        /*log*/std::cerr << "错误：SERVER_PORT 必须是有效的端口号！" << std::endl;
+        spdlog::error("环境变量 SERVER_PORT 必须是有效的端口号！");
         std::exit(1);
     }
-    /*log*/std::cout << "SERVER_PORT 获取成功。\n" << std::endl;
-    return port;
+    spdlog::info("环境变量 SERVER_PORT 获取成功。\n");
+    server_port_ = port;
 }
 
-auto read_frontend_origin_or_exit() -> std::string
-{
-    /*log*/std::cout << "正在获取 FRONTEND_ORIGIN..." << std::endl;
-    const char* origin = std::getenv("FRONTEND_ORIGIN");
-    if (origin == nullptr)
-    {
-        /*log*/std::cerr << "错误：缺少必需的环境变量 FRONTEND_ORIGIN！" << std::endl;
-        std::exit(1);
-    }
-    /*log*/std::cout << "FRONTEND_ORIGIN 获取成功。\n" << std::endl;
-    return origin;
 }
 
-auto read_host_or_exit() -> std::string
+namespace http
 {
-    /*log*/std::cout << "正在获取 SERVER_HOST..." << std::endl;
-    const char* host = std::getenv("SERVER_HOST");
-    if (host == nullptr)
-    {
-        /*log*/std::cerr << "错误：缺少必需的环境变量 SERVER_HOST！" << std::endl;
-        std::exit(1);
-    }
-    /*log*/std::cout << "SERVER_HOST 获取成功。\n" << std::endl;
-    return host;
+
+void init()
+{
+    read_frontend_origin();
+    read_server_host();
+    read_server_port();
+}
+
+// ── 返回环境变量 ──
+
+auto frontend_origin() -> std::string
+{
+    return front_origin_;
+}
+
+auto server_host() -> std::string
+{
+    return server_host_;
+}
+
+auto server_port() -> int
+{
+    return server_port_;
 }
 
 // ── 路由处理函数 ──
@@ -492,7 +541,7 @@ static void handle_blog_update(
 
 void setup_routes(httplib::Server& svr, pqxx::connection& conn)
 {
-    const std::string allowed = read_frontend_origin_or_exit();
+    const std::string allowed = frontend_origin();
 
     svr.Options("/api/.*",
         [allowed](const auto&, auto& res)

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(server)
+project(server CXX)
 
 # C++23 版本标准，强制使用版本标准，禁用编译器独有拓展
 set(CMAKE_CXX_STANDARD 23)
@@ -13,6 +13,7 @@ find_package(unofficial-sodium CONFIG REQUIRED)
 find_package(httplib           CONFIG REQUIRED)
 find_package(nlohmann_json     CONFIG REQUIRED)
 find_package(yaml-cpp          CONFIG REQUIRED)
+find_package(spdlog            CONFIG REQUIRED)
 
 # 源文件
 add_executable(${PROJECT_NAME}
@@ -44,6 +45,7 @@ target_link_libraries(${PROJECT_NAME}
         httplib::httplib
         nlohmann_json::nlohmann_json
         yaml-cpp::yaml-cpp
+        spdlog::spdlog
 )
 
 # ---------- 安装规则 ----------
