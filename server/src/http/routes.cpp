@@ -9,7 +9,7 @@
 #include "auth/login.h"
 #include "auth/session.h"
 #include "blog/blog_queries.h"
-#include "image/image_queries.h"
+#include "img/image_queries.h"
 #include "md/markdown_parser.h"
 #include "profile/profile_queries.h"
 #include "config/env.h"

@@ -1,5 +1,5 @@
 /**
- * @file image/image_queries.h
+ * @file img/image_queries.h
  * @brief 照片墙图片数据库查询
  */
 #pragma once

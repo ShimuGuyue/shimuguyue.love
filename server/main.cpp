@@ -7,7 +7,7 @@
 
 #include "db/connection.h"
 #include "http/routes.h"
-#include "image/image_queries.h"
+#include "img/image_queries.h"
 #include "md/markdown_parser.h"
 
 int main(int argc, char* argv[])

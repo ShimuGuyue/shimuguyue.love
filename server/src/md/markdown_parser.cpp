@@ -119,10 +119,8 @@ auto parse_frontmatter(const std::string& raw) -> nlohmann::json
         }
     }
 
-    spdlog::info(
-        "md 文本的 fromtmatter 信息解析完成。\n"
-        "{}", json.dump()
-    );
+    spdlog::info("md 文本的 fromtmatter 信息解析完成。");
+    spdlog::debug("{}", json.dump());
     return json;
 }
 
