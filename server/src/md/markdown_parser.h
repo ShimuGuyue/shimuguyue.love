@@ -8,7 +8,8 @@
 #include <string>
 #include <vector>
 
-namespace md {
+namespace md
+{
 
 /**
  * @brief 读取 DOC_PATH 环境变量

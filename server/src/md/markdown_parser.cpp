@@ -31,6 +31,7 @@ auto doc_path() -> const std::string&
 
 auto parse_frontmatter(const std::string& raw) -> nlohmann::json
 {
+    spdlog::info("正在解析 md 文本的 fromtmatter 信息...");
     std::string text = raw;
 
     // 去除 UTF-8 BOM
@@ -42,37 +43,41 @@ auto parse_frontmatter(const std::string& raw) -> nlohmann::json
 
     // CRLF → LF
     for (size_t pos = text.find("\r\n"); pos != std::string::npos; pos = text.find("\r\n", pos))
+    {
         text.replace(pos, 2, "\n");
+    }
 
-    nlohmann::json result;
-    result["title"] = "";
-    result["description"] = "";
-    result["category"] = "";
-    result["tags"] = nlohmann::json::array();
-    result["file_path"] = "";
-    result["file_path_category"] = "";
-    result["file_path_name"] = "";
-    result["content"] = text;
+    nlohmann::json json;
+    json["title"] = "";
+    json["description"] = "";
+    json["category"] = "";
+    json["tags"] = nlohmann::json::array();
+    json["file_path_category"] = "";
+    json["file_path_name"] = "";
+    json["content"] = text;
 
 
     // 查找 frontmatter 分隔符
     auto first_delim = text.find("---\n");
     if (first_delim == std::string::npos)
-        return result;
-
+        return json;
     auto second_delim = text.find("\n---\n", first_delim + 4);
     if (second_delim == std::string::npos)
     {
         second_delim = text.find("\n---", first_delim + 4);
         if (second_delim == std::string::npos)
-            return result;
+            return json;
     }
 
     std::string fm_text = text.substr(first_delim + 4, second_delim - first_delim - 4);
     std::string content = text.substr(second_delim + 4);
-    while (!content.empty() && content[0] == '\n') content.erase(0, 1);
+    // 去除 frontmatter 与正文间空白行
+    while (!content.empty() && content[0] == '\n')
+    {
+        content.erase(0, 1);
+    }
 
-    result["content"] = content;
+    json["content"] = content;
 
     // 删除 YAML 解析会导致异常的空值行
     std::regex empty_line(R"(^\w+:\s*$)", std::regex::multiline);
@@ -82,40 +87,43 @@ auto parse_frontmatter(const std::string& raw) -> nlohmann::json
     YAML::Node fm = YAML::Load(fm_text);
 
     if (fm["title"])
-        result["title"] = fm["title"].as<std::string>();
+        json["title"] = fm["title"].as<std::string>();
 
     if (fm["description"])
-        result["description"] = fm["description"].as<std::string>();
+        json["description"] = fm["description"].as<std::string>();
 
     if (fm["category"])
-        result["category"] = fm["category"].as<std::string>();
+        json["category"] = fm["category"].as<std::string>();
 
     if (fm["tags"] && fm["tags"].IsSequence())
     {
         for (const auto& t : fm["tags"])
         {
-            result["tags"].push_back(t.as<std::string>());
+            json["tags"].push_back(t.as<std::string>());
         }
     }
 
     if (fm["file_path"])
     {
         std::string fp = fm["file_path"].as<std::string>();
-        result["file_path"] = fp;
         auto slash = fp.find('/');
         if (slash != std::string::npos)
         {
-            result["file_path_category"] = fp.substr(0, slash);
-            result["file_path_name"] = fp.substr(slash + 1);
+            json["file_path_category"] = fp.substr(0, slash);
+            json["file_path_name"] = fp.substr(slash + 1);
         }
         else
         {
-            result["file_path_category"] = "";
-            result["file_path_name"] = fp;
+            json["file_path_category"] = "";
+            json["file_path_name"] = fp;
         }
     }
 
-    return result;
+    spdlog::info(
+        "md 文本的 fromtmatter 信息解析完成。\n"
+        "{}", json.dump()
+    );
+    return json;
 }
 
 } // namespace md
