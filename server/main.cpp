@@ -13,7 +13,7 @@
 int main(int argc, char* argv[])
 {
     spdlog::set_level(spdlog::level::trace);
-    spdlog::info("项目初始化进行中...\n");
+    spdlog::info("项目初始化进行中...");
 
     http::init();
     db::init();
