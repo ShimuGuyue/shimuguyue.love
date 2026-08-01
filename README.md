@@ -155,6 +155,7 @@ cd ${PROJECT_PATH}
     vcpkg install cpp-httplib:x64-linux
     vcpkg install nlohmann-json:x64-linux
     vcpkg install yaml-cpp:x64-linux
+    vcpkg install spdlog
     ```
 
 +   设置环境变量
@@ -167,12 +168,14 @@ cd ${PROJECT_PATH}
     source ~/.bashrc
     ```
 
-+   构建并运行 `C++` 应用程序
++   构建并后台运行 `C++` 应用程序
 
     ```bash
     cmake -B build --preset default
     cmake --build build
-    ./build/server
+
+    ../tools/server-run.sh start # 启动后端运行
+    ../tools/server-run.sh stop  # 终止后端运行
     ```
 
 ### 项目配置
