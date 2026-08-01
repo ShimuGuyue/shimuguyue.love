@@ -28,20 +28,20 @@
 namespace http
 {
 
-static std::string front_origin_;
-static std::string server_host_;
-static int         server_port_;
+static std::string FRONTEND_ORIGIN;
+static std::string SERVER_HOST;
+static int         SERVER_PORT;
 
 /// libpqxx connection 非线程安全，所有数据库操作串行化
 static std::mutex g_db_mutex;
 
 void init()
 {
-    front_origin_ =           config::get_env("FRONTEND_ORIGIN");
-    server_host_  =           config::get_env("SERVER_HOST");
-    server_port_  = std::stoi(config::get_env("SERVER_PORT"));
+    FRONTEND_ORIGIN =           config::get_env("FRONTEND_ORIGIN");
+    SERVER_HOST     =           config::get_env("SERVER_HOST");
+    SERVER_PORT     = std::stoi(config::get_env("SERVER_PORT"));
 
-    if (server_port_ <= 0)
+    if (SERVER_PORT <= 0)
     {
         spdlog::error("环境变量 SERVER_PORT 必须是有效的端口号！");
         std::exit(1);
@@ -52,17 +52,17 @@ void init()
 
 auto frontend_origin() -> std::string
 {
-    return front_origin_;
+    return FRONTEND_ORIGIN;
 }
 
 auto server_host() -> std::string
 {
-    return server_host_;
+    return SERVER_HOST;
 }
 
 auto server_port() -> int
 {
-    return server_port_;
+    return SERVER_PORT;
 }
 
 // ── 路由处理函数 ──

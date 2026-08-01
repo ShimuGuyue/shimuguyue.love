@@ -23,5 +23,7 @@ int main(int argc, char* argv[])
     httplib::Server svr;
     http::setup_routes(svr, db::connection());
 
+    spdlog::info("项目初始化完成。\n");
+
     svr.listen(http::server_host(), http::server_port());
 }

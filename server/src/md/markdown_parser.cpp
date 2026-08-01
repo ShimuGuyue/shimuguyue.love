@@ -17,16 +17,16 @@
 namespace md
 {
 
-static std::string doc_path_;
+static std::string DOC_PATH;
 
 void init()
 {
-    doc_path_ = config::get_env("DOC_PATH");
+    DOC_PATH = config::get_env("DOC_PATH");
 }
 
 auto doc_path() -> const std::string&
 {
-    return doc_path_;
+    return DOC_PATH;
 }
 
 auto parse_frontmatter(const std::string& raw) -> nlohmann::json

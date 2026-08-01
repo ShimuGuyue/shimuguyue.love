@@ -15,7 +15,7 @@
 namespace db
 {
 
-static pqxx::connection connection_;
+static pqxx::connection conn;
 
 void init()
 {
@@ -31,9 +31,9 @@ void init()
         "host={} port={} dbname={} user={} password={}",
         host, port, dbname, user, password
     );
-    connection_ = pqxx::connection{ conn_str };
+    conn = pqxx::connection{ conn_str };
 
-    if (!connection_.is_open())
+    if (!conn.is_open())
     {
         spdlog::error("连接至 PostgreSQL 失败！");
         exit(1);
@@ -43,7 +43,7 @@ void init()
 
 const auto connection() -> pqxx::connection&
 {
-    return connection_;
+    return conn;
 }
 
 } // namespace db
