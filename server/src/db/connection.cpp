@@ -5,62 +5,52 @@
 
 #include "db/connection.h"
 
+#include "config/env.h"
+
 #include <cstdlib>
 #include <format>
-#include <iostream>
 #include <string>
+#include <spdlog/spdlog.h>
 
-namespace {
-
-/**
- * @brief 读取必需的环境变量，未设置时打印错误信息并退出程序。
- * @param key 环境变量名。
- * @return 环境变量的值。
- */
-[[nodiscard]]auto env_required(const char* key) -> std::string
+namespace
 {
-    const char* val{ std::getenv(key) };
-    if (val == nullptr)
-    {
-        /*log*/std::cerr << std::format("错误：缺少必需的环境变量 {}！", key) << std::endl;
-        std::exit(1);
-    }
-    return val;
-}
+
+pqxx::connection connection_;
 
 } // namespace
 
 
 
-// ================================================== //
-
-
-
-namespace db {
-
-auto connect() -> pqxx::connection
+namespace db
 {
-    /*log*/std::cout << "正在连接至 PostgreSQL..." << std::endl;
 
-    auto host     = env_required("PGHOST");
-    auto port     = env_required("PGPORT");
-    auto dbname   = env_required("PGDATABASE");
-    auto user     = env_required("PGUSER");
-    auto password = env_required("PGPASSWORD");
+void init()
+{
+    spdlog::info("正在连接至 PostgreSQL...");
+
+    auto host     = config::get_env("PGHOST");
+    auto port     = config::get_env("PGPORT");
+    auto dbname   = config::get_env("PGDATABASE");
+    auto user     = config::get_env("PGUSER");
+    auto password = config::get_env("PGPASSWORD");
 
     auto conn_str = std::format(
         "host={} port={} dbname={} user={} password={}",
         host, port, dbname, user, password
     );
-    pqxx::connection conn{ conn_str };
+    connection_ = pqxx::connection{ conn_str };
 
-    if (!conn.is_open())
+    if (!connection_.is_open())
     {
-        /*log*/std::cout << "连接至 PostgreSQL 失败！" << std::endl;
+        spdlog::error("连接至 PostgreSQL 失败！");
         exit(1);
     }
-    /*log*/std::cout << std::format("成功连接至 PostgreSQL。\n") << std::endl;
-    return conn;
+    spdlog::info("成功连接至 PostgreSQL。\n");
+}
+
+const auto connection() -> pqxx::connection&
+{
+    return connection_;
 }
 
 } // namespace db

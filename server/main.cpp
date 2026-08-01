@@ -16,14 +16,12 @@ int main(int argc, char* argv[])
     spdlog::info("项目初始化进行中...\n");
 
     http::init();
-
-    pqxx::connection conn = db::connect();
-
+    db::init();
     md::init();
     img::init();
 
     httplib::Server svr;
-    http::setup_routes(svr, conn);
+    http::setup_routes(svr, db::connection());
 
     svr.listen(http::server_host(), http::server_port());
 }
