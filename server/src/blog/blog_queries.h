@@ -110,12 +110,12 @@ struct BlogQuery
  *
  * @param conn      数据库连接。
  * @param file_path 博客文件相对路径。
- * @return 错误消息字符串（空表示成功）。
+ * @return 错误消息字符串（std::nullopt 表示成功）。
  */
 [[nodiscard]] auto delete_blog(
     pqxx::connection& conn,
     std::string_view  file_path)
--> std::string;
+-> std::optional<std::string>;
 
 /**
  * @brief 保存博客及关联元数据，同时写入 .md 文件。
@@ -128,7 +128,7 @@ struct BlogQuery
  * @param file_path_name      文件路径文件名部分。
  * @param content             博客正文（Markdown）。
  * @param date                更新日期（YYYY-MM-DD 格式）。
- * @return 错误消息字符串（空表示成功）。
+ * @return 错误消息字符串（std::nullopt 表示成功）。
  */
 [[nodiscard]] auto save_blog(
     pqxx::connection&               conn,
@@ -140,7 +140,7 @@ struct BlogQuery
     std::string_view                file_path_name,
     std::string_view                content,
     std::string_view                date)
--> std::string;
+-> std::optional<std::string>;
 
 /**
  * @brief 更新已有博客及关联元数据，同时覆盖 .md 文件。
@@ -155,7 +155,7 @@ struct BlogQuery
  * @param file_path_name      新文件路径文件名部分。
  * @param content             博客正文（Markdown）。
  * @param date                更新日期（YYYY-MM-DD 格式）。
- * @return 错误消息字符串（空表示成功）。
+ * @return 错误消息字符串（std::nullopt 表示成功）。
  */
 [[nodiscard]] auto update_blog(
     pqxx::connection&               conn,
@@ -168,6 +168,6 @@ struct BlogQuery
     std::string_view                file_path_name,
     std::string_view                content,
     std::string_view                date)
--> std::string;
+-> std::optional<std::string>;
 
 } // namespace blog

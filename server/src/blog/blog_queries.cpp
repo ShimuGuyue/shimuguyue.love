@@ -33,18 +33,18 @@ auto join_ids(const std::vector<int>& ids) -> std::string
     return oss.str();
 }
 
-/// 校验单个字段，禁止所有标点 / 空格 / 特殊字符，返回错误消息（空表示通过）
-static auto validate_field(std::string_view field_name, std::string_view value) -> std::string
+/// 校验单个字段，禁止所有标点 / 空格 / 特殊字符，返回错误消息（std::nullopt 表示通过）
+static auto validate_field(std::string_view field_name, std::string_view value) -> std::optional<std::string>
 {
     // 禁止：HTML 实体字符、路径分隔符、空格、点号、常见标点
     constexpr std::string_view BAD = "<>&\"'\\|*?/ .!@#$%^&*()+=[]{};:'\",.<>?/`~";
 
     if (value.find_first_of(BAD) != std::string::npos)
         return std::string{ field_name } + " 含有特殊字符";
-    return {};
+    return std::nullopt;
 }
 
-/// 校验所有元信息字段，返回错误消息（空表示通过）
+/// 校验所有元信息字段，返回错误消息（std::nullopt 表示通过）
 static auto validate_all_fields(
     std::string_view                title,
     std::string_view                description,
@@ -52,24 +52,24 @@ static auto validate_all_fields(
     const std::vector<std::string>& tag_names,
     std::string_view                file_path_category,
     std::string_view                file_path_name)
--> std::string
+-> std::optional<std::string>
 {
-    if (auto err = validate_field("标题", title);                  !err.empty())
+    if (auto err = validate_field("标题", title);                  err)
         return err;
-    if (auto err = validate_field("描述", description);            !err.empty())
+    if (auto err = validate_field("描述", description);            err)
         return err;
-    if (auto err = validate_field("分类", category_name);          !err.empty())
+    if (auto err = validate_field("分类", category_name);          err)
         return err;
     for (const auto& tag : tag_names)
     {
-        if (auto err = validate_field("标签", tag);                !err.empty())
+        if (auto err = validate_field("标签", tag);                err)
             return err;
     }
-    if (auto err = validate_field("文件路径", file_path_category); !err.empty())
+    if (auto err = validate_field("文件路径", file_path_category); err)
         return err;
-    if (auto err = validate_field("文件路径", file_path_name);     !err.empty())
+    if (auto err = validate_field("文件路径", file_path_name);     err)
         return err;
-    return {};
+    return std::nullopt;
 }
 
 } // namespace
@@ -329,12 +329,12 @@ auto save_blog(
     std::string_view                file_path_name,
     std::string_view                content,
     std::string_view                date)
- -> std::string
+ -> std::optional<std::string>
 {
     spdlog::info("正在保存博客 {}...", title);
-    if (auto err = validate_all_fields(title, description, category_name, tag_names, file_path_category, file_path_name); !err.empty())
+    if (auto err = validate_all_fields(title, description, category_name, tag_names, file_path_category, file_path_name); err)
     {
-        spdlog::error("保存博客失败：{}", err);
+        spdlog::error("保存博客失败：{}", *err);
         return err;
     }
 
@@ -348,7 +348,7 @@ auto save_blog(
         if (!r.empty())
         {
             spdlog::error("保存博客失败：路径 {} 已存在。", file_path);
-            return "博客路径已存在";
+            return std::string{ "博客路径已存在" };
         }
     }
 
@@ -369,7 +369,7 @@ auto save_blog(
             if (r.empty())
             {
                 spdlog::error("保存博客失败：创建分类 {} 失败。", category_name);
-                return "创建分类失败";
+                return std::string{ "创建分类失败" };
             }
             category_id = r[0]["id"].as<int>();
         }
@@ -406,7 +406,7 @@ auto save_blog(
     if (r.empty())
     {
         spdlog::error("保存博客失败：插入数据库记录失败。");
-        return "创建博客记录失败";
+        return std::string{ "创建博客记录失败" };
     }
 
     const int blog_id = r[0]["id"].as<int>();
@@ -444,7 +444,7 @@ auto save_blog(
         if (!ofs)
         {
             spdlog::error("保存博客失败：写入文件 {} 失败。", out_path.string());
-            return "写入文件失败！";
+            return std::string{ "写入文件失败！" };
         }
         ofs << fm.str();
         ofs.close();
@@ -452,13 +452,13 @@ auto save_blog(
 
     txn.commit();
     spdlog::info("博客保存成功。");
-    return {};
+    return std::nullopt;
 }
 
 auto delete_blog(
     pqxx::connection& conn,
     std::string_view  file_path)
--> std::string
+-> std::optional<std::string>
 {
     spdlog::info("正在删除博客 {}...", file_path);
     if (file_path.empty())
@@ -529,7 +529,7 @@ auto delete_blog(
     }
 
     spdlog::info("博客删除成功。");
-    return {};
+    return std::nullopt;
 }
 
 auto update_blog(
@@ -543,12 +543,12 @@ auto update_blog(
     std::string_view               file_path_name,
     std::string_view               content,
     std::string_view               date)
- -> std::string
+ -> std::optional<std::string>
 {
     spdlog::info("正在更新博客 {}...", title);
-    if (auto err = validate_all_fields(title, description, category_name, tag_names, file_path_category, file_path_name); !err.empty())
+    if (auto err = validate_all_fields(title, description, category_name, tag_names, file_path_category, file_path_name); err)
     {
-        spdlog::error("更新博客失败：{}", err);
+        spdlog::error("更新博客失败：{}", *err);
         return err;
     }
 
@@ -711,7 +711,7 @@ auto update_blog(
     }
 
     spdlog::info("博客更新成功。");
-    return {};
+    return std::nullopt;
 }
 
 } // namespace blog
