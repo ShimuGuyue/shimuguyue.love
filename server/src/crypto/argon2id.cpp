@@ -6,6 +6,7 @@
 #include "crypto/argon2id.h"
 
 #include <array>
+
 #include <sodium.h>
 #include <spdlog/spdlog.h>
 

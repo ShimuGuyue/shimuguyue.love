@@ -10,22 +10,21 @@
 
 namespace about
 {
+    auto get_about(pqxx::connection& conn) -> std::string
+    {
+        spdlog::debug("正在获取 README 内容...");
+        pqxx::work txn{ conn };
+        const auto rows = txn.exec(
+            "SELECT content FROM about WHERE id = 1"
+        );
 
-auto get_about(pqxx::connection& conn) -> std::string
-{
-    spdlog::info("正在获取 README 内容...");
-    pqxx::work txn{ conn };
-    const auto rows = txn.exec(
-        "SELECT content FROM about WHERE id = 1"
-    );
-
-    std::string content;
-    const auto& row = rows[0];
-    if (!row["content"].is_null())
-        content = row["content"].as<std::string>();
-    txn.commit();
-    spdlog::info("README 内容获取完成。");
-    return content;
-}
+        std::string content;
+        const auto& row = rows[0];
+        if (!row["content"].is_null())
+            content = row["content"].as<std::string>();
+        txn.commit();
+        spdlog::debug("README 内容获取完成。");
+        return content;
+    }
 
 } // namespace about
