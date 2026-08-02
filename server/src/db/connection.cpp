@@ -115,7 +115,6 @@ namespace
 
 namespace db
 {
-
 static pqxx::connection conn;
 
     void init()

@@ -14,7 +14,7 @@ namespace profile
 
 auto get_profile(pqxx::connection& conn) -> nlohmann::json
 {
-    spdlog::info("正在从数据库获取个人简介...");
+    spdlog::debug("正在从数据库获取个人简介...");
     pqxx::work txn{ conn };
     const auto rows = txn.exec(
         "SELECT title, subtitle, bio FROM profile WHERE id = 1"
@@ -35,9 +35,9 @@ auto update_profile(
     std::string_view  title,
     std::string_view  subtitle,
     std::string_view  bio)
--> std::string
+-> std::optional<std::string>
 {
-    spdlog::info("正在向数据库更新个人简介...");
+    spdlog::debug("正在向数据库更新个人简介...");
     pqxx::work txn{ conn };
     txn.exec(
         "UPDATE profile SET title = $1, subtitle = $2, bio = $3 WHERE id = 1",
@@ -49,7 +49,7 @@ auto update_profile(
     );
     txn.commit();
     spdlog::info("更新个人简介成功。");
-    return {};
+    return std::nullopt;
 }
 
 } // namespace profile
