@@ -11,7 +11,8 @@
 
 #include <pqxx/pqxx>
 
-namespace auth {
+namespace auth
+{
 
 /// 会话信息
 struct SessionInfo

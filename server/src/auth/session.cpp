@@ -8,10 +8,10 @@
 #include <mutex>
 #include <random>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
-namespace auth {
-
-namespace {
+namespace
+{
 
 std::mutex g_rng_mutex;
 
@@ -40,12 +40,18 @@ auto generate_token() -> std::string
 
 } // namespace
 
+
+
+namespace auth
+{
+
 auto create_session(
     pqxx::connection&               conn,
     int                             user_id,
     const std::vector<std::string>& permissions)
 -> std::string
 {
+    spdlog::info("正在为用户 {} 创建 session...", user_id);
     const auto token = generate_token();
 
     pqxx::work txn{ conn };
@@ -66,6 +72,8 @@ auto create_session(
     );
 
     txn.commit();
+    spdlog::info("用户 {} 的 session 创建成功。", user_id);
+    spdlog::debug("session token：{}", token);
     return token;
 }
 
@@ -74,9 +82,10 @@ auto validate_session(
     std::string_view  token)
 -> std::optional<SessionInfo>
 {
+    spdlog::debug("正在验证 session...");
     pqxx::work txn{ conn };
 
-    const auto row = txn.exec(
+    txn.exec(
         "DELETE FROM sessions "
         "WHERE expires_at <= NOW()"
     );
@@ -90,6 +99,7 @@ auto validate_session(
     if (result.empty())
     {
         txn.commit();
+        spdlog::info("session 验证失败：token 无效或已过期。");
         return std::nullopt;
     }
 
@@ -107,14 +117,17 @@ auto validate_session(
     }
 
     txn.commit();
+    spdlog::debug("session 验证通过（user_id={}）。", info.user_id);
     return info;
 }
 
 void cleanup_expired_sessions(pqxx::connection& conn)
 {
+    spdlog::info("正在清理过期 session...");
     pqxx::work txn{ conn };
-    txn.exec("DELETE FROM sessions WHERE expires_at <= NOW()");
+    const auto r = txn.exec("DELETE FROM sessions WHERE expires_at <= NOW()");
     txn.commit();
+    spdlog::info("已清理 {} 条过期 session。", r.affected_rows());
 }
 
 } // namespace auth
