@@ -8,7 +8,8 @@
 #include <string>
 #include <string_view>
 
-namespace crypto {
+namespace crypto
+{
 
 /**
  * @brief Argon2id 密码哈希工具类。

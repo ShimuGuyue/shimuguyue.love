@@ -7,10 +7,10 @@
 
 #include <array>
 #include <sodium.h>
+#include <spdlog/spdlog.h>
 
-namespace crypto {
-
-namespace {
+namespace
+{
 
 /// 固定盐哈希专用固定盐值（16 字节编译期常量）。
 constexpr std::array<unsigned char, crypto_pwhash_SALTBYTES> salt_fixed = {
@@ -38,10 +38,17 @@ auto bin_to_hex(const unsigned char* data, std::size_t len) -> std::string
 
 } // namespace
 
+
+
+namespace crypto
+{
+
 auto Argon2id::hash_with_random_salt(std::string_view data) -> std::optional<std::string>
 {
+    spdlog::info("正在进行 Argon2id 随机盐哈希...");
     if (data.empty())
     {
+        spdlog::info("随机盐哈希失败：输入数据为空。");
         return std::nullopt;
     }
 
@@ -57,17 +64,25 @@ auto Argon2id::hash_with_random_salt(std::string_view data) -> std::optional<std
     );
 
     if (result != 0)
+    {
+        spdlog::error("随机盐哈希失败：crypto_pwhash_str 返回错误码 {}", result);
         return std::nullopt;
+    }
 
     // 去除 crypto_pwhash_STRBYTES 尾部包含的 '\0'，返回紧凑字符串
     res.resize(std::char_traits<char>::length(res.data()));
+    spdlog::info("随机盐哈希完成。");
     return res;
 }
 
 auto Argon2id::hash_with_fixed_salt(std::string_view data) -> std::optional<std::string>
 {
+    spdlog::info("正在进行 Argon2id 固定盐哈希...");
     if (data.empty())
+    {
+        spdlog::info("固定盐哈希失败：输入数据为空。");
         return std::nullopt;
+    }
 
     // crypto_pwhash_BYTES = 32（libsodium 固定值；unofficial-sodium 未导出该宏）
     std::array<unsigned char, 32> hash_out{};
@@ -86,15 +101,24 @@ auto Argon2id::hash_with_fixed_salt(std::string_view data) -> std::optional<std:
     );
 
     if (result != 0)
+    {
+        spdlog::error("固定盐哈希失败：crypto_pwhash 返回错误码 {}", result);
         return std::nullopt;
+    }
 
-    return bin_to_hex(hash_out.data(), hash_out.size());
+    auto hex = bin_to_hex(hash_out.data(), hash_out.size());
+    spdlog::info("固定盐哈希完成：{}", hex);
+    return hex;
 }
 
 auto Argon2id::verify(std::string_view data, std::string_view hash) -> bool
 {
+    spdlog::info("正在进行 Argon2id 验证...");
     if (hash.empty() || data.empty())
+    {
+        spdlog::info("Argon2id 验证失败：输入数据或哈希值为空。");
         return false;
+    }
 
     auto result = static_cast<int>(
         crypto_pwhash_str_verify(
@@ -104,7 +128,13 @@ auto Argon2id::verify(std::string_view data, std::string_view hash) -> bool
         )
     );
 
-    return result == 0;
+    if (result != 0)
+    {
+        spdlog::info("Argon2id 验证失败：密码不匹配。");
+        return false;
+    }
+    spdlog::info("Argon2id 验证通过。");
+    return true;
 }
 
 } // namespace crypto
