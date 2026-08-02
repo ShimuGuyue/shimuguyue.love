@@ -12,7 +12,8 @@
 #include <nlohmann/json.hpp>
 #include <pqxx/pqxx>
 
-namespace blog {
+namespace blog
+{
 
 /**
  * @brief 分类信息。

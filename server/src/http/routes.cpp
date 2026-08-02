@@ -367,6 +367,7 @@ static void handle_blog_save(
 
     if (title.empty() || description.empty() || category.empty() ||
         pathCat.empty() || pathName.empty() || content.empty()) {
+        spdlog::error("保存博客失败：缺少必填字段。");
         res.status = 400;
         res.set_content(R"({"error":"所有字段均为必填"})", "application/json");
         return;
@@ -387,6 +388,7 @@ static void handle_blog_save(
         content, buf);
 
     if (!err.empty()) {
+        spdlog::error("保存博客失败：{}", err);
         res.status = 500;
         nlohmann::json j;
         j["error"] = err;
@@ -394,6 +396,7 @@ static void handle_blog_save(
         return;
     }
 
+    spdlog::info("博客保存成功：{}/{}。", pathCat, pathName);
     res.set_content(R"({"ok":true})", "application/json");
 }
 
@@ -412,6 +415,7 @@ static void handle_blog_update(
 
     const auto body = nlohmann::json::parse(req.body, nullptr, false);
     if (body.is_discarded()) {
+        spdlog::error("更新博客失败：无效的 JSON。");
         res.status = 400;
         res.set_content(R"({"error":"无效的 JSON"})", "application/json");
         return;
@@ -452,6 +456,7 @@ static void handle_blog_update(
 
     if (title.empty() || description.empty() || category.empty() ||
         pathCat.empty() || pathName.empty() || old_file_path.empty() || content.empty()) {
+        spdlog::error("更新博客失败：缺少必填字段。");
         res.status = 400;
         res.set_content(R"({"error":"所有字段均为必填"})", "application/json");
         return;
@@ -471,6 +476,7 @@ static void handle_blog_update(
         old_file_path, pathCat, pathName, content, buf);
 
     if (!err.empty()) {
+        spdlog::error("更新博客失败：{}", err);
         res.status = 500;
         nlohmann::json j;
         j["error"] = err;
@@ -478,6 +484,7 @@ static void handle_blog_update(
         return;
     }
 
+    spdlog::info("博客更新成功：{}/{}。", pathCat, pathName);
     res.set_content(R"({"ok":true})", "application/json");
 }
 
@@ -565,14 +572,18 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
 
             if (!req.has_param("file_path"))
             {
+                spdlog::error("获取博客失败：缺少 file_path 参数。");
                 res.status = 400;
                 res.set_content(R"({"error":"缺少 file_path 参数"})", "application/json");
                 return;
             }
 
-            auto blog = blog::get_blog_by_file_path(conn, req.get_param_value("file_path"));
+            const auto fp = req.get_param_value("file_path");
+            spdlog::info("正在获取博客：{}", fp);
+            auto blog = blog::get_blog_by_file_path(conn, fp);
             if (!blog)
             {
+                spdlog::info("获取博客失败：{} 不存在。", fp);
                 res.status = 404;
                 res.set_content(R"({"error":"博客不存在"})", "application/json");
                 return;
@@ -652,6 +663,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
 
             const auto body = nlohmann::json::parse(req.body, nullptr, false);
             if (body.is_discarded()) {
+                spdlog::error("保存图片元数据失败：无效的 JSON。");
                 res.status = 400;
                 res.set_content(R"({"error":"无效的 JSON"})", "application/json");
                 return;
@@ -668,12 +680,14 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
                 body.value("z", 0)
             );
             if (!err.empty()) {
+                spdlog::error("保存图片元数据失败：{}", err);
                 res.status = 500;
                 nlohmann::json j;
                 j["error"] = err;
                 res.set_content(j.dump(), "application/json");
                 return;
             }
+            spdlog::info("图片元数据保存成功：{}", body.value("path", ""));
             res.set_content(R"({"ok":true})", "application/json");
         }
     );
@@ -827,6 +841,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
 
             const auto body = nlohmann::json::parse(req.body, nullptr, false);
             if (body.is_discarded()) {
+                spdlog::error("删除博客失败：无效的 JSON。");
                 res.status = 400;
                 res.set_content(R"({"error":"无效的 JSON"})", "application/json");
                 return;
@@ -834,6 +849,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
 
             const auto file_path = body.value("file_path", "");
             if (file_path.empty()) {
+                spdlog::error("删除博客失败：缺少 file_path 参数。");
                 res.status = 400;
                 res.set_content(R"({"error":"缺少 file_path 参数"})", "application/json");
                 return;
@@ -841,6 +857,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
 
             const auto err = blog::delete_blog(conn, file_path);
             if (!err.empty()) {
+                spdlog::error("删除博客失败：{}", err);
                 res.status = 500;
                 nlohmann::json j;
                 j["error"] = err;
@@ -848,6 +865,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
                 return;
             }
 
+            spdlog::info("博客删除成功：{}。", file_path);
             res.set_content(R"({"ok":true})", "application/json");
         }
     );
