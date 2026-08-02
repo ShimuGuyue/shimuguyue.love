@@ -4,7 +4,7 @@
  */
 
 #include "http/routes.h"
-#include "http/rate_limit.h"
+#include "auth/rate_limit.h"
 #include "about/about_queries.h"
 #include "auth/login.h"
 #include "auth/session.h"
@@ -92,9 +92,12 @@ static void handle_login_key(
     res.set_header("Content-Type", "application/json");
 
     // 解析 JSON
+    spdlog::debug("收到密钥登录请求（ip={}）。", req.remote_addr);
+
     const auto body = nlohmann::json::parse(req.body, nullptr, false);
     if (body.is_discarded())
     {
+        spdlog::error("密钥登录失败：无效的 JSON。");
         res.status = 400;
         res.set_content(R"({"error":"无效的 JSON"})", "application/json");
         return;
@@ -102,8 +105,9 @@ static void handle_login_key(
 
     // 登录频率限制检查
     const auto& ip = req.remote_addr;
-    if (rate_limit::is_rate_limited(ip))
+    if (auth::is_rate_limited(ip))
     {
+        spdlog::error("密钥登录失败：IP {} 已被限流。", ip);
         res.status = 429;
         res.set_content(R"({"error":"登录尝试过于频繁，请稍后再试"})", "application/json");
         return;
@@ -113,17 +117,18 @@ static void handle_login_key(
     const auto key = body.value("key", "");
     auto result = auth::login_by_key(conn, key);
 
-    // 返回结果
     if (!result)
     {
+        spdlog::error("密钥登录失败（ip={}）：{}", ip, result.error());
         res.status = 401;
-        rate_limit::record_failure(ip);
+        auth::record_failure(ip);
         nlohmann::json err;
         err["error"] = result.error();
         res.set_content(err.dump(), "application/json");
         return;
     }
-    rate_limit::clear(ip);
+    auth::clear(ip);
+    spdlog::info("密钥登录成功（ip={}，user_id={}）。", ip, result->id);
     nlohmann::json resp;
     resp["id"] = result->id;
     resp["username"] = result->username.has_value()
@@ -147,9 +152,12 @@ static void handle_login_password(
     res.set_header("Content-Type", "application/json");
 
     // 解析 JSON
+    spdlog::debug("收到密码登录请求（ip={}）。", req.remote_addr);
+
     const auto body = nlohmann::json::parse(req.body, nullptr, false);
     if (body.is_discarded())
     {
+        spdlog::error("密码登录失败：无效的 JSON。");
         res.status = 400;
         res.set_content(R"({"error":"无效的 JSON"})", "application/json");
         return;
@@ -157,8 +165,9 @@ static void handle_login_password(
 
     // 登录频率限制检查
     const auto& ip = req.remote_addr;
-    if (rate_limit::is_rate_limited(ip))
+    if (auth::is_rate_limited(ip))
     {
+        spdlog::error("密码登录失败：IP {} 已被限流。", ip);
         res.status = 429;
         res.set_content(R"({"error":"登录尝试过于频繁，请稍后再试"})", "application/json");
         return;
@@ -169,17 +178,18 @@ static void handle_login_password(
     const auto pwd      = body.value("password", "");
     auto result = auth::login_by_password(conn, username, pwd);
 
-    // 返回结果
     if (!result)
     {
+        spdlog::error("密码登录失败（ip={}，user={}）：{}", ip, username, result.error());
         res.status = 401;
-        rate_limit::record_failure(ip);
+        auth::record_failure(ip);
         nlohmann::json err;
         err["error"] = result.error();
         res.set_content(err.dump(), "application/json");
         return;
     }
-    rate_limit::clear(ip);
+    auth::clear(ip);
+    spdlog::info("密码登录成功（ip={}，user={}）。", ip, username);
     nlohmann::json resp;
     resp["id"] = result->id;
     resp["username"] = result->username.has_value()
@@ -328,6 +338,7 @@ static void handle_blog_save(
 
     const auto body = nlohmann::json::parse(req.body, nullptr, false);
     if (body.is_discarded()) {
+        spdlog::error("保存博客失败：无效的 JSON。");
         res.status = 400;
         res.set_content(R"({"error":"无效的 JSON"})", "application/json");
         return;
@@ -344,6 +355,7 @@ static void handle_blog_save(
     }
     const auto session = auth::validate_session(conn, token);
     if (!session) {
+        spdlog::error("保存博客失败：未登录或会话已过期。");
         res.status = 401;
         res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
         return;
@@ -352,6 +364,7 @@ static void handle_blog_save(
     // 权限检查
     const auto& perms = session->permissions;
     if (std::find(perms.begin(), perms.end(), "create") == perms.end()) {
+        spdlog::error("保存博客失败：用户 {} 无 create 权限。", session->user_id);
         res.status = 403;
         res.set_content(R"({"error":"当前用户无 create 权限"})", "application/json");
         return;
@@ -387,11 +400,11 @@ static void handle_blog_save(
         pathCat, pathName,
         content, buf);
 
-    if (!err.empty()) {
-        spdlog::error("保存博客失败：{}", err);
+    if (err) {
+        spdlog::error("保存博客失败：{}", *err);
         res.status = 500;
         nlohmann::json j;
-        j["error"] = err;
+        j["error"] = *err;
         res.set_content(j.dump(), "application/json");
         return;
     }
@@ -432,6 +445,7 @@ static void handle_blog_update(
     }
     const auto session = auth::validate_session(conn, token);
     if (!session) {
+        spdlog::error("更新博客失败：未登录或会话已过期。");
         res.status = 401;
         res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
         return;
@@ -440,6 +454,7 @@ static void handle_blog_update(
     // 权限检查
     const auto& perms = session->permissions;
     if (std::find(perms.begin(), perms.end(), "edit") == perms.end()) {
+        spdlog::error("更新博客失败：用户 {} 无 edit 权限。", session->user_id);
         res.status = 403;
         res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
         return;
@@ -475,11 +490,11 @@ static void handle_blog_update(
         conn, title, description, category, tagList,
         old_file_path, pathCat, pathName, content, buf);
 
-    if (!err.empty()) {
-        spdlog::error("更新博客失败：{}", err);
+    if (err) {
+        spdlog::error("更新博客失败：{}", *err);
         res.status = 500;
         nlohmann::json j;
-        j["error"] = err;
+        j["error"] = *err;
         res.set_content(j.dump(), "application/json");
         return;
     }
@@ -533,6 +548,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             }
             const auto session = auth::validate_session(conn, token);
             if (!session) {
+                spdlog::error("获取权限失败：未登录或会话已过期。");
                 res.status = 401;
                 res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
                 return;
@@ -650,12 +666,14 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             }
             const auto session = auth::validate_session(conn, token);
             if (!session) {
+                spdlog::error("保存图片元数据失败：未登录或会话已过期。");
                 res.status = 401;
                 res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
                 return;
             }
             const auto& perms = session->permissions;
             if (std::find(perms.begin(), perms.end(), "edit") == perms.end()) {
+                spdlog::error("保存图片元数据失败：用户 {} 无 edit 权限。", session->user_id);
                 res.status = 403;
                 res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
                 return;
@@ -700,6 +718,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             res.set_header("Content-Type", "application/json");
 
             if (!req.form.has_file("file")) {
+                spdlog::error("上传图片失败：未选择文件。");
                 res.status = 400;
                 res.set_content(R"({"error":"未选择文件"})", "application/json");
                 return;
@@ -719,12 +738,14 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             }
             const auto session = auth::validate_session(conn, token);
             if (!session) {
+                spdlog::error("上传图片失败：未登录或会话已过期。");
                 res.status = 401;
                 res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
                 return;
             }
             const auto& perms = session->permissions;
             if (std::find(perms.begin(), perms.end(), "edit") == perms.end()) {
+                spdlog::error("上传图片失败：用户 {} 无 edit 权限。", session->user_id);
                 res.status = 403;
                 res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
                 return;
@@ -732,12 +753,14 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
 
             auto [err, result] = img::upload_image(conn, file.filename, file.content);
             if (!err.empty()) {
+                spdlog::error("上传图片失败：{}", err);
                 res.status = 500;
                 nlohmann::json j;
                 j["error"] = err;
                 res.set_content(j.dump(), "application/json");
                 return;
             }
+            spdlog::info("图片上传成功：{}。", file.filename);
             res.set_content(result.dump(), "application/json");
         }
     );
@@ -761,12 +784,14 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             }
             const auto session = auth::validate_session(conn, token);
             if (!session) {
+                spdlog::error("删除图片失败：未登录或会话已过期。");
                 res.status = 401;
                 res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
                 return;
             }
             const auto& perms = session->permissions;
             if (std::find(perms.begin(), perms.end(), "edit") == perms.end()) {
+                spdlog::error("删除图片失败：用户 {} 无 edit 权限。", session->user_id);
                 res.status = 403;
                 res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
                 return;
@@ -774,19 +799,24 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
 
             const auto body = nlohmann::json::parse(req.body, nullptr, false);
             if (body.is_discarded()) {
+                spdlog::error("删除图片失败：无效的 JSON。");
                 res.status = 400;
                 res.set_content(R"({"error":"无效的 JSON"})", "application/json");
                 return;
             }
 
-            const auto err = img::delete_image(conn, body.value("path", ""));
+            const auto path = body.value("path", "");
+            const auto err = img::delete_image(conn, path);
             if (!err.empty()) {
+                spdlog::error("删除图片失败：{}", err);
                 res.status = 500;
                 nlohmann::json j;
                 j["error"] = err;
                 res.set_content(j.dump(), "application/json");
                 return;
             }
+            spdlog::info("图片删除成功：{}。", path);
+            res.set_content(R"({"ok":true})", "application/json");
             res.set_content(R"({"ok":true})", "application/json");
         }
     );
@@ -826,6 +856,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             }
             const auto session = auth::validate_session(conn, token);
             if (!session) {
+                spdlog::error("删除博客失败：未登录或会话已过期。");
                 res.status = 401;
                 res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
                 return;
@@ -834,6 +865,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             // 权限检查
             const auto& perms = session->permissions;
             if (std::find(perms.begin(), perms.end(), "drop") == perms.end()) {
+                spdlog::error("删除博客失败：用户 {} 无 drop 权限。", session->user_id);
                 res.status = 403;
                 res.set_content(R"({"error":"当前用户无 drop 权限"})", "application/json");
                 return;
@@ -856,11 +888,11 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             }
 
             const auto err = blog::delete_blog(conn, file_path);
-            if (!err.empty()) {
-                spdlog::error("删除博客失败：{}", err);
+            if (err) {
+                spdlog::error("删除博客失败：{}", *err);
                 res.status = 500;
                 nlohmann::json j;
-                j["error"] = err;
+                j["error"] = *err;
                 res.set_content(j.dump(), "application/json");
                 return;
             }
@@ -911,12 +943,14 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
             }
             const auto session = auth::validate_session(conn, token);
             if (!session) {
+                spdlog::error("更新个人简介失败：未登录或会话已过期。");
                 res.status = 401;
                 res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
                 return;
             }
             const auto& perms = session->permissions;
             if (std::find(perms.begin(), perms.end(), "edit") == perms.end()) {
+                spdlog::error("更新个人简介失败：用户 {} 无 edit 权限。", session->user_id);
                 res.status = 403;
                 res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
                 return;
@@ -924,6 +958,7 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
 
             const auto body = nlohmann::json::parse(req.body, nullptr, false);
             if (body.is_discarded()) {
+                spdlog::error("更新个人简介失败：无效的 JSON。");
                 res.status = 400;
                 res.set_content(R"({"error":"无效的 JSON"})", "application/json");
                 return;
@@ -936,12 +971,14 @@ void setup_routes(httplib::Server& svr, pqxx::connection& conn)
                 body.value("bio", "")
             );
             if (!err.empty()) {
+                spdlog::error("更新个人简介失败：{}", err);
                 res.status = 500;
                 nlohmann::json j;
                 j["error"] = err;
                 res.set_content(j.dump(), "application/json");
                 return;
             }
+            spdlog::info("个人简介更新成功。");
             res.set_content(R"({"ok":true})", "application/json");
         }
     );

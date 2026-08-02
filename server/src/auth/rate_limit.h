@@ -1,12 +1,13 @@
 /**
- * @file http/rate_limit.h
+ * @file auth/rate_limit.h
  * @brief 登录频率限制
  */
 #pragma once
 
 #include <string>
 
-namespace rate_limit {
+namespace auth
+{
 
 /**
  * @brief 检查指定 IP 是否超出登录频率限制。
@@ -32,4 +33,4 @@ void record_failure(const std::string& ip);
  */
 void clear(const std::string& ip);
 
-} // namespace rate_limit
+} // namespace auth

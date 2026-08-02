@@ -1,15 +1,17 @@
 /**
- * @file http/rate_limit.cpp
+ * @file auth/rate_limit.cpp
  * @brief 登录频率限制实现
  */
 
-#include "http/rate_limit.h"
+#include "auth/rate_limit.h"
 
 #include <chrono>
 #include <unordered_map>
 #include <vector>
+#include <spdlog/spdlog.h>
 
-namespace rate_limit {
+namespace auth
+{
 
 /// 冷却时间内允许的最大失败尝试次数
 constexpr int MAX_ATTEMPTS = 5;
@@ -26,20 +28,29 @@ auto is_rate_limited(const std::string& ip) -> bool
     const auto  now        = std::chrono::steady_clock::now();
     const auto  cutoff     = now - std::chrono::seconds(COOLDOWN_SECONDS);
 
-    // 清理过期记录
-    std::erase_if(timestamps, [cutoff](const auto& t) { return t < cutoff; });
+    std::erase_if(timestamps,
+        [cutoff](const auto& t)
+        {
+            return t < cutoff;
+        }
+    );
 
-    return timestamps.size() >= static_cast<std::size_t>(MAX_ATTEMPTS);
+    const bool limited{ timestamps.size() >= static_cast<std::size_t>(MAX_ATTEMPTS) };
+    if (limited)
+        spdlog::info("IP {} 登录已被限流。", ip, timestamps.size());
+    return limited;
 }
 
 void record_failure(const std::string& ip)
 {
     g_attempts[ip].push_back(std::chrono::steady_clock::now());
+    spdlog::debug("IP {} 记录一次登录失败（当前失败次数：{}）", ip, g_attempts[ip].size());
 }
 
 void clear(const std::string& ip)
 {
     g_attempts.erase(ip);
+    spdlog::debug("IP {} 的限流记录已清除。", ip);
 }
 
-} // namespace rate_limit
+} // namespace auth
