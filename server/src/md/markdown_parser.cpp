@@ -5,7 +5,6 @@
 
 #include "md/markdown_parser.h"
 
-#include <cstdlib>
 #include <regex>
 #include <string>
 
@@ -13,22 +12,8 @@
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
-#include "config/env.h"
-
 namespace md
 {
-static std::string DOC_PATH;
-
-    void init()
-    {
-        DOC_PATH = config::get_env("DOC_PATH");
-    }
-
-    auto doc_path() -> const std::string&
-    {
-        return DOC_PATH;
-    }
-
     auto parse_frontmatter(const std::string& raw) -> nlohmann::json
     {
         spdlog::debug("正在解析 md 文本的 fromtmatter 信息...");

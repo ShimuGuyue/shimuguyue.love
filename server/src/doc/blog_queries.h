@@ -1,6 +1,6 @@
 /**
- * @file blog/blog_queries.h
- * @brief 博客相关数据库查询函数
+ * @file doc/blog_queries.h
+ * @brief 博客（文档）数据库查询函数
  */
 #pragma once
 
@@ -12,8 +12,19 @@
 #include <nlohmann/json.hpp>
 #include <pqxx/pqxx>
 
-namespace blog
+namespace doc
 {
+
+/**
+ * @brief 读取 DOC_PATH 环境变量。
+ * 若未设置则 std::exit(1)。
+ */
+void init();
+
+/**
+ * @brief 获取 DOC_PATH。
+ */
+[[nodiscard]] auto doc_path() -> const std::string&;
 
 /**
  * @brief 分类信息。
@@ -170,4 +181,4 @@ struct BlogQuery
         std::string_view                date)
     -> std::optional<std::string>;
 
-} // namespace blog
+} // namespace doc

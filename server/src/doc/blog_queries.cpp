@@ -1,9 +1,9 @@
 /**
- * @file blog/blog_queries.cpp
- * @brief 博客相关数据库查询实现
+ * @file doc/blog_queries.cpp
+ * @brief 博客（文档）数据库查询实现
  */
 
-#include "blog/blog_queries.h"
+#include "doc/blog_queries.h"
 
 #include <filesystem>
 #include <format>
@@ -12,7 +12,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "md/markdown_parser.h"
+#include "config/env.h"
 
 namespace
 {
@@ -92,8 +92,20 @@ namespace
 
 
 
-namespace blog
+namespace doc
 {
+
+static std::string DOC_PATH;
+
+void init()
+{
+    DOC_PATH = config::get_env("DOC_PATH");
+}
+
+auto doc_path() -> const std::string&
+{
+    return DOC_PATH;
+}
     auto get_categories(pqxx::connection& conn) -> std::vector<Category>
     {
         spdlog::debug("正在从数据库获取分类列表...");
@@ -473,7 +485,7 @@ namespace blog
             fm << "---\n\n";
             fm << content;
 
-            std::filesystem::path out_path{ std::format("{}/blogs/{}.md", md::doc_path(), file_path) };
+            std::filesystem::path out_path{ std::format("{}/blogs/{}.md", doc_path(), file_path) };
             std::filesystem::create_directories(out_path.parent_path());
             std::ofstream ofs{ out_path, std::ios::binary };
             if (!ofs)
@@ -562,7 +574,7 @@ namespace blog
     // 删除服务器上的 .md 文件及可能为空的父目录
     {
         std::error_code ec;
-        std::filesystem::path md_path{ std::format("{}/blogs/{}.md", md::doc_path(), file_path) };
+        std::filesystem::path md_path{ std::format("{}/blogs/{}.md", doc_path(), file_path) };
         std::filesystem::remove(md_path, ec);
         if (ec)
         {
@@ -738,7 +750,7 @@ namespace blog
         if (path_changed)
         {
             std::error_code ec;
-            std::filesystem::path old_md{ std::format("{}/blogs/{}.md", md::doc_path(), old_file_path) };
+            std::filesystem::path old_md{ std::format("{}/blogs/{}.md", doc_path(), old_file_path) };
             std::filesystem::remove(old_md, ec);
             if (ec)
             {
@@ -774,7 +786,7 @@ namespace blog
             fm << "---\n\n";
             fm << content;
 
-            std::filesystem::path out_path{ std::format("{}/blogs/{}.md", md::doc_path(), new_file_path) };
+            std::filesystem::path out_path{ std::format("{}/blogs/{}.md", doc_path(), new_file_path) };
             std::filesystem::create_directories(out_path.parent_path());
             std::ofstream ofs{ out_path, std::ios::binary };
             if (!ofs)
@@ -789,4 +801,4 @@ namespace blog
         return std::nullopt;
     }
 
-} // namespace blog
+} // namespace doc

@@ -6,9 +6,9 @@
 #include <spdlog/spdlog.h>
 
 #include "db/connection.h"
+#include "doc/blog_queries.h"
 #include "http/routes.h"
 #include "img/image_queries.h"
-#include "md/markdown_parser.h"
 
 int main(int argc, char* argv[])
 {
@@ -17,8 +17,8 @@ int main(int argc, char* argv[])
 
     http::init();   // HTTP 路由前置配置
     db::  init();   // 数据库连接与表检查
-    md::  init();   // Markdown 解析器
-    img:: init();   // 图片查询初始化
+    doc:: init();   // 文档相关初始化
+    img:: init();   // 图片相关初始化
 
     httplib::Server svr;
     http::setup_routes(svr, db::connection());

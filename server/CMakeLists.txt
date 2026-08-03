@@ -23,7 +23,7 @@ add_executable(${PROJECT_NAME}
     src/crypto/argon2id.cpp
     src/auth/login.cpp
     src/auth/session.cpp
-    src/blog/blog_queries.cpp
+    src/doc/blog_queries.cpp
     src/img/image_queries.cpp
     src/http/routes.cpp
     src/auth/rate_limit.cpp
