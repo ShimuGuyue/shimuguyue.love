@@ -15,10 +15,10 @@ int main(int argc, char* argv[])
     spdlog::set_level(spdlog::level::trace);
     spdlog::info("项目初始化进行中...");
 
-    http::init();
-    db::  init();
-    md::  init();
-    img:: init();
+    http::init();   // HTTP 路由前置配置
+    db::  init();   // 数据库连接与表检查
+    md::  init();   // Markdown 解析器
+    img:: init();   // 图片查询初始化
 
     httplib::Server svr;
     http::setup_routes(svr, db::connection());
