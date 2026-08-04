@@ -7,7 +7,7 @@
 ### 前端（`client/`）
 
 ```bash
-cd client
+cd client/
 npm install
 npm run dev          # 开发服务器（热重载）—— 自动代理 /api 到 localhost:8080
 npm run build        # 生产构建（先 type-check，再 vite build）
@@ -18,10 +18,10 @@ npm run preview      # 预览生产构建
 
 ### 服务端（`server/`）
 
-依赖 vcpkg（`libpqxx`、`libsodium`、`httplib`、`nlohmann-json`、`yaml-cpp`），需先设 `VCPKG_ROOT`。
+依赖 vcpkg（`libpqxx`、`libsodium`、`httplib`、`nlohmann-json`、`yaml-cpp`、`spdlog`），需先设 `VCPKG_ROOT`。
 
 ```bash
-cd server
+cd server/
 cmake -B build --preset default
 cmake --build build
 ./build/server
@@ -44,7 +44,7 @@ cmake --build build
 PostgreSQL
 ```
 
-- **博客**：双重存储 —— PostgreSQL 行 + `DOC_PATH/blogs/` 下 `.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `DOC_PATH/blogs/` 的相对路径（不含 `.md` 后缀）。
+- **博客**：双重存储 —— PostgreSQL 行 + `DOC_PATH/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `DOC_PATH/blogs/` 的相对路径（不含 `.md` 后缀）。
 - **图片**：文件存于 `IMAGE_PATH/`，元数据存于数据库，文件名与对应 `id` 同名。
 - **认证**：Bearer token，存于 `sessions` 表，24 小时过期，权限 JSON 序列化存库。
 - **配置**：所有配置从环境变量读取，缺失则 `exit(1)`。无配置文件。
@@ -57,7 +57,7 @@ PostgreSQL
 | `SERVER_PORT` | 监听端口 | server |
 | `FRONTEND_ORIGIN` | CORS 允许的前端地址 | server |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
-| `DOC_PATH` | 博客 `.md` 文件保存目录 | server |
+| `DOC_PATH` | 文档文件保存目录 | server |
 | `IMAGE_PATH` | 图片文件保存目录 | server |
 | `README_DIR` | 前端渲染 README 文件路径，供 `pull-readme.sh` 和 `/api/about/sync` 使用 | server, tools |
 | `BUILD_DIR` | 前端构建输出目录（默认 `dist`） | client (vite) |
@@ -68,6 +68,8 @@ PostgreSQL
 
 - **要求冲突时停止执行**：多个要求不可调和时，AI 必须停止，明确指出冲突点并等待用户确认，不得自行选择或猜测。
 - **用户修改优先**：用户手动修改的内容为最终权威；AI 必须先读取当前文件内容再编辑，不得覆盖用户修改。
+- **环境安装权限**：当项目运行所需环境未下载时，AI 应停止任务，向用户指出缺失的环境及下载方式，待用户下载完成后再执行任务。
+- **文件修改记录**：当新建/删除文件时，AI应将其记录到 `AGENTS.md`。
 
 ### C++（C++23）
 
@@ -75,7 +77,11 @@ PostgreSQL
 - **Doxygen**：`/** */` 风格，函数、类、命名空间均需标注。
 - **`[[nodiscard]]`**：标注所有返回值不可丢弃的函数。
 - **尾置返回类型**：`auto func() -> int`。
-- **`#pragma once`**。
+- 头文件 `#pragma once`。
+- 循环语句 `for`、`while` 循环体加大括号。
+- 命名空间、类、函数、循环、分支、lambda 等的大括号换行。变量赋值不换行。
+- 匿名命名空间写在有名命名空间之前。之间五行空白行分隔。
+- 缩进：命名空间内类和变量不缩进。函数进行缩进。
 
 ### 前端
 
@@ -87,19 +93,88 @@ PostgreSQL
 
 ## 目录速查
 
+**根目录**
+
 | 路径 | 说明 |
 |---|---|
+| `AGENTS.md` | 项目规范与协作说明（本文档） |
+| `README.md` | 项目说明文档 |
+| `TODO.md` | 待办清单 |
+
+**client/**
+
+| 路径 | 说明 |
+|---|---|
+| `client/package.json` | 前端依赖与 npm 脚本（dev / build / type-check / preview） |
+| `client/package-lock.json` | 前端依赖锁定文件 |
+| `client/index.html` | Vite 入口 HTML |
+| `client/env.d.ts` | 环境变量类型声明 |
+| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/image/home` → localhost:8080，`BUILD_DIR` 输出目录 |
+| `client/tsconfig.json` | TS 总配置 |
+| `client/tsconfig.app.json` | 应用代码 TS 配置 |
+| `client/tsconfig.node.json` | 构建脚本 TS 配置 |
+| `client/public/assets/favicon.png` | 站点图标 |
+| `client/public/assets/note-background.png` | 博客背景图 |
+| `client/src/main.ts` | 前端入口：挂载 App、注册 Pinia 与路由 |
+| `client/src/App.vue` | 根组件：全局 CSS 变量（`:root` / `html.dark`） |
 | `client/src/router/index.ts` | 12 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
 | `client/src/stores/auth.ts` | 认证状态（token、username），localStorage 持久化 |
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
 | `client/src/components/NavBar.vue` | 唯一公共组件：导航栏、主题切换、用户入口 |
+| `client/src/views/Home.vue` | 主页：照片墙浏览、编辑、上传 |
+| `client/src/views/Blogs.vue` | 博客列表页（分类/标签筛选、搜索） |
+| `client/src/views/BlogDetail.vue` | 博客详情页（Markdown 渲染） |
+| `client/src/views/BlogEdit.vue` | 博客新建/编辑页 |
+| `client/src/views/About.vue` | 关于我页面（渲染 README） |
+| `client/src/views/Profile.vue` | 个人介绍编辑页 |
+| `client/src/views/LoginKey.vue` | 密钥登录页 |
+| `client/src/views/LoginPassword.vue` | 密码登录页 |
+| `client/src/views/Projects.vue` | 项目页 |
+| `client/src/views/Acknowledgments.vue` | 致谢页 |
+| `client/src/views/Favorites.vue` | 收藏页 |
+| `client/src/types/markdown-it-task-lists.d.ts` | markdown-it-task-lists 插件类型声明 |
+| `client/src/assets/background.css` | 全局背景主题（粉色 × 紫色系） |
+| `client/src/assets/blog-layout.css` | 博客页布局共用样式 |
+| `client/src/assets/blog.css` | 博客卡片、标签、分类公共样式 |
+| `client/src/assets/glass.css` | 毛玻璃工具类 |
+| `client/src/assets/markdown.css` | Markdown 渲染样式（PinkFairy 主题） |
+| `client/src/assets/pink-theme.css` | PinkFairy 颜色变量 |
+
+**server/**
+
+| 路径 | 说明 |
+|---|---|
 | `server/main.cpp` | 服务端入口：初始化 → 建立数据库连接 → 注册路由 → 监听 |
+| `server/CMakeLists.txt` | CMake 构建配置（源文件列表、vcpkg 依赖） |
+| `server/CMakePresets.json` | CMake 预设（default） |
 | `server/src/http/routes.cpp` | 所有 API 路由注册（~930 行），按 auth/blog/image/profile/about 分组 |
-| `server/src/crypto/argon2id.cpp` | Argon2id 密码哈希，随机盐 / 固定盐两种模式 |
-| `server/src/md/markdown_parser.cpp` | Markdown YAML frontmatter 解析（用 yaml-cpp） |
-| `server/src/about/about_queries.cpp` | 关于我 页面内容数据库查询 |
-| `sql/` | 数据库建表脚本，按 README 指定顺序执行 |
-| `tools/` | 自动化脚本：博客自动同步、README 自动拉取 |
+| `server/src/http/routes.h` | HTTP 服务配置声明（`FRONTEND_ORIGIN` / `SERVER_HOST` / `SERVER_PORT`、`setup_routes`） |
+| `server/src/db/connection.cpp` / `.h` | 数据库连接：单 `pqxx::connection` + 表检查 |
+| `server/src/config/env.cpp` / `.h` | 环境变量读取（缺失则 `exit(1)`） |
+| `server/src/auth/login.cpp` / `.h` | 密钥/密码登录、权限查询 |
+| `server/src/auth/session.cpp` / `.h` | 会话 token 创建、验证、过期清理 |
+| `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |
+| `server/src/crypto/argon2id.cpp` / `.h` | Argon2id 密码哈希，随机盐 / 固定盐两种模式 |
+| `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询 + `DOC_PATH` 初始化 |
+| `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
+| `server/src/profile/profile_queries.cpp` / `.h` | 个人介绍查询、更新 |
+| `server/src/about/about_queries.cpp` / `.h` | 关于我 README 内容数据库查询 |
+| `server/src/md/markdown_parser.cpp` / `.h` | Markdown YAML frontmatter 解析（用 yaml-cpp） |
+
+**sql/ 与 tools/**
+
+| 路径 | 说明 |
+|---|---|
+| `sql/create_users.sql` | 用户表（users、permissions、user_permissions） |
+| `sql/create_sessions.sql` | 会话表（sessions） |
+| `sql/create_blogs.sql` | 博客表（categories、tags、blogs、blog_tags） |
+| `sql/create_images.sql` | 照片墙图片表（images） |
+| `sql/create_profile.sql` | 个人介绍表（profile，单行） |
+| `sql/create_about.sql` | 关于我内容表（about，单行） |
+| `tools/auto-sync-blogs.sh` | 博客 `.md` 自动同步脚本 |
+| `tools/pull-readme.sh` | README 自动拉取脚本 |
+| `tools/server-run.sh` | 服务端启动脚本 |
+| `tools/server-run.log` | 服务端运行日志（运行产物） |
 | `test/` | 测试用文件（非代码） |
 
 ## 注意事项
