@@ -6,17 +6,17 @@
 
 #include <pqxx/pqxx>
 
-namespace db {
+namespace db
+{
+    /**
+     * @brief 初始化数据库连接。
+     */
+    void init();
 
-/**
- * @brief 初始化数据库连接。
- */
-void init();
-
-/**
- * @brief 获取数据库连接的 pqxx::connection
- * @return 已打开的 pqxx::connection。
- */
-[[nodiscard]] auto connection() -> pqxx::connection&;
+    /**
+     * @brief 获取数据库连接的 pqxx::connection
+     * @return 已打开的 pqxx::connection。
+     */
+    [[nodiscard]] auto connection() -> pqxx::connection&;
 
 } // namespace db

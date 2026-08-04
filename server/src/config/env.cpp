@@ -9,18 +9,17 @@
 
 namespace config
 {
-
-[[nodiscard]]auto get_env(const char* key) -> std::string
-{
-    spdlog::info("正在获取环境变量 {}...", key);
-    const char* val{ std::getenv(key) };
-    if (val == nullptr)
+    [[nodiscard]]auto get_env(const char* key) -> std::string
     {
-        spdlog::error("缺少必需的环境变量 {}！", key);
-        std::exit(1);
+        spdlog::debug("正在获取环境变量 {}...", key);
+        const char* val{ std::getenv(key) };
+        if (val == nullptr)
+        {
+            spdlog::error("缺少必需的环境变量 {}！", key);
+            std::exit(1);
+        }
+        spdlog::debug("环境变量 {} 获取成功。", key);
+        return val;
     }
-    spdlog::info("环境变量 {} 获取成功。", key);
-    return val;
-}
 
 }

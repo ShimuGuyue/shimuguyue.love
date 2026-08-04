@@ -100,6 +100,7 @@ async function importFile() {
     try {
       const resp = await fetch('/api/blog/parse', { method: 'POST', body: text })
       if (!resp.ok) throw new Error(`${resp.status}`)
+
       const data = await resp.json()
       title.value = data.title || ''
       description.value = data.description || ''
@@ -107,6 +108,7 @@ async function importFile() {
       tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || '')
       pathCategory.value = data.file_path_category || ''
       pathName.value = data.file_path_name || ''
+
       if (editorRef.value) {
         let content = data.content || ''
         content = content.replace(/\t/g, '    ').replace(/[ \t]+$/gm, '')
