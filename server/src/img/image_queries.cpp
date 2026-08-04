@@ -19,14 +19,6 @@
 
 namespace img
 {
-
-    void init()
-    {
-        // 确保子目录存在
-        std::error_code ec;
-        std::filesystem::create_directories(std::format("{}/home", config::env()["IMAGE_PATH"]), ec);
-    }
-
     auto get_all_images(pqxx::connection& conn) -> nlohmann::json
     {
         spdlog::debug("正在获取照片墙图片信息...");
@@ -112,7 +104,9 @@ namespace img
         }
 
         std::error_code ec;
-        std::filesystem::path file_path{ std::format("{}/{}", config::env()["IMAGE_PATH"], path) };
+        std::filesystem::path file_path{
+            std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / std::string{ path }
+        };
         if (!std::filesystem::remove(file_path, ec) && ec)
             spdlog::error("删除文件失败: {} - {}", file_path.string(), ec.message());
 
@@ -161,7 +155,8 @@ namespace img
 
         // 写入文件
         spdlog::debug("正在将图片文件写入目录...");
-        const auto full = std::format("{}/{}", config::env()["IMAGE_PATH"], rel_path);
+        const auto full =
+            (std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / rel_path).string();
         std::error_code ec;
         std::filesystem::create_directories(std::filesystem::path(full).parent_path(), ec);
         if (ec)

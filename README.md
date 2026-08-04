@@ -24,6 +24,7 @@ cd ${PROJECT_PATH}
 ### 环境变量
 
 复制项目根目录的 `.env.example` 为 `.env` 并填写。
+文件类目录只配置一个根目录 `FILE_PATH`：博客文件位于 `$FILE_PATH/doc/blogs`、图片位于 `$FILE_PATH/image`、README 位于 `$FILE_PATH/README`，服务端启动时会自动创建这些目录。
 
 ### 前端
 
@@ -150,7 +151,7 @@ cd ${PROJECT_PATH}
     ```bash
     cmake -B build --preset default
     cmake --build build
-    
+
     ../tools/server-run.sh start # 启动后端运行
     ../tools/server-run.sh stop  # 终止后端运行
     ```
@@ -162,17 +163,17 @@ cd ${PROJECT_PATH}
     首先在 `server/main.cpp` 添加以下代码并运行为自己的密钥/密码拿到哈希值
 
     ！拿到值后请立刻删除语句。
-    
+
     ```cpp
     std:cout << *crypto::Argon2id::hash_with_random_salt("${KEY}")     << std::endl; ///< 密钥哈希值
     std:cout << *crypto::Argon2id::hash_with_fixed_salt("${PASSWORD}") << std::endl; ///< 密码哈希值
     ```
-    
+
     在数据库创建管理员用户。
-    
+
     ```postgresql
     # 默认当前数据库表均为空，则对应条目的 id 可知
-    
+
     # 添加管理员用户信息
     INSERT INTO users (key_hash, key_enabled, username, password_hash)
     VALUES (
@@ -182,16 +183,16 @@ cd ${PROJECT_PATH}
         '${USERNAME}',      # 用户名
         '${PASSWORD_HASH}', # 密码哈希值
     ); # id 为 1
-    
+
     # 添加权限列表
     INSERT INTO permissions (name) VALUES ('create'); #id 为 1
     INSERT INTO permissions (name) VALUES ('edit');   #id 为 2
     INSERT INTO permissions (name) VALUES ('drop');   #id 为 3
-    
+
     # 为管理员授予权限
     INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 1);
-    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 2); 
-    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 3); 
+    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 2);
+    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 3);
     ```
 
 ### 自动化（可选）
@@ -203,7 +204,7 @@ cd ${PROJECT_PATH}
 +   博客保存目录连接远程仓库并创建 `auto` 分支
 
     ```bash
-    cd ${DOC_PATH}/blogs
+    cd ${FILE_PATH}/doc/blogs
     git init
     git remote add origin ${REPO_URL}
     git checkout -b auto
@@ -215,7 +216,7 @@ cd ${PROJECT_PATH}
 
     ```bash
     chmod +x ./auto-sync-blogs.sh
-    
+
     crontab -e
     * * * * * /bin/bash ${PROJECT_PATH}/tools/auto-sync-blogs.sh >> ${PROJECT_PATH}/tools/auto-sync-blogs.log 2>&1
     ```
@@ -225,7 +226,7 @@ cd ${PROJECT_PATH}
 +   创建目录连接 README 远程仓库
 
     ```bash
-    cd ${README_DIR}
+    cd ${FILE_PATH}/README
     git init
     git remote add origin ${REPO_URL}
     ```
@@ -234,7 +235,7 @@ cd ${PROJECT_PATH}
 
     ```bash
     chmod +x ./pull-readme.sh
-    
+
     crontab -e
     0 4 * * * /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
     ```

@@ -44,8 +44,8 @@ cmake --build build
 PostgreSQL
 ```
 
-- **博客**：双重存储 —— PostgreSQL 行 + `DOC_PATH/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `DOC_PATH/blogs/` 的相对路径（不含 `.md` 后缀）。
-- **图片**：文件存于 `IMAGE_PATH/`，元数据存于数据库，文件名与对应 `id` 同名。
+- **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/doc/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/doc/blogs/` 的相对路径（不含 `.md` 后缀）。
+- **图片**：文件存于 `FILE_PATH/image/`，元数据存于数据库，文件名与对应 `id` 同名。
 - **认证**：Bearer token，存于 `sessions` 表，24 小时过期，权限 JSON 序列化存库。
 - **配置**：所有配置从环境变量读取，缺失则 `exit(1)`。无配置文件。
 
@@ -56,10 +56,8 @@ PostgreSQL
 | `SERVER_HOST` | 监听地址 | server |
 | `SERVER_PORT` | 监听端口 | server |
 | `FRONTEND_ORIGIN` | CORS 允许的前端地址 | server |
+| `FILE_PATH` | 文件根目录；启动时统一创建/检测博客（`FILE_PATH/doc/blogs`）、图片（`FILE_PATH/image`）、README（`FILE_PATH/README`）目录 | server, tools |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
-| `DOC_PATH` | 文档文件保存目录 | server |
-| `IMAGE_PATH` | 图片文件保存目录 | server |
-| `README_DIR` | 前端渲染 README 文件路径，供 `pull-readme.sh` 和 `/api/about/sync` 使用 | server, tools |
 | `BUILD_DIR` | 前端构建输出目录（默认 `dist`） | client (vite) |
 
 ## 编码约定
@@ -157,7 +155,7 @@ PostgreSQL
 | `server/src/auth/session.cpp` / `.h` | 会话 token 创建、验证、过期清理 |
 | `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |
 | `server/src/crypto/argon2id.cpp` / `.h` | Argon2id 密码哈希，随机盐 / 固定盐两种模式 |
-| `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询 + `DOC_PATH` 初始化 |
+| `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询（博客文件路径来自 `FILE_PATH/doc`） |
 | `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
 | `server/src/profile/profile_queries.cpp` / `.h` | 个人介绍查询、更新 |
 | `server/src/about/about_queries.cpp` / `.h` | 关于我 README 内容数据库查询 |

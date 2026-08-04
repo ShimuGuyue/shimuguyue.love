@@ -15,11 +15,6 @@
 namespace img
 {
     /**
-     * @brief 初始化：确保图片目录存在（路径来自 config::env()["IMAGE_PATH"]）。
-     */
-    void init();
-
-    /**
      * @brief 获取所有图片记录。
      * @param conn 数据库连接。
      * @return JSON 数组。

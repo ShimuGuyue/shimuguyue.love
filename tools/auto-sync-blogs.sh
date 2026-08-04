@@ -2,22 +2,22 @@
 # ============================================================
 # auto-sync-blogs.sh — 博客内容自动同步脚本
 # ============================================================
-# 用途：检测 $DOC_PATH/blogs/ 下 .md 文件变更，自动 git add / commit / push
+# 用途：检测 $FILE_PATH/doc/blogs/ 下 .md 文件变更，自动 git add / commit / push
 # 部署：由 crontab 或 systemd timer 定时每分钟调用一次
 #
 # 前置条件：
-#   1. $DOC_PATH/blogs 是一个已初始化的 git 仓库，含远程仓库配置
-#   2. 本脚本需要有对 $DOC_PATH/blogs 的写权限
+#   1. $FILE_PATH/doc/blogs 是一个已初始化的 git 仓库，含远程仓库配置
+#   2. 本脚本需要有对 $FILE_PATH/doc/blogs 的写权限
 #   3. git 已配置 user.name 和 user.email（用于 auto-commit）
 #
 # 环境变量：
-#   DOC_PATH          — server 使用的博客内容根目录
+#   FILE_PATH         — 文件根目录，博客内容根目录为 $FILE_PATH/doc
 #   SYNC_REMOTE       — 推送到的远程仓库名（默认 origin）
 #   SYNC_BRANCH       — 推送到的分支名（默认 auto）
 #   SYNC_STATE_FILE   — 状态文件路径（默认 /tmp/auto-sync-blogs.state）
 #
 # 工作原理：
-#   $DOC_PATH/blogs 是独立的 git 仓库。
+#   $FILE_PATH/doc/blogs 是独立的 git 仓库。
 #   每次运行时，进入仓库目录，记录当前时间戳到状态文件。
 #   下次运行时，查找比状态文件更新的 .md 文件。
 #   如果有变更，执行 git add / commit / push。
@@ -35,7 +35,7 @@ if [[ -f "$PROJECT_ROOT/.env" ]]; then
 fi
 
 # ---- 配置 ----
-DOC_PATH="${DOC_PATH:-}"
+FILE_PATH="${FILE_PATH:-}"
 SYNC_REMOTE="${SYNC_REMOTE:-origin}"
 SYNC_BRANCH="${SYNC_BRANCH:-auto}"
 STATE_FILE="${SYNC_STATE_FILE:-/tmp/auto-sync-blogs.state}"
@@ -53,12 +53,12 @@ for arg in "${@}"; do
 done
 
 # ---- 校验 ----
-if [[ -z "$DOC_PATH" ]]; then
-    echo "[auto-sync] 错误：环境变量 DOC_PATH 未设置。"
+if [[ -z "$FILE_PATH" ]]; then
+    echo "[auto-sync] 错误：环境变量 FILE_PATH 未设置。"
     exit 1
 fi
 
-GIT_REPO="$DOC_PATH/blogs"
+GIT_REPO="$FILE_PATH/doc/blogs"
 
 if [[ ! -d "$GIT_REPO" ]]; then
     echo "[auto-sync] 提示：$GIT_REPO 目录不存在，跳过。"

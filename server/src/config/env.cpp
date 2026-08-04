@@ -22,8 +22,7 @@ constexpr std::string_view REQUIRED_KEYS[] = {
     "FRONTEND_ORIGIN",
     "SERVER_HOST",
     "SERVER_PORT",
-    "DOC_PATH",
-    "IMAGE_PATH",
+    "FILE_PATH",
     "PGHOST",
     "PGPORT",
     "PGDATABASE",
@@ -139,6 +138,36 @@ namespace config
             spdlog::error("环境变量 SERVER_PORT 必须是有效的端口号！");
             std::exit(1);
         }
+
+        // 统一创建并检测 FILE_PATH 下的所有文件目录
+        const auto root = std::filesystem::path{ EnvMap::env_values["FILE_PATH"] };
+        const std::filesystem::path SUBDIRS[] = {
+            "doc",
+            "doc/blogs",
+            "image",
+            "image/home",
+            "README",
+        };
+
+        std::error_code ec;
+        if (!std::filesystem::create_directories(root, ec) && ec)
+        {
+            spdlog::error("文件根目录不可用：{}（{}）", root.string(), ec.message());
+            std::exit(1);
+        }
+        for (const auto& sub : SUBDIRS)
+        {
+            const auto dir = root / sub;
+            std::error_code sub_ec;
+            if (!std::filesystem::create_directories(dir, sub_ec) && sub_ec)
+            {
+                spdlog::error("目录不可用：{}（{}）", dir.string(), sub_ec.message());
+                std::exit(1);
+            }
+        }
+
+        spdlog::info("文件目录已确认：{}/doc/blogs、{}/image/home、{}/README。",
+                     root.string(), root.string(), root.string());
 
         spdlog::info("环境变量已从 {} 加载。", env_file->string());
     }

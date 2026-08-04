@@ -2,7 +2,7 @@
 -- 照片墙图片表
 -- ============================================================
 -- id:          自增主键
--- path:        图片相对路径（相对于 IMAGE_PATH，如 "home/photo.jpg"）
+-- path:        图片相对路径（相对于 FILE_PATH/image，如 "home/photo.jpg"）
 -- description: 图片简介
 -- scale:       缩放比例（默认 1.0）
 -- rotation:    旋转角度（度，默认 0.0）
