@@ -149,6 +149,7 @@ PostgreSQL
 | `server/CMakePresets.json` | CMake 预设（default） |
 | `server/src/http/routes.cpp` | 所有 API 路由注册（~930 行），按 auth/blog/image/profile/about 分组 |
 | `server/src/http/routes.h` | HTTP 服务配置声明（`FRONTEND_ORIGIN` / `SERVER_HOST` / `SERVER_PORT`、`setup_routes`） |
+| `server/src/http/handlers.cpp` / `.h` | 全部 API 路由处理函数（业务逻辑），由 routes.cpp 统一注册调用 |
 | `server/src/db/connection.cpp` / `.h` | 数据库连接：单 `pqxx::connection` + 表检查 |
 | `server/src/config/env.cpp` / `.h` | 环境变量读取（缺失则 `exit(1)`） |
 | `server/src/auth/login.cpp` / `.h` | 密钥/密码登录、权限查询 |

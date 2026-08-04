@@ -26,6 +26,7 @@ add_executable(${PROJECT_NAME}
     src/doc/blog_queries.cpp
     src/img/image_queries.cpp
     src/http/routes.cpp
+    src/http/handlers.cpp
     src/auth/rate_limit.cpp
     src/md/markdown_parser.cpp
     src/profile/profile_queries.cpp
