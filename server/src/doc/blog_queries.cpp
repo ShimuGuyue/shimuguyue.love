@@ -314,7 +314,10 @@ namespace
         fm << "---\n\n";
         fm << content;
 
-        std::filesystem::path out_path{ std::format("{}/blogs/{}.md", config::env()["DOC_PATH"], file_path) };
+        std::filesystem::path out_path{
+            std::filesystem::path{ config::env()["FILE_PATH"] } / "doc" / "blogs"
+            / (std::string{ file_path } + ".md")
+        };
         std::filesystem::create_directories(out_path.parent_path());
         std::ofstream ofs{ out_path, std::ios::binary };
         if (!ofs)
@@ -335,7 +338,10 @@ namespace
     auto delete_blog_md(std::string_view file_path) -> std::optional<std::string>
     {
         std::error_code ec;
-        std::filesystem::path md_path{ std::format("{}/blogs/{}.md", config::env()["DOC_PATH"], file_path) };
+        std::filesystem::path md_path{
+            std::filesystem::path{ config::env()["FILE_PATH"] } / "doc" / "blogs"
+            / (std::string{ file_path } + ".md")
+        };
         std::filesystem::remove(md_path, ec);
         if (ec)
         {

@@ -5,6 +5,7 @@
 
 #include "http/routes.h"
 
+#include <filesystem>
 #include <string>
 
 #include "config/env.h"
@@ -80,8 +81,9 @@ namespace http
             }
         );
 
-        // 挂载图片静态文件服务
-        svr.set_mount_point("/image", config::env()["IMAGE_PATH"]);
+        // 挂载图片静态文件服务（图片目录为 FILE_PATH/image）
+        svr.set_mount_point("/image",
+            (std::filesystem::path{ config::env()["FILE_PATH"] } / "image").string());
 
         // GET /api/images — 获取所有图片
         svr.Get("/api/images",

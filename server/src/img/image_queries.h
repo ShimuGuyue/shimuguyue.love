@@ -15,7 +15,7 @@
 namespace img
 {
     /**
-     * @brief 初始化：确保图片目录存在（路径来自 config::env()["IMAGE_PATH"]）。
+     * @brief 初始化：确保图片目录存在（路径为 config::env()["FILE_PATH"]/image）。
      */
     void init();
 
