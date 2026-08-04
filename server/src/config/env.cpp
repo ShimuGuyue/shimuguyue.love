@@ -119,7 +119,7 @@ namespace config
         const auto env_file = find_env_file();
         if (!env_file)
         {
-            spdlog::error("未找到 .env 文件！请将 .env 放在项目目录中。");
+            spdlog::error("未找到 .env 文件！请将 .env 放在项目根目录中。");
             std::exit(1);
         }
         load_env_file(*env_file, EnvMap::env_values);

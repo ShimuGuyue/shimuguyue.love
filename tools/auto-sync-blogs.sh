@@ -25,6 +25,15 @@
 
 set -euo pipefail
 
+# ---- 加载项目 .env（项目根目录） ----
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
 # ---- 配置 ----
 DOC_PATH="${DOC_PATH:-}"
 SYNC_REMOTE="${SYNC_REMOTE:-origin}"
@@ -45,7 +54,7 @@ done
 
 # ---- 校验 ----
 if [[ -z "$DOC_PATH" ]]; then
-    echo "[auto-sync] 错误：DOC_PATH 未设置。请设置环境变量或导出。"
+    echo "[auto-sync] 错误：环境变量 DOC_PATH 未设置。"
     exit 1
 fi
 

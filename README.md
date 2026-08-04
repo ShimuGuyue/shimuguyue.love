@@ -21,6 +21,10 @@ git clone git@github.com:${USER_NAME}/${REPO_NAME}.git ${PROJECT_PATH}
 cd ${PROJECT_PATH}
 ```
 
+### 环境变量
+
+复制项目根目录的 `.env.example` 为 `.env` 并填写。
+
 ### 前端
 
 本条目下操作默认在 `${PROJECT_PATH}/client` 目录下执行。
@@ -36,14 +40,6 @@ cd ${PROJECT_PATH}
 
     ```bash
     npm install
-    ```
-
-+   设置环境变量
-
-    ```bash
-    echo 'export FRONTEND_ORIGIN=${FRONTEND_ORIGIN}' >> ~/.bashrc # 前端访问地址
-    echo 'export BUILD_DIR=${BUILD_DIR_CLIENT}'      >> ~/.bashrc # 前端构建文件目录
-    source ~/.bashrc
     ```
 
 +   构建生成版本，生成 `dist` 目录
@@ -83,7 +79,7 @@ cd ${PROJECT_PATH}
     apt install postgresql
     ```
 
-+   创建数据库和用户并设置权限，设置环境变量
++   创建数据库和用户并设置权限
 
     ```bash
     sudo -u postgres psql
@@ -94,15 +90,6 @@ cd ${PROJECT_PATH}
     CREATE DATABASE ${PGDATABASE} OWNER ${PGUSER};
     GRANT ALL PRIVILEGES ON DATABASE ${PGDATABASE} TO ${PGUSER};
     \q
-    ```
-
-    ```bash
-    echo 'export PGHOST=${PGHOST}'         >> ~/.bashrc # 数据库主机
-    echo 'export PGPORT=${PGPORT}'         >> ~/.bashrc # 数据库端口
-    echo 'export PGDATABASE=${PGDATABASE}' >> ~/.bashrc # 数据库
-    echo 'export PGUSER=${PGUSER}'         >> ~/.bashrc # 数据库用户
-    echo 'export PGPASSWORD=${PGPASSWORD}' >> ~/.bashrc # 数据库密码
-    source ~/.bashrc
     ```
 
 +   创建所需数据库表
@@ -158,22 +145,12 @@ cd ${PROJECT_PATH}
     vcpkg install spdlog
     ```
 
-+   设置环境变量
-
-    ```bash
-    echo 'export SERVER_HOST=${SERVER_HOST}' >> ~/.bashrc  # 服务端主机
-    echo 'export SERVER_PORT=${SERVER_PORT}' >> ~/.bashrc  # 服务端端口
-    echo 'export DOC_PATH=${DOC_PATH}'       >> ~/.bashrc  # 文档文件保存目录
-    echo 'export IMAGE_PATH=${IMAGE_PATH}'   >> ~/.bashrc  # 图片文件保存目录
-    source ~/.bashrc
-    ```
-
 +   构建并后台运行 `C++` 应用程序
 
     ```bash
     cmake -B build --preset default
     cmake --build build
-
+    
     ../tools/server-run.sh start # 启动后端运行
     ../tools/server-run.sh stop  # 终止后端运行
     ```
@@ -240,7 +217,7 @@ cd ${PROJECT_PATH}
     chmod +x ./auto-sync-blogs.sh
     
     crontab -e
-    * * * * * export DOC_PATH=${DOC_PATH} && /bin/bash ${PROJECT_PATH}/tools/auto-sync-blogs.sh >> ${PROJECT_PATH}/tools/auto-sync-blogs.log 2>&1
+    * * * * * /bin/bash ${PROJECT_PATH}/tools/auto-sync-blogs.sh >> ${PROJECT_PATH}/tools/auto-sync-blogs.log 2>&1
     ```
 
 #### README内容自动拉取
@@ -259,6 +236,5 @@ cd ${PROJECT_PATH}
     chmod +x ./pull-readme.sh
     
     crontab -e
-    0 4 * * * export GITHUB_USER=${GITHUB_USER} && export README_DIR=${README_DIR} && export PGHOST=${PGHOST} && export PGPORT=${PGPORT} && export PGDATABASE=${PGDATABASE} && export PGUSER=${PGUSER} && export PGPASSWORD=${PGPASSWORD} && /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
+    0 4 * * * /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
     ```
-
