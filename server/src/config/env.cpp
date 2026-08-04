@@ -1,50 +1,146 @@
 /**
  * @file config/env.cpp
- * @brief 环境变量获取、初始化与存储实现
+ * @brief 环境变量加载、初始化与存储实现
  */
 
 #include "config/env.h"
 #include "config/env_map.h"
 
 #include <cstdlib>
+#include <filesystem>
+#include <fstream>
+#include <optional>
 #include <string>
+#include <string_view>
 
 #include <spdlog/spdlog.h>
 
+namespace
+{
+/// 必需的环境变量列表。
+constexpr std::string_view REQUIRED_KEYS[] = {
+    "FRONTEND_ORIGIN",
+    "SERVER_HOST",
+    "SERVER_PORT",
+    "DOC_PATH",
+    "IMAGE_PATH",
+    "PGHOST",
+    "PGPORT",
+    "PGDATABASE",
+    "PGUSER",
+    "PGPASSWORD",
+};
+
+    /**
+     * @brief 去除字符串首尾的空白字符。
+     * @param s 原始字符串。
+     * @return 去除空白后的字符串。
+     */
+    auto trim(std::string_view s) -> std::string_view
+    {
+        while (!s.empty() && (s.front() == ' ' || s.front() == '\t' || s.front() == '\r'))
+            s.remove_prefix(1);
+        while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\r'))
+            s.remove_suffix(1);
+        return s;
+    }
+
+    /**
+     * @brief 从当前目录向上查找项目的 .env 文件。
+     * @return .env 文件路径；未找到返回 std::nullopt。
+     */
+    auto find_env_file() -> std::optional<std::filesystem::path>
+    {
+        std::filesystem::path dir{ std::filesystem::current_path() };
+        for (;;)
+        {
+            const auto candidate = dir / ".env";
+            if (std::filesystem::is_regular_file(candidate))
+                return candidate;
+
+            const auto parent = dir.parent_path();
+            if (parent == dir)
+                return std::nullopt;
+            dir = parent;
+        }
+    }
+
+    /**
+     * @brief 解析 .env 文件并写入环境变量存储。
+     * @param path .env 文件路径。
+     * @param env  环境变量存储。
+     */
+    void load_env_file(const std::filesystem::path& path, config::EnvMap& env)
+    {
+        std::ifstream ifs{ path };
+        if (!ifs)
+        {
+            spdlog::error("无法读取 .env 文件：{}", path.string());
+            std::exit(1);
+        }
+
+        std::string line;
+        while (std::getline(ifs, line))
+        {
+            auto view = trim(line);
+            if (view.empty() || view.front() == '#')
+                continue;
+
+            if (view.starts_with("export "))
+                view.remove_prefix(7);
+
+            const auto eq = view.find('=');
+            if (eq == std::string_view::npos)
+            {
+                spdlog::warn("忽略无效的 .env 行：{}", line);
+                continue;
+            }
+
+            auto key   = trim(view.substr(0, eq));
+            auto value = trim(view.substr(eq + 1));
+            if (value.size() >= 2
+            &&  ((value.front() == '"' && value.back() == '"')
+              || (value.front() == '\'' && value.back() == '\'')))
+            {
+                value.remove_prefix(1);
+                value.remove_suffix(1);
+            }
+            env.set(std::string{ key }, std::string{ value });
+        }
+    }
+
+} // namespace
+
 namespace config
 {
-
     void init()
     {
-        EnvMap::env_values.set("FRONTEND_ORIGIN", get_env("FRONTEND_ORIGIN"));
-        EnvMap::env_values.set("SERVER_HOST",     get_env("SERVER_HOST"));
-        EnvMap::env_values.set("SERVER_PORT",     get_env("SERVER_PORT"));
-        EnvMap::env_values.set("DOC_PATH",        get_env("DOC_PATH"));
-        EnvMap::env_values.set("IMAGE_PATH",      get_env("IMAGE_PATH"));
-        EnvMap::env_values.set("PGHOST",          get_env("PGHOST"));
-        EnvMap::env_values.set("PGPORT",          get_env("PGPORT"));
-        EnvMap::env_values.set("PGDATABASE",      get_env("PGDATABASE"));
-        EnvMap::env_values.set("PGUSER",          get_env("PGUSER"));
-        EnvMap::env_values.set("PGPASSWORD",      get_env("PGPASSWORD"));
+        // 查找并加载项目的 .env 文件
+        const auto env_file = find_env_file();
+        if (!env_file)
+        {
+            spdlog::error("未找到 .env 文件！请将 .env 放在项目目录中。");
+            std::exit(1);
+        }
+        load_env_file(*env_file, EnvMap::env_values);
+
+        // 校验必需的环境变量
+        for (const auto& key : REQUIRED_KEYS)
+        {
+            if (EnvMap::env_values[std::string{ key }].empty())
+            {
+                spdlog::error("缺少必需的环境变量 {}！", key);
+                std::exit(1);
+            }
+        }
 
         if (std::stoi(EnvMap::env_values["SERVER_PORT"]) <= 0)
         {
             spdlog::error("环境变量 SERVER_PORT 必须是有效的端口号！");
             std::exit(1);
         }
-    }
 
-    [[nodiscard]]auto get_env(const char* key) -> std::string
-    {
-        spdlog::debug("正在获取环境变量 {}...", key);
-        const char* val{ std::getenv(key) };
-        if (val == nullptr)
-        {
-            spdlog::error("缺少必需的环境变量 {}！", key);
-            std::exit(1);
-        }
-        spdlog::debug("环境变量 {} 获取成功。", key);
-        return val;
+        spdlog::info("环境变量已从 {} 加载。", env_file->string());
     }
 
     auto env() -> const EnvMap&

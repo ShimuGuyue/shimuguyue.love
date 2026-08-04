@@ -3,6 +3,12 @@
 *.code-workspace
 **/.vscode/
 
+### Environment
+
+.env
+.env.*
+!.env.example
+
 ### CodeWhale
 
 **/.codewhale/*
