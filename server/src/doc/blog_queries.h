@@ -16,17 +16,6 @@ namespace doc
 {
 
 /**
- * @brief 读取 DOC_PATH 环境变量。
- * 若未设置则 std::exit(1)。
- */
-void init();
-
-/**
- * @brief 获取 DOC_PATH。
- */
-[[nodiscard]] auto doc_path() -> const std::string&;
-
-/**
  * @brief 分类信息。
  */
 struct Category

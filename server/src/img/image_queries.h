@@ -15,14 +15,9 @@
 namespace img
 {
     /**
-     * @brief 初始化：读取 IMAGE_PATH 环境变量，不存在则 exit(1)。
+     * @brief 初始化：确保图片目录存在（路径来自 config::env()["IMAGE_PATH"]）。
      */
     void init();
-
-    /**
-     * @brief 获取 IMAGE_PATH。
-     */
-    [[nodiscard]] auto image_path() -> const std::string&;
 
     /**
      * @brief 获取所有图片记录。

@@ -26,9 +26,18 @@
 
 set -euo pipefail
 
+# ---- 加载项目 .env（项目根目录） ----
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "$PROJECT_ROOT/.env" ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$PROJECT_ROOT/.env"
+    set +a
+fi
+
 # ---- 配置 ----
-GITHUB_USER="${GITHUB_USER:?请设置 GITHUB_USER 环境变量}"
-README_DIR="${README_DIR:?请设置 README_DIR 环境变量（仓库存放目录）}"
+GITHUB_USER="${GITHUB_USER:?GITHUB_USER 未设置，请检查项目根目录的 .env 文件}"
+README_DIR="${README_DIR:?README_DIR 未设置，请检查项目根目录的 .env 文件}"
 REPO_URL="https://github.com/${GITHUB_USER}/${GITHUB_USER}.git"
 BRANCH="${BRANCH:-main}"
 
