@@ -9,6 +9,7 @@
 #include <format>
 #include <fstream>
 #include <sstream>
+#include <utility>
 
 #include <spdlog/spdlog.h>
 
@@ -88,24 +89,287 @@ namespace
         return std::nullopt;
     }
 
+    /**
+     * @brief 按文件路径查找博客记录。
+     * @param txn       当前事务。
+     * @param file_path 博客文件相对路径。
+     * @return 找到返回 (id, category_id)，category_id 为空时为 0；未找到返回 std::nullopt。
+     */
+    auto find_blog_row(pqxx::work& txn, std::string_view file_path) -> std::optional<std::pair<int, int>>
+    {
+        const auto row = txn.exec(
+            "SELECT id, category_id FROM blogs WHERE file_path = $1",
+            pqxx::params{ std::string{ file_path } }
+        );
+        if (row.empty())
+            return std::nullopt;
+        const int category_id = row[0]["category_id"].is_null()
+                              ? 0
+                              : row[0]["category_id"].as<int>();
+        return std::pair<int, int>{ row[0]["id"].as<int>(), category_id };
+    }
+
+    /**
+     * @brief 收集博客关联的全部标签 ID。
+     * @param txn     当前事务。
+     * @param blog_id 博客 ID。
+     * @return 标签 ID 列表。
+     */
+    auto get_blog_tag_ids(pqxx::work& txn, int blog_id) -> std::vector<int>
+    {
+        const auto rows = txn.exec(
+            "SELECT tag_id FROM blog_tags WHERE blog_id = $1",
+            pqxx::params{ blog_id }
+        );
+        std::vector<int> ids;
+        ids.reserve(rows.size());
+        for (const auto& row : rows)
+        {
+            ids.push_back(row["tag_id"].as<int>());
+        }
+        return ids;
+    }
+
+    /**
+     * @brief 检查博客文件路径是否已被占用。
+     * @param txn       当前事务。
+     * @param file_path 博客文件相对路径。
+     * @return true 表示已占用。
+     */
+    auto is_file_path_taken(pqxx::work& txn, std::string_view file_path) -> bool
+    {
+        const auto r = txn.exec(
+            "SELECT 1 FROM blogs WHERE file_path = $1",
+            pqxx::params{ std::string{ file_path } }
+        );
+        return !r.empty();
+    }
+
+    /**
+     * @brief 创建分类；已存在时不插入。
+     * @param txn  当前事务。
+     * @param name 分类名。
+     * @return 新分类 ID；已存在时返回 std::nullopt。
+     */
+    auto create_category(pqxx::work& txn, std::string_view name) -> std::optional<int>
+    {
+        const auto r = txn.exec(
+            "INSERT INTO categories (name) VALUES ($1) "
+            "ON CONFLICT (name) DO NOTHING RETURNING id",
+            pqxx::params{ std::string{ name } }
+        );
+        if (r.empty())
+            return std::nullopt;
+        return r[0]["id"].as<int>();
+    }
+
+    /**
+     * @brief 按名称查找分类。
+     * @param txn  当前事务。
+     * @param name 分类名。
+     * @return 分类 ID；不存在时返回 std::nullopt。
+     */
+    auto find_category(pqxx::work& txn, std::string_view name) -> std::optional<int>
+    {
+        const auto r = txn.exec(
+            "SELECT id FROM categories WHERE name = $1",
+            pqxx::params{ std::string{ name } }
+        );
+        if (r.empty())
+            return std::nullopt;
+        return r[0]["id"].as<int>();
+    }
+
+    /**
+     * @brief 创建标签；已存在时不插入。
+     * @param txn         当前事务。
+     * @param name        标签名。
+     * @param category_id 所属分类 ID。
+     * @return 新标签 ID；已存在时返回 std::nullopt。
+     */
+    auto create_tag(
+        pqxx::work&      txn,
+        std::string_view name,
+        int              category_id)
+    -> std::optional<int>
+    {
+        const auto r = txn.exec(
+            "INSERT INTO tags (name, category_id) VALUES ($1, $2) "
+            "ON CONFLICT (name, category_id) DO NOTHING RETURNING id",
+            pqxx::params{ name, category_id }
+        );
+        if (r.empty())
+            return std::nullopt;
+        return r[0]["id"].as<int>();
+    }
+
+    /**
+     * @brief 按名称和分类查找标签。
+     * @param txn         当前事务。
+     * @param name        标签名。
+     * @param category_id 所属分类 ID。
+     * @return 标签 ID；不存在时返回 std::nullopt。
+     */
+    auto find_tag(
+        pqxx::work&      txn,
+        std::string_view name,
+        int              category_id)
+    -> std::optional<int>
+    {
+        const auto r = txn.exec(
+            "SELECT id FROM tags WHERE name = $1 AND category_id = $2",
+            pqxx::params{ name, category_id }
+        );
+        if (r.empty())
+            return std::nullopt;
+        return r[0]["id"].as<int>();
+    }
+
+    /**
+     * @brief 关联博客与标签。
+     * @param txn     当前事务。
+     * @param blog_id 博客 ID。
+     * @param tag_ids 标签 ID 列表。
+     */
+    void link_blog_tags(pqxx::work& txn, int blog_id, const std::vector<int>& tag_ids)
+    {
+        for (int tid : tag_ids)
+        {
+            txn.exec("INSERT INTO blog_tags (blog_id, tag_id) VALUES ($1, $2) "
+                     "ON CONFLICT DO NOTHING",
+                     pqxx::params{ blog_id, tid });
+        }
+    }
+
+    /**
+     * @brief 清理已无博客引用的孤立标签。
+     * @param txn     当前事务。
+     * @param tag_ids 待检查的标签 ID 列表。
+     */
+    void delete_orphan_tags(pqxx::work& txn, const std::vector<int>& tag_ids)
+    {
+        for (int tid : tag_ids)
+        {
+            const auto ref = txn.exec(
+                "SELECT 1 FROM blog_tags WHERE tag_id = $1 LIMIT 1",
+                pqxx::params{ tid }
+            );
+            if (ref.empty())
+                txn.exec("DELETE FROM tags WHERE id = $1", pqxx::params{ tid });
+        }
+    }
+
+    /**
+     * @brief 清理已无博客引用的孤立分类。
+     * @param txn         当前事务。
+     * @param category_id 分类 ID。
+     */
+    void delete_orphan_category(pqxx::work& txn, int category_id)
+    {
+        const auto ref = txn.exec(
+            "SELECT 1 FROM blogs WHERE category_id = $1 LIMIT 1",
+            pqxx::params{ category_id }
+        );
+        if (ref.empty())
+            txn.exec("DELETE FROM categories WHERE id = $1", pqxx::params{ category_id });
+    }
+
+    /**
+     * @brief 生成 Frontmatter 并写入博客 .md 文件。
+     * @param file_path     博客文件相对路径。
+     * @param title         标题。
+     * @param description   描述。
+     * @param category_name 分类名。
+     * @param tag_names     标签名列表。
+     * @param content       博客正文。
+     * @param date          更新日期（YYYY-MM-DD）。
+     * @return std::nullopt 表示成功；否则返回错误消息。
+     */
+    auto write_blog_md(
+        std::string_view                file_path,
+        std::string_view                title,
+        std::string_view                description,
+        std::string_view                category_name,
+        const std::vector<std::string>& tag_names,
+        std::string_view                content,
+        std::string_view                date,
+        std::string_view                action)
+    -> std::optional<std::string>
+    {
+        std::ostringstream fm;
+        fm << "---\n";
+        fm << "title: " << title << "\n";
+        fm << "description: " << description << "\n";
+        fm << "category: " << category_name << "\n";
+        fm << "tags: [";
+        for (std::size_t i{ 0 }; i < tag_names.size(); ++i)
+        {
+            if (i > 0)
+                fm << ", ";
+            fm << tag_names[i];
+        }
+        fm << "]\n";
+        fm << "update_time: " << date << "\n";
+        fm << "file_path: " << file_path << "\n";
+        fm << "---\n\n";
+        fm << content;
+
+        std::filesystem::path out_path{ std::format("{}/blogs/{}.md", doc::doc_path(), file_path) };
+        std::filesystem::create_directories(out_path.parent_path());
+        std::ofstream ofs{ out_path, std::ios::binary };
+        if (!ofs)
+        {
+            spdlog::error("保存博客失败：写入文件 {} 失败！", out_path.string());
+            return std::string{ "保存博客失败" };
+        }
+        ofs << fm.str();
+        ofs.close();
+        return std::nullopt;
+    }
+
+    /**
+     * @brief 删除博客 .md 文件及可能为空的父目录。
+     * @param file_path 博客文件相对路径。
+     * @return std::nullopt 表示成功；否则返回错误消息。
+     */
+    auto delete_blog_md(std::string_view file_path) -> std::optional<std::string>
+    {
+        std::error_code ec;
+        std::filesystem::path md_path{ std::format("{}/blogs/{}.md", doc::doc_path(), file_path) };
+        std::filesystem::remove(md_path, ec);
+        if (ec)
+        {
+            spdlog::error("删除博客失败：{} - {}", md_path.string(), ec.message());
+            return std::string{ "删除博客失败" };
+        }
+        ec.clear();
+        std::filesystem::remove(md_path.parent_path(), ec);
+        if (ec)
+        {
+            spdlog::error("删除父目录失败：{} - {}", md_path.parent_path().string(), ec.message());
+            return std::format("删除博客失败");
+        }
+        return std::nullopt;
+    }
+
 } // namespace
 
 
 
 namespace doc
 {
-
 static std::string DOC_PATH;
 
-void init()
-{
-    DOC_PATH = config::get_env("DOC_PATH");
-}
+    void init()
+    {
+        DOC_PATH = config::get_env("DOC_PATH");
+    }
 
-auto doc_path() -> const std::string&
-{
-    return DOC_PATH;
-}
+    auto doc_path() -> const std::string&
+    {
+        return DOC_PATH;
+    }
+
     auto get_categories(pqxx::connection& conn) -> std::vector<Category>
     {
         spdlog::debug("正在从数据库获取分类列表...");
@@ -308,7 +572,7 @@ auto doc_path() -> const std::string&
             "FROM blogs b "
             "LEFT JOIN categories c ON c.id = b.category_id "
             "WHERE b.file_path = $1",
-            pqxx::params{ std::string{file_path} }
+            pqxx::params{ std::string{ file_path } }
         );
 
         if (row.empty())
@@ -379,64 +643,39 @@ auto doc_path() -> const std::string&
 
         pqxx::work txn{ conn };
         // 检查文件路径是否已被占用
+        if (is_file_path_taken(txn, file_path))
         {
-            auto r = txn.exec("SELECT 1 FROM blogs WHERE file_path = $1",
-                              pqxx::params{ file_path });
-            if (!r.empty())
+            spdlog::info("保存博客失败：路径 {} 已存在。", file_path);
+            return std::string{ "博客路径已存在" };
+        }
+
+        // 创建分类；已存在则查找
+        auto category_id = create_category(txn, category_name);
+        if (!category_id)
+        {
+            category_id = find_category(txn, category_name);
+            if (!category_id)
             {
-                spdlog::info("保存博客失败：路径 {} 已存在。", file_path);
-                return std::string{ "博客路径已存在" };
+                spdlog::error("保存博客失败：创建分类 {} 失败。", category_name);
+                return std::string{ "创建分类失败" };
             }
         }
 
-        // 创建或查找分类
-        int category_id{ 0 };
-        {
-            pqxx::result r = txn.exec(
-                "INSERT INTO categories (name) VALUES ($1) "
-                "ON CONFLICT (name) DO NOTHING RETURNING id",
-                pqxx::params{ std::string{category_name} });
-            if (!r.empty())
-            {
-                category_id = r[0]["id"].as<int>();
-            }
-            else
-            {
-                r = txn.exec("SELECT id FROM categories WHERE name = $1",
-                             pqxx::params{ std::string{category_name} });
-                if (r.empty())
-                {
-                    spdlog::error("保存博客失败：创建分类 {} 失败。", category_name);
-                    return std::string{ "创建分类失败" };
-                }
-                category_id = r[0]["id"].as<int>();
-            }
-        }
-
-        // 创建或查找标签
+        // 创建标签；已存在则查找
         std::vector<int> tag_ids;
         for (const auto& tn : tag_names)
         {
-            pqxx::result r = txn.exec(
-                "INSERT INTO tags (name, category_id) VALUES ($1, $2) "
-                "ON CONFLICT (name, category_id) DO NOTHING RETURNING id",
-                pqxx::params{ tn, category_id });
-            if (!r.empty())
+            auto tid = create_tag(txn, tn, *category_id);
+            if (!tid)
             {
-                tag_ids.push_back(r[0]["id"].as<int>());
-            }
-            else
-            {
-                r = txn.exec(
-                    "SELECT id FROM tags WHERE name = $1 AND category_id = $2",
-                    pqxx::params{ tn, category_id });
-                if (r.empty())
+                tid = find_tag(txn, tn, *category_id);
+                if (!tid)
                 {
                     spdlog::error("保存博客失败：创建标签 {} 失败。", tn);
                     return std::string{ "创建标签失败" };
                 }
-                tag_ids.push_back(r[0]["id"].as<int>());
             }
+            tag_ids.push_back(*tid);
         }
 
         // 插入博客数据库记录
@@ -447,7 +686,7 @@ auto doc_path() -> const std::string&
             "update_time, category_id) "
             "VALUES ($1, $2, $3, $4, $5::date, $6) RETURNING id",
             pqxx::params{ std::string{title}, std::string{description},
-                          std::string{content}, file_path, dt, category_id });
+                          std::string{content}, file_path, dt, *category_id });
         if (r.empty())
         {
             spdlog::error("保存博客失败：插入数据库记录失败。");
@@ -457,45 +696,12 @@ auto doc_path() -> const std::string&
         const int blog_id = r[0]["id"].as<int>();
 
         // 关联博客与标签
-        for (int tid : tag_ids)
-        {
-            txn.exec("INSERT INTO blog_tags (blog_id, tag_id) VALUES ($1, $2) "
-                     "ON CONFLICT DO NOTHING",
-                     pqxx::params{ blog_id, tid });
-        }
+        link_blog_tags(txn, blog_id, tag_ids);
 
         // 生成 Frontmatter 并写入 .md
         // 文件路径格式：{doc_path}/blogs/{category}/{name}.md
-        {
-            std::ostringstream fm;
-            fm << "---\n";
-            fm << "title: " << title << "\n";
-            fm << "description: " << description << "\n";
-            fm << "category: " << category_name << "\n";
-            fm << "tags: [";
-            for (std::size_t i{ 0 }; i < tag_names.size(); ++i)
-            {
-                if (i > 0)
-                    fm << ", ";
-                fm << tag_names[i];
-            }
-            fm << "]\n";
-            fm << "update_time: " << date << "\n";
-            fm << "file_path: " << file_path << "\n";
-            fm << "---\n\n";
-            fm << content;
-
-            std::filesystem::path out_path{ std::format("{}/blogs/{}.md", doc_path(), file_path) };
-            std::filesystem::create_directories(out_path.parent_path());
-            std::ofstream ofs{ out_path, std::ios::binary };
-            if (!ofs)
-            {
-                spdlog::error("保存博客失败：写入文件 {} 失败。", out_path.string());
-                return std::string{ "写入文件失败！" };
-            }
-            ofs << fm.str();
-            ofs.close();
-        }
+        if (auto err = write_blog_md(file_path, title, description, category_name, tag_names, content, date, "保存博客失败"); err)
+            return err;
 
         txn.commit();
         spdlog::info("博客保存成功。");
@@ -505,107 +711,59 @@ auto doc_path() -> const std::string&
     auto delete_blog(
         pqxx::connection& conn,
         std::string_view  file_path)
--> std::optional<std::string>
-{
-    spdlog::info("正在删除博客 {}...", file_path);
-    // 校验 file_path
-    if (file_path.empty())
+    -> std::optional<std::string>
     {
-        spdlog::error("删除博客失败：缺少 file_path 参数。");
-        return "缺少 file_path 参数";
-    }
-
-    pqxx::work txn{ conn };
-
-    // 查找博客记录
-    const auto blog_row = txn.exec(
-        "SELECT id, category_id FROM blogs WHERE file_path = $1",
-        pqxx::params{ std::string{ file_path } }
-    );
-    if (blog_row.empty())
-    {
-        spdlog::error("删除博客失败：{} 不存在。", file_path);
-        return "博客不存在";
-    }
-
-    const int blog_id     = blog_row[0]["id"].as<int>();
-    const int category_id = blog_row[0]["category_id"].is_null()
-                          ? 0
-                          : blog_row[0]["category_id"].as<int>();
-
-    // 收集关联的标签 ID
-    const auto tag_rows = txn.exec(
-        "SELECT tag_id FROM blog_tags WHERE blog_id = $1",
-        pqxx::params{ blog_id }
-    );
-    std::vector<int> tag_ids;
-    tag_ids.reserve(tag_rows.size());
-    for (const auto& tr : tag_rows)
-    {
-        tag_ids.push_back(tr["tag_id"].as<int>());
-    }
-
-    // 删除博客记录（CASCADE 自动清理 blog_tags 关联）
-    txn.exec("DELETE FROM blogs WHERE id = $1", pqxx::params{ blog_id });
-    // 清理孤立标签
-    for (int tid : tag_ids)
-    {
-        const auto ref = txn.exec(
-            "SELECT 1 FROM blog_tags WHERE tag_id = $1 LIMIT 1",
-            pqxx::params{ tid }
-        );
-        if (ref.empty())
-            txn.exec("DELETE FROM tags WHERE id = $1", pqxx::params{ tid });
-    }
-
-    // 清理孤立分类
-    if (category_id > 0)
-    {
-        const auto cat_ref = txn.exec(
-            "SELECT 1 FROM blogs WHERE category_id = $1 LIMIT 1",
-            pqxx::params{ category_id }
-        );
-        if (cat_ref.empty())
-            txn.exec("DELETE FROM categories WHERE id = $1", pqxx::params{ category_id });
-    }
-
-    txn.commit();
-
-    // 删除服务器上的 .md 文件及可能为空的父目录
-    {
-        std::error_code ec;
-        std::filesystem::path md_path{ std::format("{}/blogs/{}.md", doc_path(), file_path) };
-        std::filesystem::remove(md_path, ec);
-        if (ec)
+        spdlog::info("正在删除博客 {}...", file_path);
+        // 校验 file_path
+        if (file_path.empty())
         {
-            spdlog::error("删除博客文件失败：{} - {}", md_path.string(), ec.message());
-            return "删除博客文件失败";
+            spdlog::error("删除博客失败：缺少 file_path 参数。");
+            return "缺少 file_path 参数";
         }
-        ec.clear();
-        std::filesystem::remove(md_path.parent_path(), ec);
-        if (ec)
-        {
-            spdlog::error("删除博客父目录失败：{} - {}", md_path.parent_path().string(), ec.message());
-            return "删除博客文件失败";
-        }
-    }
 
-    spdlog::info("博客删除成功。");
-    return std::nullopt;
-}
+        pqxx::work txn{ conn };
+
+        // 查找博客记录
+        auto blog = find_blog_row(txn, file_path);
+        if (!blog)
+        {
+            spdlog::error("删除博客失败：{} 不存在。", file_path);
+            return "博客不存在";
+        }
+        const auto [blog_id, category_id] = *blog;
+
+        // 收集关联的标签 ID
+        const auto tag_ids = get_blog_tag_ids(txn, blog_id);
+
+        // 删除博客记录（CASCADE 自动清理 blog_tags 关联）
+        txn.exec("DELETE FROM blogs WHERE id = $1", pqxx::params{ blog_id });
+        // 清理孤立标签
+        delete_orphan_tags(txn, tag_ids);
+        // 清理孤立分类
+        delete_orphan_category(txn, category_id);
+
+        txn.commit();
+
+        // 删除服务器上的 .md 文件及可能为空的父目录
+        if (auto err = delete_blog_md(file_path); err)
+            return err;
+
+        spdlog::info("博客删除成功。");
+        return std::nullopt;
+    }
 
     auto update_blog(
-        pqxx::connection&              conn,
-        std::string_view               title,
-        std::string_view               description,
-        std::string_view               category_name,
+        pqxx::connection&               conn,
+        std::string_view                title,
+        std::string_view                description,
+        std::string_view                category_name,
         const std::vector<std::string>& tag_names,
-        std::string_view               old_file_path,
-        std::string_view               file_path_category,
-        std::string_view               file_path_name,
-        std::string_view               content,
-        std::string_view               date)
-     -> std::optional<std::string>
+        std::string_view                old_file_path,
+        std::string_view                file_path_category,
+        std::string_view                file_path_name,
+        std::string_view                content,
+        std::string_view                date)
+    -> std::optional<std::string>
     {
         spdlog::info("正在更新博客 {}...", title);
         // 校验元信息字段
@@ -621,89 +779,51 @@ auto doc_path() -> const std::string&
         pqxx::work txn{ conn };
 
         // 查找旧博客记录
-        const auto blog_row = txn.exec(
-            "SELECT id, category_id FROM blogs WHERE file_path = $1",
-            pqxx::params{ std::string{old_file_path} });
-        if (blog_row.empty())
+        auto blog = find_blog_row(txn, old_file_path);
+        if (!blog)
         {
             spdlog::error("更新博客失败：{} 不存在。", old_file_path);
-            return "博客不存在";
+            return "旧博客不存在";
         }
-
-        const int blog_id    = blog_row[0]["id"].as<int>();
-        const int old_cat_id = blog_row[0]["category_id"].is_null()
-                             ? 0
-                             : blog_row[0]["category_id"].as<int>();
+        const auto [blog_id, old_cat_id] = *blog;
 
         // 收集旧标签 ID
-        const auto old_tags = txn.exec(
-            "SELECT tag_id FROM blog_tags WHERE blog_id = $1",
-            pqxx::params{ blog_id });
-        std::vector<int> old_tag_ids;
-        for (const auto& tr : old_tags)
-        {
-            old_tag_ids.push_back(tr["tag_id"].as<int>());
-        }
+        const auto old_tag_ids = get_blog_tag_ids(txn, blog_id);
 
-        // 创建或查找新分类
-        int category_id{ 0 };
+        // 创建新分类；已存在则查找
+        auto category_id = create_category(txn, category_name);
+        if (!category_id)
         {
-            pqxx::result r = txn.exec(
-                "INSERT INTO categories (name) VALUES ($1) "
-                "ON CONFLICT (name) DO NOTHING RETURNING id",
-                pqxx::params{ std::string{category_name} });
-            if (!r.empty())
+            category_id = find_category(txn, category_name);
+            if (!category_id)
             {
-                category_id = r[0]["id"].as<int>();
-            }
-            else
-            {
-                r = txn.exec("SELECT id FROM categories WHERE name = $1",
-                             pqxx::params{ std::string{ category_name } });
-                if (r.empty())
-                {
-                    spdlog::error("更新博客失败：创建分类 {} 失败。", category_name);
-                    return "创建分类失败";
-                }
-                category_id = r[0]["id"].as<int>();
+                spdlog::error("更新博客失败：创建分类 {} 失败。", category_name);
+                return "创建分类失败";
             }
         }
 
-        // 创建或查找新标签
+        // 创建新标签；已存在则查找
         std::vector<int> new_tag_ids;
         for (const auto& tn : tag_names)
         {
-            pqxx::result r = txn.exec(
-                "INSERT INTO tags (name, category_id) VALUES ($1, $2) "
-                "ON CONFLICT (name, category_id) DO NOTHING RETURNING id",
-                pqxx::params{ tn, category_id });
-            if (!r.empty())
+            auto tid = create_tag(txn, tn, *category_id);
+            if (!tid)
             {
-                new_tag_ids.push_back(r[0]["id"].as<int>());
-            }
-            else
-            {
-                r = txn.exec("SELECT id FROM tags WHERE name = $1 AND category_id = $2",
-                             pqxx::params{ tn, category_id });
-                if (r.empty())
+                tid = find_tag(txn, tn, *category_id);
+                if (!tid)
                 {
                     spdlog::error("更新博客失败：创建标签 {} 失败。", tn);
                     return "创建标签失败";
                 }
-                new_tag_ids.push_back(r[0]["id"].as<int>());
             }
+            new_tag_ids.push_back(*tid);
         }
 
         // 路径变更时检查新路径是否已被占用
-        if (path_changed)
+        if (path_changed && is_file_path_taken(txn, new_file_path))
         {
-            auto dup = txn.exec("SELECT 1 FROM blogs WHERE file_path = $1",
-                                pqxx::params{ std::string{new_file_path} });
-            if (!dup.empty())
-            {
-                spdlog::error("更新博客失败：新路径 {} 已被占用。", new_file_path);
-                return "新文件路径已被其他博客占用";
-            }
+            spdlog::error("更新博客失败：新路径 {} 已被占用。", new_file_path);
+            return "新文件路径已被其他博客占用";
         }
 
         // 更新博客数据库记录
@@ -712,90 +832,32 @@ auto doc_path() -> const std::string&
             "UPDATE blogs SET title = $1, description = $2, content = $3, "
             "update_time = $4::date, category_id = $5, file_path = $6 WHERE id = $7",
             pqxx::params{ std::string{ title }, std::string{ description },
-                          std::string{ content }, dt, category_id,
+                          std::string{ content }, dt, *category_id,
                           std::string{ new_file_path }, blog_id });
 
         // 重建博客-标签关联（先删后插）
         txn.exec("DELETE FROM blog_tags WHERE blog_id = $1", pqxx::params{ blog_id });
-        for (int tid : new_tag_ids)
-        {
-            txn.exec("INSERT INTO blog_tags (blog_id, tag_id) VALUES ($1, $2) "
-                     "ON CONFLICT DO NOTHING",
-                     pqxx::params{blog_id, tid});
-        }
+        link_blog_tags(txn, blog_id, new_tag_ids);
 
         // 清理孤立标签
-        for (int tid : old_tag_ids)
-        {
-            const auto ref = txn.exec(
-                "SELECT 1 FROM blog_tags WHERE tag_id = $1 LIMIT 1",
-                pqxx::params{ tid });
-            if (ref.empty())
-                txn.exec("DELETE FROM tags WHERE id = $1", pqxx::params{ tid });
-        }
+        delete_orphan_tags(txn, old_tag_ids);
 
         // 清理未被引用的分类
-        if (old_cat_id > 0 && old_cat_id != category_id)
-        {
-            const auto cat_ref = txn.exec(
-                "SELECT 1 FROM blogs WHERE category_id = $1 LIMIT 1",
-                pqxx::params{ old_cat_id });
-            if (cat_ref.empty())
-                txn.exec("DELETE FROM categories WHERE id = $1", pqxx::params{ old_cat_id });
-        }
+        if (old_cat_id != *category_id)
+            delete_orphan_category(txn, old_cat_id);
 
         txn.commit();
 
         // 如果文件路径变更，删除旧 .md 文件
         if (path_changed)
         {
-            std::error_code ec;
-            std::filesystem::path old_md{ std::format("{}/blogs/{}.md", doc_path(), old_file_path) };
-            std::filesystem::remove(old_md, ec);
-            if (ec)
-            {
-                spdlog::error("删除旧博客文件失败：{} - {}", old_md.string(), ec.message());
-                return "删除旧博客文件失败";
-            }
-            ec.clear();
-            std::filesystem::remove(old_md.parent_path(), ec);
-            if (ec)
-            {
-                spdlog::error("删除旧博客父目录失败：{} - {}", old_md.parent_path().string(), ec.message());
-                return "删除旧博客父目录失败";
-            }
+            if (auto err = delete_blog_md(old_file_path); err)
+                return err;
         }
 
         // 生成 Frontmatter 并写入新 .md 文件
-        {
-            std::ostringstream fm;
-            fm << "---\n";
-            fm << "title: " << title << "\n";
-            fm << "description: " << description << "\n";
-            fm << "category: " << category_name << "\n";
-            fm << "tags: [";
-            for (std::size_t i{ 0 }; i < tag_names.size(); ++i)
-            {
-                if (i > 0)
-                    fm << ", ";
-                fm << tag_names[i];
-            }
-            fm << "]\n";
-            fm << "update_time: " << date << "\n";
-            fm << "file_path: " << new_file_path << "\n";
-            fm << "---\n\n";
-            fm << content;
-
-            std::filesystem::path out_path{ std::format("{}/blogs/{}.md", doc_path(), new_file_path) };
-            std::filesystem::create_directories(out_path.parent_path());
-            std::ofstream ofs{ out_path, std::ios::binary };
-            if (!ofs)
-            {
-                spdlog::error("更新博客失败：写入文件 {} 失败。", out_path.string());
-                return "写入文件失败！";
-            }
-            ofs << fm.str();
-        }
+        if (auto err = write_blog_md(new_file_path, title, description, category_name, tag_names, content, date, "更新博客失败"); err)
+            return err;
 
         spdlog::info("博客更新成功。");
         return std::nullopt;
