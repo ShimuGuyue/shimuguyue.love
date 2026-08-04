@@ -24,7 +24,7 @@ cd ${PROJECT_PATH}
 ### 环境变量
 
 复制项目根目录的 `.env.example` 为 `.env` 并填写。
-文件类目录只配置一个根目录 `FILE_PATH`：博客文件位于 `$FILE_PATH/doc/blogs`、图片位于 `$FILE_PATH/image`、README 位于 `$FILE_PATH/README`。
+文件类目录只配置一个根目录 `FILE_PATH`：博客文件位于 `$FILE_PATH/doc/blogs`、图片位于 `$FILE_PATH/image`、README 位于 `$FILE_PATH/README`，服务端启动时会自动创建这些目录。
 
 ### 前端
 

@@ -8,7 +8,6 @@
 #include "config/env.h"
 #include "db/connection.h"
 #include "http/routes.h"
-#include "img/image_queries.h"
 
 int main(int argc, char* argv[])
 {
@@ -16,8 +15,7 @@ int main(int argc, char* argv[])
     spdlog::info("项目初始化进行中...");
 
     config::init(); // 环境变量初始化
-    db::  init();   // 数据库连接与表检查
-    img:: init();   // 图片相关初始化
+    db::    init(); // 数据库连接与表检查
 
     httplib::Server svr;
     http::setup_routes(svr, db::connection());

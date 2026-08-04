@@ -19,15 +19,6 @@
 
 namespace img
 {
-
-    void init()
-    {
-        // 确保子目录存在
-        std::error_code ec;
-        std::filesystem::create_directories(
-            std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / "home", ec);
-    }
-
     auto get_all_images(pqxx::connection& conn) -> nlohmann::json
     {
         spdlog::debug("正在获取照片墙图片信息...");

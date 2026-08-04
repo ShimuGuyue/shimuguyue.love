@@ -56,7 +56,7 @@ PostgreSQL
 | `SERVER_HOST` | 监听地址 | server |
 | `SERVER_PORT` | 监听端口 | server |
 | `FRONTEND_ORIGIN` | CORS 允许的前端地址 | server |
-| `FILE_PATH` | 文件根目录；博客文件在 `FILE_PATH/doc/blogs`、图片在 `FILE_PATH/image`、README 在 `FILE_PATH/README` | server, tools |
+| `FILE_PATH` | 文件根目录；启动时统一创建/检测博客（`FILE_PATH/doc/blogs`）、图片（`FILE_PATH/image`）、README（`FILE_PATH/README`）目录 | server, tools |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
 | `BUILD_DIR` | 前端构建输出目录（默认 `dist`） | client (vite) |
 
