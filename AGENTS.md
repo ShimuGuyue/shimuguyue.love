@@ -147,11 +147,12 @@ PostgreSQL
 | `server/main.cpp` | 服务端入口：初始化 → 建立数据库连接 → 注册路由 → 监听 |
 | `server/CMakeLists.txt` | CMake 构建配置（源文件列表、vcpkg 依赖） |
 | `server/CMakePresets.json` | CMake 预设（default） |
-| `server/src/http/routes.cpp` | 所有 API 路由注册（~930 行），按 auth/blog/image/profile/about 分组 |
+| `server/src/http/routes.cpp` | API 路由注册（~180 行），统一调用 handlers 中的处理函数 |
 | `server/src/http/routes.h` | HTTP 服务配置声明（`FRONTEND_ORIGIN` / `SERVER_HOST` / `SERVER_PORT`、`setup_routes`） |
 | `server/src/http/handlers.cpp` / `.h` | 全部 API 路由处理函数（业务逻辑），由 routes.cpp 统一注册调用 |
 | `server/src/db/connection.cpp` / `.h` | 数据库连接：单 `pqxx::connection` + 表检查 |
 | `server/src/config/env.cpp` / `.h` | 环境变量读取（缺失则 `exit(1)`） |
+| `server/src/config/env_map.cpp` / `.h` | 环境变量存储封装类（内部 `unordered_map`，只读 `operator[]`） |
 | `server/src/auth/login.cpp` / `.h` | 密钥/密码登录、权限查询 |
 | `server/src/auth/session.cpp` / `.h` | 会话 token 创建、验证、过期清理 |
 | `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |

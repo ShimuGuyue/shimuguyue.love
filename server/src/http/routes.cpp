@@ -5,52 +5,16 @@
 
 #include "http/routes.h"
 
-#include <cstdlib>
 #include <string>
-
-#include <spdlog/spdlog.h>
 
 #include "config/env.h"
 #include "http/handlers.h"
-#include "img/image_queries.h"
 
 namespace http
 {
-static std::string FRONTEND_ORIGIN;
-static std::string SERVER_HOST;
-static int         SERVER_PORT;
-
-    void init()
-    {
-        FRONTEND_ORIGIN =           config::get_env("FRONTEND_ORIGIN");
-        SERVER_HOST     =           config::get_env("SERVER_HOST");
-        SERVER_PORT     = std::stoi(config::get_env("SERVER_PORT"));
-
-        if (SERVER_PORT <= 0)
-        {
-            spdlog::error("环境变量 SERVER_PORT 必须是有效的端口号！");
-            std::exit(1);
-        }
-    }
-
-    auto frontend_origin() -> std::string
-    {
-        return FRONTEND_ORIGIN;
-    }
-
-    auto server_host() -> std::string
-    {
-        return SERVER_HOST;
-    }
-
-    auto server_port() -> int
-    {
-        return SERVER_PORT;
-    }
-
     void setup_routes(httplib::Server& svr, pqxx::connection& conn)
     {
-        const std::string allowed = frontend_origin();
+        const std::string allowed = config::env()["FRONTEND_ORIGIN"];
 
         svr.Options("/api/.*",
             [&conn, allowed](const auto& req, auto& res)
@@ -117,7 +81,7 @@ static int         SERVER_PORT;
         );
 
         // 挂载图片静态文件服务
-        svr.set_mount_point("/image", img::image_path());
+        svr.set_mount_point("/image", config::env()["IMAGE_PATH"]);
 
         // GET /api/images — 获取所有图片
         svr.Get("/api/images",

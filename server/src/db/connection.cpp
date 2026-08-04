@@ -16,17 +16,17 @@
 namespace
 {
     /**
-     * @brief 获取环境变量并连接到数据库
+     * @brief 连接到数据库
      */
     void connect(pqxx::connection& conn)
     {
         spdlog::debug("正在连接至 PostgreSQL...");
 
-        auto host     = config::get_env("PGHOST");
-        auto port     = config::get_env("PGPORT");
-        auto dbname   = config::get_env("PGDATABASE");
-        auto user     = config::get_env("PGUSER");
-        auto password = config::get_env("PGPASSWORD");
+        const auto& host     = config::env()["PGHOST"];
+        const auto& port     = config::env()["PGPORT"];
+        const auto& dbname   = config::env()["PGDATABASE"];
+        const auto& user     = config::env()["PGUSER"];
+        const auto& password = config::env()["PGPASSWORD"];
 
         conn = pqxx::connection{
             std::format(

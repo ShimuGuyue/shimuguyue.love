@@ -314,7 +314,7 @@ namespace
         fm << "---\n\n";
         fm << content;
 
-        std::filesystem::path out_path{ std::format("{}/blogs/{}.md", doc::doc_path(), file_path) };
+        std::filesystem::path out_path{ std::format("{}/blogs/{}.md", config::env()["DOC_PATH"], file_path) };
         std::filesystem::create_directories(out_path.parent_path());
         std::ofstream ofs{ out_path, std::ios::binary };
         if (!ofs)
@@ -335,7 +335,7 @@ namespace
     auto delete_blog_md(std::string_view file_path) -> std::optional<std::string>
     {
         std::error_code ec;
-        std::filesystem::path md_path{ std::format("{}/blogs/{}.md", doc::doc_path(), file_path) };
+        std::filesystem::path md_path{ std::format("{}/blogs/{}.md", config::env()["DOC_PATH"], file_path) };
         std::filesystem::remove(md_path, ec);
         if (ec)
         {
@@ -358,18 +358,6 @@ namespace
 
 namespace doc
 {
-static std::string DOC_PATH;
-
-    void init()
-    {
-        DOC_PATH = config::get_env("DOC_PATH");
-    }
-
-    auto doc_path() -> const std::string&
-    {
-        return DOC_PATH;
-    }
-
     auto get_categories(pqxx::connection& conn) -> std::vector<Category>
     {
         spdlog::debug("正在从数据库获取分类列表...");

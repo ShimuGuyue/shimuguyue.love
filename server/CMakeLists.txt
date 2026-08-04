@@ -31,6 +31,7 @@ add_executable(${PROJECT_NAME}
     src/md/markdown_parser.cpp
     src/profile/profile_queries.cpp
     src/config/env.cpp
+    src/config/env_map.cpp
 )
 
 # 头文件
