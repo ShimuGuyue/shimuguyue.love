@@ -26,7 +26,7 @@ auto get_profile(pqxx::connection& conn) -> nlohmann::json
     json["subtitle"] = row["subtitle"].as<std::string>();
     json["bio"]      = row["bio"]     .as<std::string>();
     txn.commit();
-    spdlog::info("获取个人简介成功。");
+    spdlog::debug("获取个人简介成功。");
     return json;
 }
 

@@ -44,7 +44,7 @@ namespace img
             item["z"]           = row["z"]          .as<int>();
             arr.push_back(std::move(item));
         }
-        spdlog::info("获取照片墙图片信息完成。");
+        spdlog::debug("获取照片墙图片信息完成。");
         return arr;
     }
 
