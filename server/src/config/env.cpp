@@ -166,10 +166,9 @@ namespace config
             }
         }
 
-        spdlog::info("文件目录已确认：{}/doc/blogs、{}/image/home、{}/README。",
-                     root.string(), root.string(), root.string());
+        spdlog::info("文件目录已确认：FILE_PATH/doc/blogs、FILE_PATH/image/home、FILE_PATH/README。");
 
-        spdlog::info("环境变量已从 {} 加载。", env_file->string());
+        spdlog::info("环境变量已加载。");
     }
 
     auto env() -> const EnvMap&

@@ -197,7 +197,10 @@ function onSearchInput() {
 }
 
 function goToBlog(filePath: string) {
-  router.push(`/blogs/${filePath.replace(/^\/+/, "")}`)
+  const routeData = router.resolve({
+    path: `/blogs/${filePath.replace(/^\/+/, "")}`
+  });
+  window.open(routeData.href, '_blank');
 }
 
 // ── 生命周期 ──
