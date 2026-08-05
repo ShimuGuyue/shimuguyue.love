@@ -201,7 +201,7 @@ async function handleSubmit() {
   border-radius: 2px;
   font-size: 1rem;
   font-weight: 600;
-  color: #fff;
+  color: var(--color-card-bg, var(--color-nav-bg));
   background-color: var(--color-text);
   cursor: pointer;
   transition: opacity var(--transition-speed);
