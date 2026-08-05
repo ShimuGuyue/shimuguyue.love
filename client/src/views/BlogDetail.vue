@@ -483,6 +483,8 @@ watch(renderedContent, async () => {
 
 /* ── 中间正文 ── */
 .blog-detail__content {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
   min-width: 0;
   min-height: calc(100vh - 177px);
 }
