@@ -222,10 +222,11 @@ html.dark
 
 /* 行内代码 */
 .blog-detail__content code {
-  color: #888;
+  font-weight: bolder;
+  color: var(--pink-hot);
   word-wrap: break-word;
   word-break: break-all;
-  background-color: rgba(0, 0, 0, 0.06);
+  background-color: rgba(0, 0, 0, 0.05);
   font-family: "仿宋", FangSong, serif;
   padding: 0.15em 0.4em;
   border-radius: 3px;
