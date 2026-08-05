@@ -178,8 +178,7 @@ cd ${PROJECT_PATH}
     INSERT INTO users (key_hash, key_enabled, username, password_hash)
     VALUES (
         '${KEY_HASH}',      # 密钥哈希值
-        'FALSE',            # 密钥可用状态
-        # 若后端代码公开，密钥的哈希算法中固定盐值被公开，不安全，生产环境建议废弃管理员密钥
+        'TRUE',             # 密钥可用状态，不暴露固定盐值情况下可以安全开启
         '${USERNAME}',      # 用户名
         '${PASSWORD_HASH}', # 密码哈希值
     ); # id 为 1

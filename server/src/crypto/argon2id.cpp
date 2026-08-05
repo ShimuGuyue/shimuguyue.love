@@ -5,6 +5,8 @@
 
 #include "crypto/argon2id.h"
 
+#include "config/env.h"
+
 #include <array>
 
 #include <sodium.h>
@@ -12,12 +14,6 @@
 
 namespace
 {
-/// 固定盐哈希专用盐值（16 字节编译期常量）。
-constexpr std::array<unsigned char, crypto_pwhash_SALTBYTES> salt_fixed = {
-    0x71, 0x68, 0xf8, 0x3d, 0x9a, 0x4e, 0xb5, 0x2c,
-    0x15, 0x7a, 0x6d, 0xe1, 0x93, 0x0f, 0x42, 0x88
-};
-
 /**
  * @brief 将二进制数据转换为 hex 字符串。
  * @param data 二进制数据指针。
@@ -34,6 +30,41 @@ auto bin_to_hex(const unsigned char* data, std::size_t len) -> std::string
         result[i * 2 + 1] = hex_chars[ data[i]       & 0x0f];
     }
     return result;
+}
+
+/**
+ * @brief 将 hex 字符转换为半字节值。
+ * @param c hex 字符。
+ * @return 0~15；无效字符返回 -1。
+ */
+auto hex_char_to_nibble(char c) -> int
+{
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+/**
+ * @brief 将 hex 字符串解码为盐值字节数组。
+ * @param hex  hex 编码字符串（长度须为盐值字节数的两倍）。
+ * @param salt 输出盐值字节数组。
+ * @return 解码成功返回 true，失败返回 false。
+ */
+auto hex_to_salt(std::string_view hex, std::array<unsigned char, crypto_pwhash_SALTBYTES>& salt) -> bool
+{
+    if (hex.size() != salt.size() * 2)
+        return false;
+
+    for (std::size_t i{ 0 }; i < salt.size(); ++i)
+    {
+        const auto hi = hex_char_to_nibble(hex[i * 2]);
+        const auto lo = hex_char_to_nibble(hex[i * 2 + 1]);
+        if (hi < 0 || lo < 0)
+            return false;
+        salt[i] = static_cast<unsigned char>((hi << 4) | lo);
+    }
+    return true;
 }
 
 } // namespace
@@ -87,8 +118,16 @@ namespace crypto::Argon2id
             return std::nullopt;
         }
 
-        // 使用编译期固定的盐值进行确定性哈希，输出为 32 字节二进制
+        // 使用环境变量 FIXED_SALT 指定的盐值进行确定性哈希，输出为 32 字节二进制
         // crypto_pwhash_BYTES = 32（libsodium 固定值；unofficial-sodium 未导出该宏）
+        std::array<unsigned char, crypto_pwhash_SALTBYTES> salt{ };
+        const auto salt_hex = config::env()["FIXED_SALT"];
+        if (!hex_to_salt(salt_hex, salt))
+        {
+            spdlog::error("固定盐哈希失败：FIXED_SALT 格式无效。");
+            return std::nullopt;
+        }
+
         std::array<unsigned char, 32> hash_out{ };
 
         const auto result = static_cast<int>(
@@ -97,7 +136,7 @@ namespace crypto::Argon2id
                 hash_out.size(),
                 data.data(),
                 data.size(),
-                salt_fixed.data(),
+                salt.data(),
                 crypto_pwhash_OPSLIMIT_SENSITIVE,
                 crypto_pwhash_MEMLIMIT_SENSITIVE,
                 crypto_pwhash_ALG_DEFAULT

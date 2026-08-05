@@ -48,7 +48,8 @@ namespace crypto::Argon2id
     /**
      * @brief 对明文数据进行固定盐哈希。
      *
-     * 盐值为编译期硬编码常量，同一 key 永远产生相同哈希值。
+     * 盐值从环境变量 FIXED_SALT 读取（32 位 hex），
+     * 同一 key 永远产生相同哈希值。
      *
      * @param data 明文数据。
      * @return 成功返回编码后的哈希字符串，

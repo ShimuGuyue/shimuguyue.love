@@ -6,6 +6,7 @@
 #include "config/env.h"
 #include "config/env_map.h"
 
+#include <algorithm>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -23,6 +24,7 @@ constexpr std::string_view REQUIRED_KEYS[] = {
     "SERVER_HOST",
     "SERVER_PORT",
     "FILE_PATH",
+    "FIXED_SALT",
     "PGHOST",
     "PGPORT",
     "PGDATABASE",
@@ -136,6 +138,25 @@ namespace config
         if (std::stoi(EnvMap::env_values["SERVER_PORT"]) <= 0)
         {
             spdlog::error("环境变量 SERVER_PORT 必须是有效的端口号！");
+            std::exit(1);
+        }
+
+        // 校验 FIXED_SALT：16 字节盐值的 hex 编码（32 个 hex 字符）
+        const auto& fixed_salt = EnvMap::env_values["FIXED_SALT"];
+        const bool fixed_salt_valid{
+            fixed_salt.size() == 32 &&
+            std::all_of(fixed_salt.begin(), fixed_salt.end(),
+                [](unsigned char c)
+                {
+                    return (c >= '0' && c <= '9')
+                        || (c >= 'a' && c <= 'f')
+                        || (c >= 'A' && c <= 'F');
+                }
+            )
+        };
+        if (!fixed_salt_valid)
+        {
+            spdlog::error("环境变量 FIXED_SALT 必须是 32 位十六进制字符串（16 字节盐值）！");
             std::exit(1);
         }
 
