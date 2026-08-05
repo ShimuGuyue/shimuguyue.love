@@ -73,7 +73,7 @@
 
 .blog-detail__content hr {
   height: 0.8px;
-  margin: 25px 0;
+  margin: 16px 0;
   border: none;
   background: repeating-linear-gradient(
     to right,
@@ -94,7 +94,10 @@ html.dark .blog-detail__content hr {
  * ============================= */
 
 /* 段落 */
-/* .blog-detail__content p {} */
+.blog-detail__content p {
+  line-height: 28px;
+  margin: 16px 0;
+}
 
 /* 斜体 */
 /* .blog-detail__content em {} */
@@ -146,6 +149,7 @@ html.dark .blog-detail__content a:hover {
  * ============================= */
 
 .blog-detail__content blockquote {
+  margin: 16px 0;
   border: 1px solid var(--pink-soft);
   border-left: 4px solid var(--pink-soft);
   border-right: 0px;
@@ -153,6 +157,10 @@ html.dark .blog-detail__content a:hover {
   background-color: rgba(0, 0, 0, 0.05);
   color: #888;
   font-weight: bold;
+}
+
+.blog-detail__content blockquote > p {
+  margin: 0;
 }
 
 /* 深色模式 */
@@ -170,9 +178,17 @@ html.dark
 .blog-detail__content ol {
   list-style: none;
   padding-left: 4ch;
+  margin: 16px 0;
 }
 .blog-detail__content li {
   position: relative;
+}
+.blog-detail__content li + li {
+  margin-top: 8px;
+}
+.blog-detail__content li > ul,
+.blog-detail__content li > ol {
+  margin: 8px 0 0;
 }
 
 /* 外层无序列表标记 */
@@ -222,10 +238,11 @@ html.dark
 
 /* 行内代码 */
 .blog-detail__content code {
-  color: #888;
+  font-weight: bolder;
+  color: var(--pink-hot);
   word-wrap: break-word;
   word-break: break-all;
-  background-color: rgba(0, 0, 0, 0.06);
+  background-color: rgba(0, 0, 0, 0.05);
   font-family: "仿宋", FangSong, serif;
   padding: 0.15em 0.4em;
   border-radius: 3px;
@@ -337,6 +354,7 @@ html.dark .blog-detail__content .hljs-deletion {
  * ============================= */
 
 .blog-detail__content table {
+  margin: 20px 0;
   text-align: left;
   width: 100%;
   border-collapse: collapse;
