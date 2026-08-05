@@ -163,6 +163,7 @@ cd ${PROJECT_PATH}
     首先在 `server/main.cpp` 添加以下代码并运行为自己的密钥/密码拿到哈希值
 
     ！拿到值后请立刻删除语句。
+    ！固定盐哈希依赖环境变量 `FIXED_SALT`，请把语句放在 `config::init();` 之后。
 
     ```cpp
     std:cout << *crypto::Argon2id::hash_with_random_salt("${KEY}")     << std::endl; ///< 密钥哈希值

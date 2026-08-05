@@ -150,9 +150,8 @@ namespace crypto::Argon2id
         }
 
         // 将二进制哈希输出转为 hex 字符串便于存储
-        auto hex = bin_to_hex(hash_out.data(), hash_out.size());
-        spdlog::debug("固定盐哈希完成：{}", hex);
-        return hex;
+        spdlog::debug("固定盐哈希完成。");
+        return bin_to_hex(hash_out.data(), hash_out.size());
     }
 
     auto verify_with_random_salt(std::string_view data, std::string_view hash) -> VerifyResult
