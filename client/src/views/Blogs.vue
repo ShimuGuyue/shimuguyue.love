@@ -48,24 +48,37 @@ const searchQuery = ref('')
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
-// ── 计算：当前可见的标签（按选中的分类过滤） ──
+// ── 计算：当前可见的标签（按选中的分类过滤，同名标签合并为一个） ──
 
 const visibleTags = computed<Tag[]>(() => {
-  if (selectedCategoryIds.value.length === 0) {
-    // 未选分类时显示所有标签
-    return tags.value
+  let list = tags.value
+  if (selectedCategoryIds.value.length > 0) {
+    // 多选时取所有选中分类的标签并集
+    const idSet = new Set(selectedCategoryIds.value)
+    list = tags.value.filter(t => idSet.has(t.category_id))
   }
-  // 多选时取所有选中分类的标签并集
-  const idSet = new Set(selectedCategoryIds.value)
-  return tags.value.filter(t => idSet.has(t.category_id))
+  const seen = new Set<string>()
+  return list.filter(t => {
+    if (seen.has(t.name)) return false
+    seen.add(t.name)
+    return true
+  })
 })
+
+/** 获取指定名称标签在全部分类下的所有 ID（同名标签一并选中） */
+function tagIdsByName(name: string): number[] {
+  return tags.value.filter(t => t.name === name).map(t => t.id)
+}
 
 // 分类切换后清除已不存在的标签选中
 let initializing = false
 watch(selectedCategoryIds, () => {
   if (initializing) return
-  const visibleIds = new Set(visibleTags.value.map(t => t.id))
-  selectedTagIds.value = selectedTagIds.value.filter(id => visibleIds.has(id))
+  const visibleNames = new Set(visibleTags.value.map(t => t.name))
+  selectedTagIds.value = selectedTagIds.value.filter(id => {
+    const name = tags.value.find(t => t.id === id)?.name
+    return name !== undefined && visibleNames.has(name)
+  })
 })
 
 // ── 远程获取 ──
@@ -130,9 +143,7 @@ onBeforeRouteUpdate(async (to, from) => {
   selectedCategoryIds.value = urlCatNames
     .map(n => categories.value.find(c => c.name === n)?.id)
     .filter(Boolean) as number[]
-  selectedTagIds.value = urlTagNames
-    .map(n => tags.value.find(t => t.name === n)?.id)
-    .filter(Boolean) as number[]
+  selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
 
   await fetchBlogs(true)
 })
@@ -146,8 +157,9 @@ function syncUrl() {
     .map(id => categories.value.find(c => c.id === id)?.name).filter(Boolean)
   const tagNames = selectedTagIds.value
     .map(id => tags.value.find(t => t.id === id)?.name).filter(Boolean)
+  const uniqueTagNames = [...new Set(tagNames)]
   if (catNames.length) q.categories = catNames.join(',')
-  if (tagNames.length) q.tags       = tagNames.join(',')
+  if (uniqueTagNames.length) q.tags    = uniqueTagNames.join(',')
   if (searchQuery.value.trim())     q.q = searchQuery.value.trim()
   if (categoryMulti.value)          q.cm = '1'
   if (tagMulti.value)               q.tm = '1'
@@ -176,17 +188,18 @@ function toggleCategory(id: number) {
   fetchBlogs()
 }
 
-function toggleTag(id: number) {
+function toggleTag(name: string) {
+  const ids = tagIdsByName(name)
+  if (ids.length === 0) return
+  const anySelected = ids.some(id => selectedTagIds.value.includes(id))
   if (tagMulti.value) {
-    const idx = selectedTagIds.value.indexOf(id)
-    if (idx >= 0) {
-      selectedTagIds.value.splice(idx, 1)
+    if (anySelected) {
+      selectedTagIds.value = selectedTagIds.value.filter(id => !ids.includes(id))
     } else {
-      selectedTagIds.value.push(id)
+      selectedTagIds.value = [...selectedTagIds.value, ...ids]
     }
   } else {
-    selectedTagIds.value =
-      selectedTagIds.value[0] === id ? [] : [id]
+    selectedTagIds.value = anySelected ? [] : ids
   }
   fetchBlogs()
 }
@@ -219,8 +232,7 @@ onMounted(async () => {
   // name → ID 转换
   selectedCategoryIds.value = urlCatNames
     .map(n => categories.value.find(c => c.name === n)?.id).filter(Boolean) as number[]
-  selectedTagIds.value = urlTagNames
-    .map(n => tags.value.find(t => t.name === n)?.id).filter(Boolean) as number[]
+  selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
 
   await fetchBlogs()
   initializing = false
@@ -258,10 +270,10 @@ onMounted(async () => {
         <div class="filter-chips">
           <button
             v-for="tag in visibleTags"
-            :key="tag.id"
+            :key="tag.name"
             class="chip"
-            :class="{ 'chip--active': selectedTagIds.includes(tag.id) }"
-            @click="toggleTag(tag.id)"
+            :class="{ 'chip--active': tagIdsByName(tag.name).some(id => selectedTagIds.includes(id)) }"
+            @click="toggleTag(tag.name)"
           >
             {{ tag.name }}
           </button>
