@@ -92,7 +92,9 @@ namespace http
                 resp["username"] = result->username.has_value()
                                  ? nlohmann::json(*result->username)
                                  : nlohmann::json(nullptr);
-                resp["token"] = auth::create_session(conn, result->id, result->permissions);
+                const auto created = auth::create_session(conn, result->id, result->permissions);
+                resp["token"]      = created.token;
+                resp["expires_at"] = created.expires_at;
                 res.set_content(resp.dump(), "application/json");
             }
         );
@@ -153,7 +155,9 @@ namespace http
                 resp["username"] = result->username.has_value()
                                  ? nlohmann::json(*result->username)
                                  : nlohmann::json(nullptr);
-                resp["token"] = auth::create_session(conn, result->id, result->permissions);
+                const auto created = auth::create_session(conn, result->id, result->permissions);
+                resp["token"]      = created.token;
+                resp["expires_at"] = created.expires_at;
                 res.set_content(resp.dump(), "application/json");
             }
         );

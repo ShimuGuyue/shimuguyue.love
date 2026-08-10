@@ -1,6 +1,42 @@
 <script setup lang="ts">
+import { onMounted, watch } from 'vue'
+
+import { useAuthStore } from '@/stores/auth'
 import NavBar from '@/components/NavBar.vue'
 import '@/assets/background.css'
+
+const auth = useAuthStore()
+
+let expiryTimer: ReturnType<typeof setTimeout> | undefined
+
+/** 会话过期：清除登录状态。 */
+function expireSession() {
+    auth.logout()
+}
+
+/** 按过期时间安排自动退出；已过期则立即退出。 */
+function scheduleExpiry() {
+    clearTimeout(expiryTimer)
+    if (!auth.isLoggedIn || !auth.expiresAt) return
+    const delay = new Date(auth.expiresAt).getTime() - Date.now()
+    if (delay <= 0) {
+        expireSession()
+    } else {
+        expiryTimer = setTimeout(expireSession, delay)
+    }
+}
+
+onMounted(scheduleExpiry)
+watch(
+    () => auth.isLoggedIn,
+    (loggedIn) => {
+        if (loggedIn) {
+            scheduleExpiry()
+        } else {
+            clearTimeout(expiryTimer)
+        }
+    },
+)
 </script>
 
 <template>

@@ -47,7 +47,7 @@ PostgreSQL
 
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/doc/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/doc/blogs/` 的相对路径（不含 `.md` 后缀）。
 - **图片**：文件存于 `FILE_PATH/image/`，元数据存于数据库，文件名与对应 `id` 同名。
-- **认证**：Bearer token，存于 `sessions` 表，24 小时过期，权限 JSON 序列化存库。
+- **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
 - **配置**：所有配置从环境变量读取，缺失则 `exit(1)`。无配置文件。
 
 ## 关键环境变量
@@ -61,6 +61,7 @@ PostgreSQL
 | `FIXED_SALT` | Argon2id 固定盐哈希盐值（32 位 hex = 16 字节） | server |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
 | `DB_POOL_SIZE` | 数据库连接池大小（正整数，必填） | server |
+| `SESSION_TTL_MINUTES` | 登录会话过期时间（分钟，正整数，必填） | server |
 | `BUILD_DIR` | 前端构建输出目录（默认 `dist`） | client (vite) |
 
 ## 编码约定
