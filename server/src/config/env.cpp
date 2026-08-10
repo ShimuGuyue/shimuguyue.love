@@ -138,10 +138,21 @@ namespace config
             }
         }
 
-        if (std::stoi(EnvMap::env_values["SERVER_PORT"]) <= 0)
+        // SERVER_PORT 必须是 1~65535 的端口号
         {
-            spdlog::error("环境变量 SERVER_PORT 必须是有效的端口号！");
-            std::exit(1);
+            const auto& server_port = EnvMap::env_values["SERVER_PORT"];
+            unsigned int parsed     = 0;
+            const auto [ptr, ec]    = std::from_chars(
+                server_port.data(),
+                server_port.data() + server_port.size(),
+                parsed
+            );
+            if (ec != std::errc{} || ptr != server_port.data() + server_port.size()
+            ||  parsed == 0 || parsed > 65535)
+            {
+                spdlog::error("环境变量 SERVER_PORT 必须是有效的端口号！");
+                std::exit(1);
+            }
         }
 
         // 校验 FIXED_SALT：16 字节盐值的 hex 编码（32 个 hex 字符）
@@ -172,7 +183,7 @@ namespace config
                 pool_size.data() + pool_size.size(),
                 parsed
             );
-            if (ec != std::errc{} || ptr != pool_size.data() + pool_size.size() || parsed < 0)
+            if (ec != std::errc{} || ptr != pool_size.data() + pool_size.size() || parsed == 0)
             {
                 spdlog::error("环境变量 DB_POOL_SIZE 必须是正整数！");
                 std::exit(1);
