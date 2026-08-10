@@ -197,7 +197,7 @@ namespace config
             "doc/blogs",
             "image",
             "image/home",
-            "README",
+            "doc/README",
         };
 
         std::error_code ec;
@@ -217,7 +217,7 @@ namespace config
             }
         }
 
-        spdlog::info("文件目录已确认：${FILE_PATH}/doc/blogs、${FILE_PATH}/image/home、${FILE_PATH}/README。");
+        spdlog::info("文件目录已确认：${FILE_PATH}/doc/blogs、${FILE_PATH}/image/home、${FILE_PATH}/doc/README。");
 
         spdlog::info("环境变量已加载。");
     }

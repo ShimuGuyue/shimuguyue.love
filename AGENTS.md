@@ -57,7 +57,7 @@ PostgreSQL
 | `SERVER_HOST` | 监听地址 | server |
 | `SERVER_PORT` | 监听端口 | server |
 | `FRONTEND_ORIGIN` | CORS 允许的前端地址 | server |
-| `FILE_PATH` | 文件根目录；启动时统一创建/检测博客（`FILE_PATH/doc/blogs`）、图片（`FILE_PATH/image`）、README（`FILE_PATH/README`）目录 | server, tools |
+| `FILE_PATH` | 文件根目录；启动时统一创建/检测博客（`FILE_PATH/doc/blogs`）、图片（`FILE_PATH/image`）、README（`FILE_PATH/doc/README`）目录 | server, tools |
 | `FIXED_SALT` | Argon2id 固定盐哈希盐值（32 位 hex = 16 字节） | server |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
 | `DB_POOL_SIZE` | 数据库连接池大小（正整数，必填） | server |

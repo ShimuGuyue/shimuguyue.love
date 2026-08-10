@@ -8,17 +8,17 @@
 #
 # 前置条件：
 #   1. 目标仓库公开可访问（无需认证）。
-#   2. 本脚本对 $FILE_PATH/README 目录有写权限。
+#   2. 本脚本对 $FILE_PATH/doc/README 目录有写权限。
 #   3. git 已安装。
 #   4. psql 已安装并配置好数据库连接环境变量（PGHOST 等）。
 #
 # 环境变量：
 #   GITHUB_USER    — GitHub 用户名，仓库地址为 github.com/$GITHUB_USER/$GITHUB_USER
-#   FILE_PATH      — 文件根目录，README 仓库本地存放路径为 $FILE_PATH/README
+#   FILE_PATH      — 文件根目录，README 仓库本地存放路径为 $FILE_PATH/doc/README
 #   BRANCH         — 拉取的分支名（默认 main）
 #
 # 工作原理：
-#   首次运行时 clone 仓库到 $FILE_PATH/README。
+#   首次运行时 clone 仓库到 $FILE_PATH/doc/README。
 #   之后每次运行执行 git fetch + reset --hard 获取最新内容。
 #   拉取成功后通过 psql 将内容写入数据库 about 表。
 #   前端 GET /api/about 从数据库直接读取，不再依赖文件系统。
@@ -46,17 +46,17 @@ export TZ="Asia/Shanghai"
 
 echo "[pull-readme] $(date '+%Y-%m-%d %H:%M') 开始拉取 README 仓库..."
 
-if [[ -d "$FILE_PATH/README/.git" ]]; then
-    git -C "$FILE_PATH/README" fetch origin "$BRANCH"
-    git -C "$FILE_PATH/README" reset --hard "origin/$BRANCH"
+if [[ -d "$FILE_PATH/doc/README/.git" ]]; then
+    git -C "$FILE_PATH/doc/README" fetch origin "$BRANCH"
+    git -C "$FILE_PATH/doc/README" reset --hard "origin/$BRANCH"
     echo "[pull-readme] 已更新 README 仓库。"
 else
-    git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$FILE_PATH/README"
+    git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$FILE_PATH/doc/README"
     echo "[pull-readme] 已 clone README 仓库。"
 fi
 
 # 同步内容到数据库
-README_FILE="$FILE_PATH/README/README.md"
+README_FILE="$FILE_PATH/doc/README/README.md"
 if [[ ! -f "$README_FILE" ]]; then
     echo "[pull-readme] 错误：$README_FILE 不存在！" >&2
     exit 1
