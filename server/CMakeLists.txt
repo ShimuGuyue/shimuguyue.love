@@ -20,6 +20,7 @@ add_executable(${PROJECT_NAME}
     main.cpp
     src/about/about_queries.cpp
     src/db/connection.cpp
+    src/db/connection_pool.cpp
     src/crypto/argon2id.cpp
     src/auth/login.cpp
     src/auth/session.cpp
@@ -38,6 +39,7 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/libcpp-pg-pool/src
 )
 
 # 链接文件

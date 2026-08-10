@@ -4,19 +4,11 @@
  */
 #pragma once
 
-#include <pqxx/pqxx>
-
 namespace db
 {
     /**
-     * @brief 初始化数据库连接。
+     * @brief 初始化数据库连接池并检查项目所需数据库表。
      */
     void init();
-
-    /**
-     * @brief 获取数据库连接的 pqxx::connection
-     * @return 已打开的 pqxx::connection。
-     */
-    [[nodiscard]] auto connection() -> pqxx::connection&;
 
 } // namespace db

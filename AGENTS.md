@@ -39,7 +39,8 @@ cmake --build build
   │  /image/home → localhost:8080
   ▼
 服务端 (C++23, httplib, 端口由 SERVER_PORT 决定)
-  │  单 pqxx::connection，全局 std::mutex 串行化所有数据库操作
+  │  连接池（libcpp-pg-pool / lklibs::PgPool，DB_POOL_SIZE 条常驻连接），
+  │  db::with_db() 并发获取独占连接，无空闲时阻塞等待
   ▼
 PostgreSQL
 ```
@@ -59,6 +60,7 @@ PostgreSQL
 | `FILE_PATH` | 文件根目录；启动时统一创建/检测博客（`FILE_PATH/doc/blogs`）、图片（`FILE_PATH/image`）、README（`FILE_PATH/README`）目录 | server, tools |
 | `FIXED_SALT` | Argon2id 固定盐哈希盐值（32 位 hex = 16 字节） | server |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
+| `DB_POOL_SIZE` | 数据库连接池大小（正整数，必填） | server |
 | `BUILD_DIR` | 前端构建输出目录（默认 `dist`） | client (vite) |
 
 ## 编码约定
@@ -143,13 +145,15 @@ PostgreSQL
 
 | 路径 | 说明 |
 |---|---|
-| `server/main.cpp` | 服务端入口：初始化 → 建立数据库连接 → 注册路由 → 监听 |
+| `server/main.cpp` | 服务端入口：初始化 → 建立数据库连接池 → 注册路由 → 监听 |
 | `server/CMakeLists.txt` | CMake 构建配置（源文件列表、vcpkg 依赖） |
 | `server/CMakePresets.json` | CMake 预设（default） |
+| `server/third_party/libcpp-pg-pool/` | 从 GitHub 拉取的连接池库（MIT 协议，纯头文件，基于 libpqxx） |
 | `server/src/http/routes.cpp` | API 路由注册（~180 行），统一调用 handlers 中的处理函数 |
 | `server/src/http/routes.h` | HTTP 服务配置声明（`FRONTEND_ORIGIN` / `SERVER_HOST` / `SERVER_PORT`、`setup_routes`） |
 | `server/src/http/handlers.cpp` / `.h` | 全部 API 路由处理函数（业务逻辑），由 routes.cpp 统一注册调用 |
-| `server/src/db/connection.cpp` / `.h` | 数据库连接：单 `pqxx::connection` + 表检查 |
+| `server/src/db/connection.cpp` / `.h` | 数据库连接池初始化 + 表检查 |
+| `server/src/db/connection_pool.cpp` / `.h` | 连接池实现：基于 `lklibs::PgPool` 的薄封装，`db::with_db()` 并发获取独占连接，无空闲时阻塞等待 |
 | `server/src/config/env.cpp` / `.h` | 环境变量读取（缺失则 `exit(1)`） |
 | `server/src/config/env_map.cpp` / `.h` | 环境变量存储封装类（内部 `unordered_map`，只读 `operator[]`） |
 | `server/src/auth/login.cpp` / `.h` | 密钥/密码登录、权限查询 |

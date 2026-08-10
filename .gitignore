@@ -25,6 +25,10 @@
 **/*.[Ll][Oo][Gg]
 **/*.[Ll][Oo][Gg].*
 
+### Third-party dependencies
+
+server/third_party/
+
 ### TODO LIST
 
 **/[Tt][Oo][Dd][Oo].*
