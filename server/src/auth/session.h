@@ -20,18 +20,25 @@ struct SessionInfo
     std::vector<std::string>   permissions;
 };
 
+/// 会话创建结果
+struct SessionCreated
+{
+    std::string token;      ///< 64 字符十六进制 token。
+    std::string expires_at; ///< 过期时间（UTC ISO 8601）。
+};
+
     /**
      * @brief 创建会话 token 并写入数据库。
      * @param conn        数据库连接。
      * @param user_id     用户 ID。
      * @param permissions 用户权限列表。
-     * @return 64 字符十六进制 token。
+     * @return token 与过期时间。
      */
     [[nodiscard]] auto create_session(
         pqxx::connection&               conn,
         int                             user_id,
         const std::vector<std::string>& permissions)
-    -> std::string;
+    -> SessionCreated;
 
     /**
      * @brief 验证 token 并从数据库获取会话信息。

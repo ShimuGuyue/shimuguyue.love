@@ -10,6 +10,8 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
+#include "config/env.h"
+
 namespace
 {
 std::mutex g_rng_mutex;
@@ -51,7 +53,7 @@ namespace auth
         pqxx::connection&               conn,
         int                             user_id,
         const std::vector<std::string>& permissions)
-    -> std::string
+    -> SessionCreated
     {
         spdlog::info("正在为用户 {} 创建 session...", user_id);
         const auto token = generate_token();
@@ -64,16 +66,19 @@ namespace auth
             pqxx::params{ user_id }
         );
 
-        // Step 2: 插入新 session，过期时间为 24 小时后
-        txn.exec(
+        // Step 2: 插入新 session，过期时间由环境变量 SESSION_TTL_MINUTES 控制
+        const auto ttl_minutes = std::stoi(config::env()["SESSION_TTL_MINUTES"]);
+        const auto r = txn.exec(
             "INSERT INTO sessions (token, user_id, permissions, expires_at) "
-            "VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours')",
-            pqxx::params{ token, user_id, nlohmann::json(permissions).dump() }
+            "VALUES ($1, $2, $3, NOW() + make_interval(mins => $4)) "
+            "RETURNING to_char(expires_at AT TIME ZONE 'UTC', "
+            "'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS expires_at",
+            pqxx::params{ token, user_id, nlohmann::json(permissions).dump(), ttl_minutes }
         );
 
         txn.commit();
         spdlog::info("用户 {} 的 session 创建成功。", user_id);
-        return token;
+        return SessionCreated{ token, r[0]["expires_at"].as<std::string>() };
     }
 
     auto validate_session(

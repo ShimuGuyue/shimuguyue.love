@@ -33,6 +33,7 @@ constexpr std::string_view REQUIRED_KEYS[] = {
     "PGUSER",
     "PGPASSWORD",
     "DB_POOL_SIZE",
+    "SESSION_TTL_MINUTES",
 };
 
     /**
@@ -186,6 +187,22 @@ namespace config
             if (ec != std::errc{} || ptr != pool_size.data() + pool_size.size() || parsed == 0)
             {
                 spdlog::error("环境变量 DB_POOL_SIZE 必须是正整数！");
+                std::exit(1);
+            }
+        }
+
+        // SESSION_TTL_MINUTES 必须是正整数
+        {
+            const auto& ttl_minutes = EnvMap::env_values["SESSION_TTL_MINUTES"];
+            std::size_t parsed      = 0;
+            const auto [ptr, ec]    = std::from_chars(
+                ttl_minutes.data(),
+                ttl_minutes.data() + ttl_minutes.size(),
+                parsed
+            );
+            if (ec != std::errc{} || ptr != ttl_minutes.data() + ttl_minutes.size() || parsed == 0)
+            {
+                spdlog::error("环境变量 SESSION_TTL_MINUTES 必须是正整数！");
                 std::exit(1);
             }
         }
