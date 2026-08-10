@@ -93,8 +93,11 @@ onUnmounted(() => {
   }
 })
 
-/// 图片逐个渲染的间隔和动画时长（毫秒）
-const REVEAL_MS = 500
+/// 单张图片的显示动画时长（毫秒），比原来 500ms 放慢
+const REVEAL_MS = 1200
+
+/// 下一张图片的触发间隔：当前图片显示到 1/3 时开始显示下一张（毫秒）
+const REVEAL_INTERVAL_MS = REVEAL_MS / 3
 
 /// 图片逐个渲染的定时器
 let revealTimer: ReturnType<typeof setTimeout> | null = null
@@ -123,7 +126,7 @@ async function loadImages() {
   } catch { /* 静默 */ }
 }
 
-/** 每隔约一秒往数组里推入一张图片 */
+/** 当前图片显示到 1/3 时推入下一张图片 */
 /** 逐张预加载尺寸后推入，避免定位跳动 */
 async function revealImages(all: ImageItem[]) {
   // 预加载所有图片获取原始尺寸
@@ -139,7 +142,7 @@ async function revealImages(all: ImageItem[]) {
       if (i >= sized.length) { resolve(); return }
       images.value.push(sized[i]!)
       i++
-      revealTimer = setTimeout(next, REVEAL_MS)
+      revealTimer = setTimeout(next, REVEAL_INTERVAL_MS)
     }
     next()
   })
@@ -171,6 +174,8 @@ const dragStart = ref({ x: 0, y: 0 })
 const editSnapshot = ref<string>('')
 /// 待删除的图片 id 集合（完成编辑时统一删除）
 const pendingDeletes = ref<Set<number>>(new Set())
+/// 本次编辑期间上传的图片 id 集合（取消编辑时统一删除）
+const pendingUploads = ref<Set<number>>(new Set())
 /// z-index 计数器，每次交互递增
 let zCounter = 0
 
@@ -208,6 +213,7 @@ function onWallClick(e: MouseEvent) {
   // 非编辑模式下：点击照片墙内部（非图片上）进入编辑
   if (inPhoto && !onImg) {
     editMode.value = true
+    pendingUploads.value = new Set()
     editSnapshot.value = JSON.stringify(images.value.map(i => ({
       id: i.id, pos_x: i.pos_x, pos_y: i.pos_y, scale: i.scale, rotation: i.rotation, description: i.description,
     })))
@@ -219,6 +225,7 @@ async function exitEdit() {
   if (changed && !permissions.value.includes('edit')) {
     alert('当前用户无 edit 权限，修改无法生效')
     pendingDeletes.value = new Set()
+    pendingUploads.value = new Set()
     revertChanges()
     editMode.value = false
     return
@@ -239,6 +246,7 @@ async function exitEdit() {
   }
   images.value = images.value.filter(i => !pendingDeletes.value.has(i.id))
   pendingDeletes.value = new Set()
+  pendingUploads.value = new Set()
 
   if (changed) {
     for (const img of images.value) {
@@ -248,7 +256,23 @@ async function exitEdit() {
   editMode.value = false
 }
 
-function cancelEdit() {
+async function cancelEdit() {
+  // 取消编辑：删除本次编辑期间上传的图片（服务器记录与文件）
+  for (const id of pendingUploads.value) {
+    const img = images.value.find(i => i.id === id)
+    if (img) {
+      await fetch('/api/image/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.token}`,
+        },
+        body: JSON.stringify({ path: img.path }),
+      })
+    }
+  }
+  images.value = images.value.filter(i => !pendingUploads.value.has(i.id))
+  pendingUploads.value = new Set()
   pendingDeletes.value = new Set()
   revertChanges()
   editMode.value = false
@@ -381,6 +405,7 @@ async function uploadImage() {
       w: size.w,
       h: size.h,
     })
+    pendingUploads.value = new Set(pendingUploads.value).add(uploaded.id)
   }
   input.click()
 }
@@ -402,6 +427,12 @@ function onImgWheel(e: WheelEvent, imgId: number) {
 }
 
 function handleImgClick(imgId: number, event: MouseEvent) {
+  if (wasDragged) { wasDragged = false; return }
+  if (editMode.value) return  // 编辑模式下单击不放大，改为双击
+  openPreview(imgId, event)
+}
+
+function handleImgDblClick(imgId: number, event: MouseEvent) {
   if (wasDragged) { wasDragged = false; return }
   openPreview(imgId, event)
 }
@@ -501,6 +532,7 @@ function imgStyle(img: ImageItem) {
           <p>拖拽：按住图片拖动</p>
           <p>缩放：滚轮</p>
           <p>旋转：Shift + 滚轮</p>
+          <p>放大：双击图片</p>
           <p>加速：按住 Ctrl 使缩放和旋转速度加快</p>
         </div>
         <div
@@ -515,6 +547,7 @@ function imgStyle(img: ImageItem) {
             :style="{ width: img.w + 'px', height: img.h + 'px', transform: `scale(${img.scale}) rotate(${img.rotation}deg)` }"
             @mousedown="e => onImgMouseDown(e, img.id)"
             @click.stop="handleImgClick(img.id, $event)"
+            @dblclick.stop="handleImgDblClick(img.id, $event)"
             @wheel.prevent="e => onImgWheel(e, img.id)"
           >
             <img
@@ -960,4 +993,3 @@ function imgStyle(img: ImageItem) {
   white-space: pre-wrap;
 }
 </style>
-
