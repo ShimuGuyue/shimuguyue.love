@@ -6,7 +6,7 @@ import Favorites from '@/views/Favorites.vue'
 import About from '@/views/About.vue'
 import LoginKey from '@/views/LoginKey.vue'
 import LoginPassword from '@/views/LoginPassword.vue'
-import Profile from '@/views/Profile.vue'
+import Manage from '@/views/Manage.vue'
 import BlogDetail from '@/views/BlogDetail.vue'
 import BlogEdit from '@/views/BlogEdit.vue'
 import Acknowledgments from '@/views/Acknowledgments.vue'
@@ -22,7 +22,7 @@ const router = createRouter({
     { path: '/thanks', name: 'acknowledgments', component: Acknowledgments },
     { path: '/login/key', name: 'login-key', component: LoginKey },
     { path: '/login/password', name: 'login-password', component: LoginPassword },
-    { path: '/profile', name: 'profile', component: Profile },
+    { path: '/manage', name: 'manage', component: Manage },
     { path: '/blog-edit/new', name: 'blog-edit-new', component: BlogEdit },
     { path: '/blog-edit/:file_path(.*)', name: 'blog-edit', component: BlogEdit },
     { path: '/blogs/:file_path(.*)', name: 'blog-detail', component: BlogDetail },

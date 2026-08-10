@@ -128,7 +128,7 @@ PostgreSQL
 | `client/src/views/BlogDetail.vue` | 博客详情页（Markdown 渲染） |
 | `client/src/views/BlogEdit.vue` | 博客新建/编辑页 |
 | `client/src/views/About.vue` | 关于我页面（渲染 README） |
-| `client/src/views/Profile.vue` | 个人介绍编辑页 |
+| `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |
