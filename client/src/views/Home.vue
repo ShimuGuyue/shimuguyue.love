@@ -93,8 +93,11 @@ onUnmounted(() => {
   }
 })
 
-/// 图片逐个渲染的间隔和动画时长（毫秒）
-const REVEAL_MS = 500
+/// 单张图片的显示动画时长（毫秒），比原来 500ms 放慢
+const REVEAL_MS = 1200
+
+/// 下一张图片的触发间隔：当前图片显示到 1/3 时开始显示下一张（毫秒）
+const REVEAL_INTERVAL_MS = REVEAL_MS / 3
 
 /// 图片逐个渲染的定时器
 let revealTimer: ReturnType<typeof setTimeout> | null = null
@@ -123,7 +126,7 @@ async function loadImages() {
   } catch { /* 静默 */ }
 }
 
-/** 每隔约一秒往数组里推入一张图片 */
+/** 当前图片显示到 1/3 时推入下一张图片 */
 /** 逐张预加载尺寸后推入，避免定位跳动 */
 async function revealImages(all: ImageItem[]) {
   // 预加载所有图片获取原始尺寸
@@ -139,7 +142,7 @@ async function revealImages(all: ImageItem[]) {
       if (i >= sized.length) { resolve(); return }
       images.value.push(sized[i]!)
       i++
-      revealTimer = setTimeout(next, REVEAL_MS)
+      revealTimer = setTimeout(next, REVEAL_INTERVAL_MS)
     }
     next()
   })
@@ -960,4 +963,3 @@ function imgStyle(img: ImageItem) {
   white-space: pre-wrap;
 }
 </style>
-
