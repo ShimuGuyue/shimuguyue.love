@@ -174,6 +174,8 @@ const dragStart = ref({ x: 0, y: 0 })
 const editSnapshot = ref<string>('')
 /// 待删除的图片 id 集合（完成编辑时统一删除）
 const pendingDeletes = ref<Set<number>>(new Set())
+/// 本次编辑期间上传的图片 id 集合（取消编辑时统一删除）
+const pendingUploads = ref<Set<number>>(new Set())
 /// z-index 计数器，每次交互递增
 let zCounter = 0
 
@@ -211,6 +213,7 @@ function onWallClick(e: MouseEvent) {
   // 非编辑模式下：点击照片墙内部（非图片上）进入编辑
   if (inPhoto && !onImg) {
     editMode.value = true
+    pendingUploads.value = new Set()
     editSnapshot.value = JSON.stringify(images.value.map(i => ({
       id: i.id, pos_x: i.pos_x, pos_y: i.pos_y, scale: i.scale, rotation: i.rotation, description: i.description,
     })))
@@ -222,6 +225,7 @@ async function exitEdit() {
   if (changed && !permissions.value.includes('edit')) {
     alert('当前用户无 edit 权限，修改无法生效')
     pendingDeletes.value = new Set()
+    pendingUploads.value = new Set()
     revertChanges()
     editMode.value = false
     return
@@ -242,6 +246,7 @@ async function exitEdit() {
   }
   images.value = images.value.filter(i => !pendingDeletes.value.has(i.id))
   pendingDeletes.value = new Set()
+  pendingUploads.value = new Set()
 
   if (changed) {
     for (const img of images.value) {
@@ -251,7 +256,23 @@ async function exitEdit() {
   editMode.value = false
 }
 
-function cancelEdit() {
+async function cancelEdit() {
+  // 取消编辑：删除本次编辑期间上传的图片（服务器记录与文件）
+  for (const id of pendingUploads.value) {
+    const img = images.value.find(i => i.id === id)
+    if (img) {
+      await fetch('/api/image/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${auth.token}`,
+        },
+        body: JSON.stringify({ path: img.path }),
+      })
+    }
+  }
+  images.value = images.value.filter(i => !pendingUploads.value.has(i.id))
+  pendingUploads.value = new Set()
   pendingDeletes.value = new Set()
   revertChanges()
   editMode.value = false
@@ -384,6 +405,7 @@ async function uploadImage() {
       w: size.w,
       h: size.h,
     })
+    pendingUploads.value = new Set(pendingUploads.value).add(uploaded.id)
   }
   input.click()
 }
