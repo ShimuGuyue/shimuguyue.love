@@ -1,13 +1,30 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+
+/** 后台管理栏目定义。 */
+interface AdminSection {
+  key: string
+  label: string
+}
 
 const router = useRouter()
 const auth = useAuthStore()
 
+/** 栏目列表：目前先提供「个人信息」，后续栏目在此追加。 */
+const sections: AdminSection[] = [
+  { key: 'profile', label: '个人信息' },
+]
+
+const activeSection = ref<string>('profile')
 const permissions = ref<string[]>([])
 const loading = ref(false)
+
+/** 当前激活栏目的标题。 */
+const activeLabel = computed(
+  () => sections.find((section) => section.key === activeSection.value)?.label ?? ''
+)
 
 onMounted(async () => {
   if (!auth.id) return
@@ -27,6 +44,11 @@ onMounted(async () => {
   }
 })
 
+/** 点击左侧栏目时切换内容区。 */
+function selectSection(key: string) {
+  activeSection.value = key
+}
+
 function handleLogout() {
   auth.logout()
   router.push('/')
@@ -34,117 +56,219 @@ function handleLogout() {
 </script>
 
 <template>
-  <main class="profile">
-    <h1>个人中心</h1>
+  <main class="admin">
+    <!-- 最左侧栏目栏 -->
+    <aside class="admin-sidebar">
+      <h2 class="admin-sidebar__title">后台管理</h2>
 
-    <div class="profile-card">
-      <p v-if="auth.username" class="profile-card__name">
-        {{ auth.username }}
-      </p>
-      <p v-else class="profile-card__name profile-card__name--anonymous">
-        匿名用户
-      </p>
-
-      <!-- 权限列表 -->
-      <p v-if="loading" class="profile-card__no-perm">加载中...</p>
-      <ul v-else-if="permissions.length" class="profile-card__permissions">
-        <li
-          v-for="perm in permissions"
-          :key="perm"
-          class="profile-card__perm-item"
+      <nav class="admin-sidebar__nav">
+        <button
+          v-for="section in sections"
+          :key="section.key"
+          type="button"
+          class="admin-sidebar__item"
+          :class="{ 'admin-sidebar__item--active': activeSection === section.key }"
+          @click="selectSection(section.key)"
         >
-          {{ perm }}
-        </li>
-      </ul>
-      <p v-else class="profile-card__no-perm">暂无特殊权限</p>
+          {{ section.label }}
+        </button>
+      </nav>
 
-      <button class="profile-card__logout" @click="handleLogout">
+      <button type="button" class="admin-sidebar__logout" @click="handleLogout">
         退出登录
       </button>
-    </div>
+    </aside>
+
+    <!-- 右侧内容区 -->
+    <section class="admin-content">
+      <h1 class="admin-content__title">{{ activeLabel }}</h1>
+
+      <dl v-if="activeSection === 'profile'" class="info-list">
+        <div class="info-list__row">
+          <dt>用户名</dt>
+          <dd>{{ auth.username ?? '匿名用户' }}</dd>
+        </div>
+
+        <div class="info-list__row">
+          <dt>权限</dt>
+          <dd>
+            <span v-if="loading" class="info-list__hint">加载中...</span>
+            <template v-else-if="permissions.length">
+              <span
+                v-for="perm in permissions"
+                :key="perm"
+                class="perm-item"
+              >
+                {{ perm }}
+              </span>
+            </template>
+            <span v-else class="info-list__hint">暂无特殊权限</span>
+          </dd>
+        </div>
+      </dl>
+    </section>
   </main>
 </template>
 
 <style scoped>
-.profile {
+/* 纯色背景铺满视口，覆盖全局渐变背景 */
+.admin {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   min-height: calc(100vh - 80px);
-  padding: 40px 20px;
+  background-color: var(--color-bg);
 }
 
-.profile h1 {
-  margin: 0 0 28px;
+/* ── 最左侧栏目栏 ── */
+
+.admin-sidebar {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 220px;
+  padding: 24px 16px;
+  border-right: 1px solid var(--color-border);
+}
+
+.admin-sidebar__title {
+  margin: 0 0 24px;
+  padding: 0 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary);
+}
+
+.admin-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.admin-sidebar__item {
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  font-size: 0.95rem;
+  text-align: left;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color var(--transition-speed),
+    color var(--transition-speed);
+}
+
+.admin-sidebar__item:hover {
+  background-color: var(--color-hover);
+  color: var(--color-text);
+}
+
+.admin-sidebar__item--active {
+  background-color: var(--color-hover);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.admin-sidebar__logout {
+  margin-top: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  font-size: 0.9rem;
+  color: #e53e3e;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-speed),
+    border-color var(--transition-speed);
+}
+
+.admin-sidebar__logout:hover {
+  background-color: rgba(229, 62, 62, 0.08);
+  border-color: #e53e3e;
+}
+
+/* ── 右侧内容区 ── */
+
+.admin-content {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 40px;
+}
+
+.admin-content__title {
+  margin: 0 0 24px;
   font-size: 1.5rem;
   color: var(--color-text);
 }
 
-.profile-card {
-  width: 100%;
-  max-width: 360px;
-  padding: 32px;
-  background-color: var(--color-card-bg, var(--color-nav-bg));
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  text-align: center;
+/* ── 信息列表 ── */
+
+.info-list {
+  margin: 0;
+  max-width: 640px;
 }
 
-.profile-card__name {
-  margin: 0 0 8px;
-  font-family: 'FangSong', '仿宋', STFangsong, serif;
-  font-size: 1.25rem;
-  color: var(--color-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.info-list__row {
+  display: flex;
+  align-items: flex-start;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.profile-card__name--anonymous {
-  color: var(--color-text-secondary);
+.info-list__row:last-child {
+  border-bottom: none;
 }
 
-/* ── 权限列表 ── */
-
-.profile-card__permissions {
-  margin: 16px 0 0;
-  padding: 0;
-  list-style: none;
-  border-top: 1px solid var(--color-border);
-  padding-top: 12px;
-}
-
-.profile-card__perm-item {
-  padding: 6px 0;
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-}
-
-.profile-card__no-perm {
-  margin: 12px 0 0;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  font-style: italic;
-}
-
-/* ── 退出 ── */
-
-.profile-card__logout {
-  margin-top: 20px;
-  padding: 10px 0;
-  width: 100%;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+.info-list__row dt {
+  flex-shrink: 0;
+  width: 96px;
   font-size: 0.95rem;
-  color: #e53e3e;
-  background: transparent;
-  cursor: pointer;
-  transition: background-color var(--transition-speed), border-color var(--transition-speed);
+  color: var(--color-text-secondary);
 }
 
-.profile-card__logout:hover {
-  background-color: rgba(229, 62, 62, 0.08);
-  border-color: #e53e3e;
+.info-list__row dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  font-size: 1rem;
+  color: var(--color-text);
+}
+
+.perm-item {
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.info-list__hint {
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+/* ── 窄屏：栏目栏移到顶部 ── */
+
+@media (max-width: 720px) {
+  .admin {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .admin-sidebar__nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .admin-sidebar__logout {
+    margin-top: 16px;
+  }
+
+  .admin-content {
+    padding: 24px 20px;
+  }
 }
 </style>
