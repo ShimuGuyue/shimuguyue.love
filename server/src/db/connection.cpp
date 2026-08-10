@@ -6,43 +6,17 @@
 #include "db/connection.h"
 
 #include <cstdlib>
-#include <format>
 #include <string>
+#include <vector>
 
+#include <pqxx/pqxx>
 #include <spdlog/spdlog.h>
 
 #include "config/env.h"
+#include "db/connection_pool.h"
 
 namespace
 {
-    /**
-     * @brief 连接到数据库
-     */
-    void connect(pqxx::connection& conn)
-    {
-        spdlog::debug("正在连接至 PostgreSQL...");
-
-        const auto& host     = config::env()["PGHOST"];
-        const auto& port     = config::env()["PGPORT"];
-        const auto& dbname   = config::env()["PGDATABASE"];
-        const auto& user     = config::env()["PGUSER"];
-        const auto& password = config::env()["PGPASSWORD"];
-
-        conn = pqxx::connection{
-            std::format(
-                "host={} port={} dbname={} user={} password={}",
-                host, port, dbname, user, password
-            )
-        };
-
-        if (!conn.is_open())
-        {
-            spdlog::error("连接至 PostgreSQL 失败！");
-            exit(1);
-        }
-        spdlog::info("成功连接至 PostgreSQL。");
-    }
-
     /**
      * @brief 检查项目所需数据库表
      */
@@ -113,19 +87,25 @@ namespace
 
 }
 
+
+
+
+
 namespace db
 {
-static pqxx::connection conn;
-
     void init()
     {
-        connect(conn);
-        check(conn);
-    }
+        const auto pool_size = static_cast<std::size_t>(
+            std::stoull(config::env()["DB_POOL_SIZE"])
+        );
+        ConnectionPool::instance().create(pool_size);
 
-    const auto connection() -> pqxx::connection&
-    {
-        return conn;
+        with_db(
+            [](pqxx::connection& conn)
+            {
+                check(conn);
+            }
+        );
     }
 
 } // namespace db

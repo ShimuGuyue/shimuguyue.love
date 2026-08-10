@@ -7,12 +7,14 @@
 #include "config/env_map.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <system_error>
 
 #include <spdlog/spdlog.h>
 
@@ -30,6 +32,7 @@ constexpr std::string_view REQUIRED_KEYS[] = {
     "PGDATABASE",
     "PGUSER",
     "PGPASSWORD",
+    "DB_POOL_SIZE",
 };
 
     /**
@@ -158,6 +161,22 @@ namespace config
         {
             spdlog::error("环境变量 FIXED_SALT 必须是 32 位十六进制字符串（16 字节盐值）！");
             std::exit(1);
+        }
+
+        // DB_POOL_SIZE 必须是正整数
+        {
+            const auto& pool_size = EnvMap::env_values["DB_POOL_SIZE"];
+            std::size_t parsed    = 0;
+            const auto [ptr, ec]  = std::from_chars(
+                pool_size.data(),
+                pool_size.data() + pool_size.size(),
+                parsed
+            );
+            if (ec != std::errc{} || ptr != pool_size.data() + pool_size.size() || parsed < 0)
+            {
+                spdlog::error("环境变量 DB_POOL_SIZE 必须是正整数！");
+                std::exit(1);
+            }
         }
 
         // 统一创建并检测 FILE_PATH 下的所有文件目录

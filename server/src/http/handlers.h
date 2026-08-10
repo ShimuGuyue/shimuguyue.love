@@ -7,7 +7,6 @@
 #include <string>
 
 #include <httplib.h>
-#include <pqxx/pqxx>
 
 namespace http
 {
@@ -18,7 +17,6 @@ namespace http
 void handle_cors(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -27,7 +25,6 @@ void handle_cors(
 void handle_login_key(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -36,7 +33,6 @@ void handle_login_key(
 void handle_login_password(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -45,7 +41,6 @@ void handle_login_password(
 void handle_user_permissions(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -54,7 +49,6 @@ void handle_user_permissions(
 void handle_get_categories(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -63,7 +57,6 @@ void handle_get_categories(
 void handle_get_tags(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -72,7 +65,6 @@ void handle_get_tags(
 void handle_get_blogs(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -81,7 +73,6 @@ void handle_get_blogs(
 void handle_get_blog(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -90,7 +81,6 @@ void handle_get_blog(
 void handle_blog_parse(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -99,7 +89,6 @@ void handle_blog_parse(
 void handle_get_images(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -108,7 +97,6 @@ void handle_get_images(
 void handle_save_image(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -117,7 +105,6 @@ void handle_save_image(
 void handle_upload_image(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -126,7 +113,6 @@ void handle_upload_image(
 void handle_delete_image(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -135,7 +121,6 @@ void handle_delete_image(
 void handle_save_blog(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -144,7 +129,6 @@ void handle_save_blog(
 void handle_update_blog(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -153,7 +137,6 @@ void handle_update_blog(
 void handle_delete_blog(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -162,7 +145,6 @@ void handle_delete_blog(
 void handle_get_about(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -171,7 +153,6 @@ void handle_get_about(
 void handle_get_profile(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 /**
@@ -180,7 +161,6 @@ void handle_get_profile(
 void handle_save_profile(
     const httplib::Request& req,
     httplib::Response&      res,
-    pqxx::connection&       conn,
     const std::string&      allowed);
 
 } // namespace http

@@ -146,6 +146,12 @@ cd ${PROJECT_PATH}
     vcpkg install spdlog
     ```
 
++  拉取 `libcpp-pg-pool`（连接池库，纯头文件，基于 `libpqxx`）
+
+    ```bash
+    git clone --depth 1 https://github.com/leventkaragol/libcpp-pg-pool ./third_party/libcpp-pg-pool
+    ```
+
 +   构建并后台运行 `C++` 应用程序
 
     ```bash
