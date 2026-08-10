@@ -406,6 +406,12 @@ function onImgWheel(e: WheelEvent, imgId: number) {
 
 function handleImgClick(imgId: number, event: MouseEvent) {
   if (wasDragged) { wasDragged = false; return }
+  if (editMode.value) return  // 编辑模式下单击不放大，改为双击
+  openPreview(imgId, event)
+}
+
+function handleImgDblClick(imgId: number, event: MouseEvent) {
+  if (wasDragged) { wasDragged = false; return }
   openPreview(imgId, event)
 }
 
@@ -504,6 +510,7 @@ function imgStyle(img: ImageItem) {
           <p>拖拽：按住图片拖动</p>
           <p>缩放：滚轮</p>
           <p>旋转：Shift + 滚轮</p>
+          <p>放大：双击图片</p>
           <p>加速：按住 Ctrl 使缩放和旋转速度加快</p>
         </div>
         <div
@@ -518,6 +525,7 @@ function imgStyle(img: ImageItem) {
             :style="{ width: img.w + 'px', height: img.h + 'px', transform: `scale(${img.scale}) rotate(${img.rotation}deg)` }"
             @mousedown="e => onImgMouseDown(e, img.id)"
             @click.stop="handleImgClick(img.id, $event)"
+            @dblclick.stop="handleImgDblClick(img.id, $event)"
             @wheel.prevent="e => onImgWheel(e, img.id)"
           >
             <img
