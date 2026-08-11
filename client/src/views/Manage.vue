@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -7,47 +6,16 @@ import { useAuthStore } from '@/stores/auth'
 interface AdminSection {
   key: string
   label: string
+  path: string
 }
 
 const router = useRouter()
 const auth = useAuthStore()
 
-/** 栏目列表：目前先提供「个人信息」，后续栏目在此追加。 */
+/** 栏目列表：每个栏目对应一个子路由，后续栏目在此追加。 */
 const sections: AdminSection[] = [
-  { key: 'profile', label: '个人信息' },
+  { key: 'profile', label: '个人信息', path: '/manage/profile' },
 ]
-
-const activeSection = ref<string>('profile')
-const permissions = ref<string[]>([])
-const loading = ref(false)
-
-/** 当前激活栏目的标题。 */
-const activeLabel = computed(
-  () => sections.find((section) => section.key === activeSection.value)?.label ?? ''
-)
-
-onMounted(async () => {
-  if (!auth.id) return
-  loading.value = true
-  try {
-    const resp = await fetch('/api/user/permissions', {
-      headers: { 'Authorization': 'Bearer ' + auth.token }
-    })
-    if (resp.ok) {
-      const data = await resp.json()
-      permissions.value = data.permissions ?? []
-    }
-  } catch {
-    // 忽略
-  } finally {
-    loading.value = false
-  }
-})
-
-/** 点击左侧栏目时切换内容区。 */
-function selectSection(key: string) {
-  activeSection.value = key
-}
 
 function handleLogout() {
   auth.logout()
@@ -62,16 +30,14 @@ function handleLogout() {
       <h2 class="admin-sidebar__title">后台管理</h2>
 
       <nav class="admin-sidebar__nav">
-        <button
+        <RouterLink
           v-for="section in sections"
           :key="section.key"
-          type="button"
+          :to="section.path"
           class="admin-sidebar__item"
-          :class="{ 'admin-sidebar__item--active': activeSection === section.key }"
-          @click="selectSection(section.key)"
         >
           {{ section.label }}
-        </button>
+        </RouterLink>
       </nav>
 
       <button type="button" class="admin-sidebar__logout" @click="handleLogout">
@@ -81,31 +47,7 @@ function handleLogout() {
 
     <!-- 右侧内容区 -->
     <section class="admin-content">
-      <h1 class="admin-content__title">{{ activeLabel }}</h1>
-
-      <dl v-if="activeSection === 'profile'" class="info-list">
-        <div class="info-list__row">
-          <dt>用户名</dt>
-          <dd>{{ auth.username ?? '匿名用户' }}</dd>
-        </div>
-
-        <div class="info-list__row">
-          <dt>权限</dt>
-          <dd>
-            <span v-if="loading" class="info-list__hint">加载中...</span>
-            <template v-else-if="permissions.length">
-              <span
-                v-for="perm in permissions"
-                :key="perm"
-                class="perm-item"
-              >
-                {{ perm }}
-              </span>
-            </template>
-            <span v-else class="info-list__hint">暂无特殊权限</span>
-          </dd>
-        </div>
-      </dl>
+      <RouterView />
     </section>
   </main>
 </template>
@@ -145,11 +87,13 @@ function handleLogout() {
 }
 
 .admin-sidebar__item {
+  display: block;
   padding: 10px 12px;
   border: none;
   background: transparent;
   font-size: 0.95rem;
   text-align: left;
+  text-decoration: none;
   color: var(--color-text-secondary);
   cursor: pointer;
   transition:
@@ -162,7 +106,7 @@ function handleLogout() {
   color: var(--color-text);
 }
 
-.admin-sidebar__item--active {
+.admin-sidebar__item.router-link-exact-active {
   background-color: var(--color-hover);
   color: var(--color-text);
   font-weight: 600;
@@ -192,51 +136,6 @@ function handleLogout() {
   flex: 1;
   min-width: 0;
   padding: 32px 40px;
-}
-
-.admin-content__title {
-  margin: 0 0 24px;
-  font-size: 1.5rem;
-  color: var(--color-text);
-}
-
-/* ── 信息列表 ── */
-
-.info-list {
-  margin: 0;
-  max-width: 640px;
-}
-
-.info-list__row {
-  display: flex;
-  align-items: flex-start;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.info-list__row:last-child {
-  border-bottom: none;
-}
-
-.info-list__row dt {
-  flex-shrink: 0;
-  width: 96px;
-  font-size: 0.95rem;
-  color: var(--color-text-secondary);
-}
-
-.info-list__row dd {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
-  font-size: 1rem;
-  color: var(--color-text);
-}
-
-.perm-item {
-  font-size: 0.85rem;
-  color: var(--color-text);
 }
 
 .info-list__hint {
