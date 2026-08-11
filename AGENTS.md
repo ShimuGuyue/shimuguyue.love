@@ -90,7 +90,6 @@ PostgreSQL
 - **Vue**：`<script setup lang="ts">`，`<style scoped>` 默认。
 - **TypeScript**：`@vue/tsconfig` 基座，`noUncheckedIndexedAccess` 开启。路径别名 `@/` 映射到 `src/`。
 - **导入**：Node 内置模块用 `node:url` 格式；ES module（`"type": "module"`）。
-- **CSS**：无 CSS 框架，全部自定义 CSS 变量（`App.vue` 中 `:root` / `html.dark`），共用样式文件在 `client/src/assets/`。
 - **网络请求**：无 API 封装模块，直接用 `fetch()`。认证 token 从 `useAuthStore()` 取出，拼接 `Authorization: Bearer <token>` 请求头。
 
 ## 目录速查
