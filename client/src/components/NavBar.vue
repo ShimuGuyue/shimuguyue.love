@@ -14,9 +14,9 @@ const { toggle } = theme
 const auth = useAuthStore()
 const { isLoggedIn, username } = storeToRefs(auth)
 
-/** 用户按钮跳转目标：未登录 → /login/key，已登录 → /profile */
+/** 用户按钮跳转目标：未登录 → /login/key，已登录 → /manage */
 const userLink = computed(() =>
-  isLoggedIn.value ? '/profile' : '/login/key'
+  isLoggedIn.value ? '/manage' : '/login/key'
 )
 
 /** 用户按钮显示文本 */
