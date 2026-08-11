@@ -241,7 +241,7 @@ namespace http
                 // 查询所有用户及其权限列表
                 pqxx::work txn{ conn };
                 const auto rows = txn.exec(
-                    "SELECT u.id, u.username, p.name "
+                    "SELECT u.id, u.username, u.key_enabled, u.password_hash, p.name "
                     "FROM users u "
                     "LEFT JOIN user_permissions up ON up.user_id = u.id "
                     "LEFT JOIN permissions p ON p.id = up.permission_id "
@@ -266,6 +266,8 @@ namespace http
                             {"username", row["username"].is_null()
                                         ? nlohmann::json(nullptr)
                                         : nlohmann::json(row["username"].as<std::string>())},
+                            {"key_enabled", row["key_enabled"].as<bool>()},
+                            {"has_password", !row["password_hash"].is_null()},
                             {"permissions", nlohmann::json::array()}
                         };
                     }
