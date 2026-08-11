@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import Home from '@/views/Home.vue'
 import Blogs from '@/views/Blogs.vue'
 import Projects from '@/views/Projects.vue'
@@ -40,6 +41,16 @@ const router = createRouter({
     { path: '/blog-edit/:file_path(.*)', name: 'blog-edit', component: BlogEdit },
     { path: '/blogs/:file_path(.*)', name: 'blog-detail', component: BlogDetail },
   ],
+})
+
+/** 后台管理页仅允许已登录用户访问。 */
+router.beforeEach((to) => {
+  const auth = useAuthStore()
+  if (to.path.startsWith('/manage') && !auth.isLoggedIn) {
+    window.alert('该页面仅登录用户可访问，请先登录。')
+    return { name: 'login-key' }
+  }
+  return true
 })
 
 export default router
