@@ -15,6 +15,7 @@ const auth = useAuthStore()
 /** 栏目列表：每个栏目对应一个子路由，后续栏目在此追加。 */
 const sections: AdminSection[] = [
   { key: 'profile', label: '个人信息', path: '/manage/profile' },
+  { key: 'users', label: '用户管理', path: '/manage/users' },
 ]
 
 function handleLogout() {

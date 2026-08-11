@@ -119,7 +119,7 @@ PostgreSQL
 | `client/public/assets/note-background.png` | 博客背景图 |
 | `client/src/main.ts` | 前端入口：挂载 App、注册 Pinia 与路由 |
 | `client/src/App.vue` | 根组件：全局 CSS 变量（`:root` / `html.dark`） |
-| `client/src/router/index.ts` | 13 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
+| `client/src/router/index.ts` | 14 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
 | `client/src/stores/auth.ts` | 认证状态（token、username），localStorage 持久化 |
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
 | `client/src/components/NavBar.vue` | 唯一公共组件：导航栏、主题切换、用户入口 |
@@ -130,6 +130,7 @@ PostgreSQL
 | `client/src/views/About.vue` | 关于我页面（渲染 README） |
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
+| `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage 权限） |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |

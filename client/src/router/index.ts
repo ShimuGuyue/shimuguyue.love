@@ -9,6 +9,7 @@ import LoginKey from '@/views/LoginKey.vue'
 import LoginPassword from '@/views/LoginPassword.vue'
 import Manage from '@/views/Manage.vue'
 import ProfileSection from '@/views/ProfileSection.vue'
+import UserManageSection from '@/views/UserManageSection.vue'
 import BlogDetail from '@/views/BlogDetail.vue'
 import BlogEdit from '@/views/BlogEdit.vue'
 import Acknowledgments from '@/views/Acknowledgments.vue'
@@ -35,6 +36,12 @@ const router = createRouter({
           name: 'manage-profile',
           component: ProfileSection,
         },
+        {
+          path: 'users',
+          name: 'manage-users',
+          component: UserManageSection,
+          meta: { requiresPermission: 'manage' },
+        },
       ],
     },
     { path: '/blog-edit/new', name: 'blog-edit-new', component: BlogEdit },
@@ -43,12 +50,35 @@ const router = createRouter({
   ],
 })
 
-/** 后台管理页仅允许已登录用户访问。 */
-router.beforeEach((to) => {
+/** 拉取当前用户权限列表。 */
+async function fetchPermissions(token: string | null): Promise<string[]> {
+  if (!token) return []
+  try {
+    const resp = await fetch('/api/user/permissions', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    })
+    if (!resp.ok) return []
+    const data = await resp.json()
+    return data.permissions ?? []
+  } catch {
+    return []
+  }
+}
+
+/** 后台管理页仅允许已登录用户访问，带权限要求的栏目再校验权限。 */
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
   if (to.path.startsWith('/manage') && !auth.isLoggedIn) {
     window.alert('该页面仅登录用户可访问，请先登录。')
     return { name: 'login-key' }
+  }
+  const required = to.meta.requiresPermission as string | undefined
+  if (required) {
+    const permissions = await fetchPermissions(auth.token)
+    if (!permissions.includes(required)) {
+      window.alert(`该页面仅 ${required} 权限用户可访问`)
+      return { name: 'manage-profile' }
+    }
   }
   return true
 })

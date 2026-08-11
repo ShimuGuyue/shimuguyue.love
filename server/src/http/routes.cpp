@@ -45,6 +45,14 @@ namespace http
             }
         );
 
+        // GET /api/manage/users — 获取用户列表（需要 manage 权限）
+        svr.Get("/api/manage/users",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_manage_users(req, res, allowed);
+            }
+        );
+
         svr.Get("/api/categories",
             [allowed](const auto& req, auto& res)
             {

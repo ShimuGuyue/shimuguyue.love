@@ -194,11 +194,13 @@ cd ${PROJECT_PATH}
     INSERT INTO permissions (name) VALUES ('create'); #id 为 1
     INSERT INTO permissions (name) VALUES ('edit');   #id 为 2
     INSERT INTO permissions (name) VALUES ('drop');   #id 为 3
+    INSERT INTO permissions (name) VALUES ('manage'); #id 为 4
 
     # 为管理员授予权限
     INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 1);
     INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 2);
     INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 3);
+    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 4);
     ```
 
 ### 自动化（可选）

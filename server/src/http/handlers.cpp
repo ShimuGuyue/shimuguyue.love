@@ -198,6 +198,93 @@ namespace http
         );
     }
 
+    void handle_manage_users(
+        const httplib::Request& req,
+        httplib::Response&      res,
+        const std::string&      allowed)
+    {
+        db::with_db(
+            [&](pqxx::connection& conn)
+            {
+                res.set_header("Access-Control-Allow-Origin", allowed);
+                res.set_header("Content-Type", "application/json");
+
+                // Session 验证
+                std::string token;  // 提取 Bearer token
+                if (req.has_header("Authorization"))
+                {
+                    const auto& auth_hdr = req.get_header_value("Authorization");
+                    constexpr std::string_view PREFIX = "Bearer ";
+                    if (auth_hdr.size() > PREFIX.size()
+                    &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
+                        token = auth_hdr.substr(PREFIX.size());
+                }
+                const auto session = auth::validate_session(conn, token);
+                if (!session)
+                {
+                    spdlog::info("获取用户列表失败：未登录或会话已过期。");
+                    res.status = 401;
+                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+                    return;
+                }
+
+                // 权限检查：仅 manage 权限用户可查看用户列表
+                const auto& perms = session->permissions;
+                if (std::find(perms.begin(), perms.end(), "manage") == perms.end())
+                {
+                    spdlog::info("获取用户列表失败：用户 {} 无 manage 权限。", session->user_id);
+                    res.status = 403;
+                    res.set_content(R"({"error":"当前用户无 manage 权限"})", "application/json");
+                    return;
+                }
+
+                // 查询所有用户及其权限列表
+                pqxx::work txn{ conn };
+                const auto rows = txn.exec(
+                    "SELECT u.id, u.username, p.name "
+                    "FROM users u "
+                    "LEFT JOIN user_permissions up ON up.user_id = u.id "
+                    "LEFT JOIN permissions p ON p.id = up.permission_id "
+                    "ORDER BY u.id, up.permission_id"
+                );
+
+                nlohmann::json users = nlohmann::json::array();
+                int current_id = 0;
+                nlohmann::json current_user;
+                for (const auto& row : rows)
+                {
+                    const int user_id = row["id"].as<int>();
+                    if (user_id != current_id)
+                    {
+                        if (current_id != 0)
+                        {
+                            users.push_back(std::move(current_user));
+                        }
+                        current_id = user_id;
+                        current_user = nlohmann::json{
+                            {"id", user_id},
+                            {"username", row["username"].is_null()
+                                        ? nlohmann::json(nullptr)
+                                        : nlohmann::json(row["username"].as<std::string>())},
+                            {"permissions", nlohmann::json::array()}
+                        };
+                    }
+                    if (!row["name"].is_null())
+                    {
+                        current_user["permissions"].push_back(row["name"].as<std::string>());
+                    }
+                }
+                if (current_id != 0)
+                {
+                    users.push_back(std::move(current_user));
+                }
+                txn.commit();
+
+                res.set_content(nlohmann::json{{"users", std::move(users)}}.dump(), "application/json");
+            }
+        );
+    }
+
     void handle_get_categories(
         const httplib::Request& req,
         httplib::Response&      res,
