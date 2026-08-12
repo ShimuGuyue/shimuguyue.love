@@ -10,11 +10,30 @@ interface ManageUser {
   permissions: string[]
 }
 
+interface EditDraft {
+  id: number
+  username: string
+  key_enabled: boolean
+  key: string
+  password: string
+  permissions: string[]
+}
+
+interface PageRow {
+  user: ManageUser | null
+  draft: EditDraft | null
+}
+
 const auth = useAuthStore()
 
 const users = ref<ManageUser[]>([])
+const allPermissions = ref<string[]>([])
 const loading = ref(false)
 const error = ref('')
+
+const editing = ref(false)
+const saving = ref(false)
+const drafts = ref<EditDraft[]>([])
 
 /** 分页：每页固定 15 条 */
 const PAGE_SIZE = 15
@@ -28,13 +47,13 @@ const pageNumbers = computed(() =>
   Array.from({ length: pageCount.value }, (_, i) => i + 1)
 )
 
-/** 当前页数据：不足 15 条时用空行补齐。 */
-const pagedUsers = computed<(ManageUser | null)[]>(() => {
+/** 当前页数据：不足 15 条时用空行补齐，并带上对应的编辑草稿。 */
+const pageRows = computed<PageRow[]>(() => {
   const start = (page.value - 1) * PAGE_SIZE
-  return Array.from(
-    { length: PAGE_SIZE },
-    (_, i) => users.value[start + i] ?? null
-  )
+  return Array.from({ length: PAGE_SIZE }, (_, i) => {
+    const user = users.value[start + i] ?? null
+    return { user, draft: drafts.value[start + i] ?? null }
+  })
 })
 
 watch([users, pageCount], () => {
@@ -43,8 +62,9 @@ watch([users, pageCount], () => {
   }
 })
 
-onMounted(async () => {
+async function loadUsers() {
   loading.value = true
+  error.value = ''
   try {
     const resp = await fetch('/api/manage/users', {
       headers: { 'Authorization': 'Bearer ' + auth.token }
@@ -56,59 +76,219 @@ onMounted(async () => {
     }
     const data = await resp.json()
     users.value = data.users ?? []
+    allPermissions.value = data.all_permissions ?? []
   } catch {
     error.value = '加载失败'
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadUsers)
+
+/** 进入编辑模式：为所有用户生成草稿。 */
+function startEdit() {
+  drafts.value = users.value.map((user) => ({
+    id: user.id,
+    username: user.username ?? '',
+    key_enabled: user.key_enabled,
+    key: '',
+    password: '',
+    permissions: [...user.permissions],
+  }))
+  editing.value = true
+}
+
+/** 取消编辑：丢弃草稿。 */
+function cancelEdit() {
+  editing.value = false
+  drafts.value = []
+}
+
+/** 保存：只提交有改动的行。 */
+async function saveChanges() {
+  saving.value = true
+  try {
+    for (const draft of drafts.value) {
+      const original = users.value.find((user) => user.id === draft.id)
+      if (!original) continue
+
+      const payload: Record<string, unknown> = { id: draft.id }
+      let changed = false
+
+      if (draft.username !== (original.username ?? '')) {
+        payload.username = draft.username
+        changed = true
+      }
+      if (draft.key_enabled !== original.key_enabled) {
+        payload.key_enabled = draft.key_enabled
+        changed = true
+      }
+      if (draft.key) {
+        payload.key = draft.key
+        changed = true
+      }
+      if (draft.password) {
+        payload.password = draft.password
+        changed = true
+      }
+      const permsChanged =
+        original.permissions.length !== draft.permissions.length ||
+        [...original.permissions].sort().join(',') !==
+          [...draft.permissions].sort().join(',')
+      if (permsChanged) {
+        payload.permissions = draft.permissions
+        changed = true
+      }
+      if (!changed) continue
+
+      const resp = await fetch('/api/manage/user/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + auth.token,
+        },
+        body: JSON.stringify(payload),
+      })
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        window.alert(data.error ?? '保存失败')
+        return
+      }
+    }
+    editing.value = false
+    drafts.value = []
+    await loadUsers()
+  } catch {
+    window.alert('保存失败')
+  } finally {
+    saving.value = false
+  }
+}
 </script>
 
 <template>
   <div>
-    <h1 class="admin-content__title">用户管理</h1>
+    <div class="users-header">
+      <h1 class="admin-content__title">用户管理</h1>
+      <div v-if="users.length" class="users-toolbar">
+        <template v-if="editing">
+          <button
+            type="button"
+            class="users-toolbar__btn users-toolbar__btn--primary"
+            :disabled="saving"
+            @click="saveChanges"
+          >
+            {{ saving ? '保存中...' : '保存' }}
+          </button>
+          <button
+            type="button"
+            class="users-toolbar__btn"
+            :disabled="saving"
+            @click="cancelEdit"
+          >
+            取消
+          </button>
+        </template>
+        <button
+          v-else
+          type="button"
+          class="users-toolbar__btn users-toolbar__btn--primary"
+          @click="startEdit"
+        >
+          编辑
+        </button>
+      </div>
+    </div>
 
     <p v-if="loading" class="users-hint">加载中...</p>
     <p v-else-if="error" class="users-hint">{{ error }}</p>
 
     <template v-else-if="users.length">
       <div class="users-table-wrap">
-        <table class="users-table">
+        <table class="users-table" :class="{ 'users-table--editing': editing }">
           <thead>
             <tr>
               <th class="users-table__id">ID</th>
-              <th>用户名</th>
+              <th class="users-table__username">用户名</th>
               <th class="users-table__mask">密钥</th>
               <th class="users-table__status">密钥可用状态</th>
               <th class="users-table__mask">密码</th>
-              <th>权限列表</th>
+              <th class="users-table__perms-col">权限列表</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(user, index) in pagedUsers" :key="index">
-              <td class="users-table__id">{{ user?.id ?? '' }}</td>
+            <tr v-for="(row, index) in pageRows" :key="index">
+              <td class="users-table__id">{{ row.user?.id ?? '' }}</td>
               <td>
-                <span v-if="user && user.username">{{ user.username }}</span>
-                <span v-else-if="user" class="users-hint">无</span>
+                <input
+                  v-if="editing && row.draft"
+                  v-model="row.draft.username"
+                  class="users-table__input"
+                  maxlength="10"
+                />
+                <span v-else-if="row.user && row.user.username">
+                  {{ row.user.username }}
+                </span>
+                <span v-else-if="row.user" class="users-hint">无</span>
               </td>
-              <td class="users-table__mask">{{ user ? '？？？？？？？？？' : '' }}</td>
+              <td class="users-table__mask">
+                <input
+                  v-if="editing && row.draft"
+                  v-model="row.draft.key"
+                  type="password"
+                  class="users-table__input"
+                  placeholder="留空不修改"
+                />
+                <span v-else-if="row.user">？？？？？？？？？</span>
+              </td>
               <td class="users-table__status">
                 <input
-                  v-if="user"
+                  v-if="row.draft"
+                  v-model="row.draft.key_enabled"
                   type="checkbox"
-                  :checked="user.key_enabled"
+                />
+                <input
+                  v-else-if="row.user"
+                  type="checkbox"
+                  :checked="row.user.key_enabled"
                   disabled
                 />
               </td>
               <td>
-                <span v-if="user && user.has_password">？？？？？？？？？</span>
-                <span v-else-if="user" class="users-hint">无</span>
+                <input
+                  v-if="editing && row.draft"
+                  v-model="row.draft.password"
+                  type="password"
+                  class="users-table__input"
+                  placeholder="留空不修改"
+                />
+                <span v-else-if="row.user && row.user.has_password">
+                  ？？？？？？？？？
+                </span>
+                <span v-else-if="row.user" class="users-hint">无</span>
               </td>
               <td>
-                <span v-if="user && user.permissions.length">
-                  {{ user.permissions.join('、') }}
-                </span>
-                <span v-else-if="user" class="users-hint">无</span>
+                <div v-if="editing && row.draft" class="users-table__perms">
+                  <label
+                    v-for="perm in allPermissions"
+                    :key="perm"
+                    class="users-table__perm"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="perm"
+                      v-model="row.draft.permissions"
+                    />
+                    {{ perm }}
+                  </label>
+                </div>
+                <template v-else-if="row.user">
+                  <span v-if="row.user.permissions.length">
+                    {{ row.user.permissions.join('、') }}
+                  </span>
+                  <span v-else class="users-hint">无</span>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -152,18 +332,19 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.admin-content__title {
-  margin: 0 0 24px;
-  font-size: 1.5rem;
-  color: var(--color-text);
-}
-
 .users-table {
   width: 100%;
   /* 固定高度：表头 + 15 行，每行 44px */
   height: calc(44px * 16);
+  table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
+  /* 自定义复选框颜色 */
+  --checkbox-checked-color: #3366ff;
+}
+
+html.dark .users-table {
+  --checkbox-checked-color: #598bff;
 }
 
 .users-table th,
@@ -174,7 +355,14 @@ onMounted(async () => {
   font-family: 'FangSong', '仿宋', STFangsong, serif;
   font-size: 0.95rem;
   color: var(--color-text);
+  vertical-align: middle;
   white-space: nowrap;
+}
+
+/* 编辑模式保持行高不变，超宽内容裁剪 */
+.users-table--editing th,
+.users-table--editing td {
+  overflow: hidden;
 }
 
 .users-table th {
@@ -187,23 +375,20 @@ onMounted(async () => {
   width: 80px;
 }
 
+.users-table__username {
+  width: 18%;
+}
+
 .users-table__status {
-  width: 60px;
+  width: 8em;
   text-align: center;
 }
 
 .users-table__mask {
-  width: 9em;
+  width: 12em;
 }
 
-/* 自定义复选框：状态更清晰 */
-.users-table {
-  --checkbox-checked-color: #3366ff;
-}
-
-html.dark .users-table {
-  --checkbox-checked-color: #598bff;
-}
+/* ── 自定义复选框 ── */
 
 .users-table input[type='checkbox'] {
   width: 18px;
@@ -235,10 +420,97 @@ html.dark .users-table {
   transform: rotate(45deg);
 }
 
+/* ── 编辑输入控件 ── */
+
+.users-table__input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-nav-bg);
+  font-family: 'FangSong', '仿宋', STFangsong, serif;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.users-table__input:focus {
+  outline: none;
+  border-color: var(--color-text-secondary);
+}
+
+.users-table__perms {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 4px 16px;
+}
+
+.users-table__perm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.users-table__perm input {
+  cursor: pointer;
+}
+
 .users-hint {
   margin: 0;
   font-size: 0.9rem;
   color: var(--color-text-secondary);
+}
+
+/* ── 标题栏与工具栏 ── */
+
+.users-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.admin-content__title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--color-text);
+}
+
+.users-toolbar {
+  display: flex;
+  gap: 8px;
+}
+
+.users-toolbar__btn {
+  min-width: 64px;
+  padding: 6px 16px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.users-toolbar__btn:hover:not(:disabled) {
+  background-color: var(--color-hover);
+}
+
+.users-toolbar__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.users-toolbar__btn--primary {
+  border-color: var(--checkbox-checked-color);
+  color: var(--checkbox-checked-color);
+}
+
+.users-toolbar__btn--primary:hover:not(:disabled) {
+  background-color: var(--checkbox-checked-color);
+  color: #fff;
 }
 
 /* ── 分页 ── */

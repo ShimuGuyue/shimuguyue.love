@@ -52,6 +52,14 @@ void handle_manage_users(
     const std::string&      allowed);
 
 /**
+ * @brief 处理 POST /api/manage/user/update 请求（需 manage 权限）。
+ */
+void handle_manage_update_user(
+    const httplib::Request& req,
+    httplib::Response&      res,
+    const std::string&      allowed);
+
+/**
  * @brief 处理 GET /api/categories 请求。
  */
 void handle_get_categories(
