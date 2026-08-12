@@ -14,12 +14,11 @@
 #   FILE_PATH         — 文件根目录，博客内容根目录为 $FILE_PATH/doc
 #   SYNC_REMOTE       — 推送到的远程仓库名（默认 origin）
 #   SYNC_BRANCH       — 推送到的分支名（默认 auto）
-#   SYNC_STATE_FILE   — 状态文件路径（默认 /tmp/auto-sync-blogs.state）
 #
 # 工作原理：
 #   $FILE_PATH/doc/blogs 是独立的 git 仓库。
-#   每次运行时，进入仓库目录，记录当前时间戳到状态文件。
-#   下次运行时，查找比状态文件更新的 .md 文件。
+#   每次运行时，通过 git diff 检测已跟踪文件相对上次提交是否有变化
+#   （修改 / 删除可检测到，未跟踪的新文件不同步）。
 #   如果有变更，执行 git add / commit / push。
 # ============================================================
 
@@ -38,7 +37,6 @@ fi
 FILE_PATH="${FILE_PATH:-}"
 SYNC_REMOTE="${SYNC_REMOTE:-origin}"
 SYNC_BRANCH="${SYNC_BRANCH:-auto}"
-STATE_FILE="${SYNC_STATE_FILE:-/tmp/auto-sync-blogs.state}"
 
 # 设置时区为东八区
 export TZ="Asia/Shanghai"
@@ -78,18 +76,9 @@ HAS_CHANGES=false
 
 if $FORCE; then
     HAS_CHANGES=true
-else
-    if [[ -f "$STATE_FILE" ]]; then
-        # 检查是否有比状态文件更新的 .md 文件
-        if find . -name '*.md' -type f -newer "$STATE_FILE" 2>/dev/null | grep -q .; then
-            HAS_CHANGES=true
-        fi
-    else
-        # 首次运行，不追溯已有文件
-        :
-    fi
-    # 更新状态文件
-    touch "$STATE_FILE"
+elif ! git diff --quiet || ! git diff --cached --quiet; then
+    # 仅检测已跟踪文件的修改与删除，未跟踪文件不同步
+    HAS_CHANGES=true
 fi
 
 if ! $HAS_CHANGES; then
@@ -108,12 +97,12 @@ fi
 if $DRY_RUN; then
     echo "[auto-sync] [DRY-RUN] 检测到以下变更："
     git status --short || true
-    echo "[auto-sync] [DRY-RUN] 将执行: git add . && git commit && git push $SYNC_REMOTE $BRANCH"
+    echo "[auto-sync] [DRY-RUN] 将执行: git add -u && git commit && git push $SYNC_REMOTE $BRANCH"
     exit 0
 fi
 
-# Git add
-git add .
+# Git add（仅暂存已跟踪文件的修改与删除）
+git add -u
 
 # 检查是否有暂存变更
 if git diff --cached --quiet; then
