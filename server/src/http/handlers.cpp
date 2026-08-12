@@ -199,6 +199,54 @@ namespace http
         );
     }
 
+    void handle_user_info(
+        const httplib::Request& req,
+        httplib::Response&      res,
+        const std::string&      allowed)
+    {
+        db::with_db(
+            [&](pqxx::connection& conn)
+            {
+                res.set_header("Access-Control-Allow-Origin", allowed);
+                res.set_header("Content-Type", "application/json");
+
+                // Session 验证
+                std::string token;  // 提取 Bearer token
+                if (req.has_header("Authorization"))
+                {
+                    const auto& auth_hdr = req.get_header_value("Authorization");
+                    constexpr std::string_view PREFIX = "Bearer ";
+                    if (auth_hdr.size() > PREFIX.size()
+                    &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
+                        token = auth_hdr.substr(PREFIX.size());
+                }
+                const auto session = auth::validate_session(conn, token);
+                if (!session)
+                {
+                    spdlog::info("获取用户信息失败：未登录或会话已过期。");
+                    res.status = 401;
+                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+                    return;
+                }
+
+                // 查询用户名
+                pqxx::work txn{ conn };
+                const auto rows = txn.exec(
+                    "SELECT username FROM users WHERE id = $1",
+                    pqxx::params{ session->user_id }
+                );
+                txn.commit();
+
+                nlohmann::json resp;
+                resp["id"] = session->user_id;
+                resp["username"] = rows.empty() || rows[0]["username"].is_null()
+                    ? nlohmann::json(nullptr)
+                    : nlohmann::json(rows[0]["username"].as<std::string>());
+                res.set_content(resp.dump(), "application/json");
+            }
+        );
+    }
+
     void handle_manage_users(
         const httplib::Request& req,
         httplib::Response&      res,

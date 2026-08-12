@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import '@/assets/manage/button.css'
+import '@/assets/manage/font.css'
 
 interface ManageUser {
   id: number
@@ -223,6 +225,8 @@ async function saveChanges() {
         return
       }
     }
+    // 与个人信息页同款刷新逻辑：保存后从后端刷新当前用户名，导航栏即时同步
+    await auth.refreshUsername()
     editing.value = false
     drafts.value = []
     await loadUsers()
@@ -242,7 +246,7 @@ async function saveChanges() {
         <template v-if="editing">
           <button
             type="button"
-            class="users-toolbar__btn users-toolbar__btn--primary"
+            class="manage-btn manage-btn--primary"
             :disabled="saving"
             @click="openCreateDialog"
           >
@@ -250,15 +254,15 @@ async function saveChanges() {
           </button>
           <button
             type="button"
-            class="users-toolbar__btn users-toolbar__btn--primary"
+            class="manage-btn manage-btn--primary"
             :disabled="saving"
             @click="saveChanges"
           >
-            {{ saving ? '保存中...' : '保存修改' }}
+            {{ saving ? '保存中...' : '保存编辑' }}
           </button>
           <button
             type="button"
-            class="users-toolbar__btn users-toolbar__btn--primary"
+            class="manage-btn manage-btn--primary"
             :disabled="saving"
             @click="cancelEdit"
           >
@@ -268,7 +272,7 @@ async function saveChanges() {
         <button
           v-else
           type="button"
-          class="users-toolbar__btn users-toolbar__btn--primary"
+          class="manage-btn manage-btn--primary"
           @click="startEdit"
         >
           编辑用户
@@ -527,7 +531,6 @@ html.dark .users-table {
   height: 44px;
   padding: 0 14px;
   border: 1px solid var(--color-border);
-  font-family: 'FangSong', '仿宋', STFangsong, serif;
   font-size: 0.95rem;
   color: var(--color-text);
   vertical-align: middle;
@@ -603,7 +606,6 @@ html.dark .users-table {
   padding: 0 8px;
   border: 1px solid var(--color-border);
   background-color: var(--color-nav-bg);
-  font-family: 'FangSong', '仿宋', STFangsong, serif;
   font-size: 0.9rem;
   color: var(--color-text);
 }
@@ -657,35 +659,6 @@ html.dark .users-table {
 .users-toolbar {
   display: flex;
   gap: 8px;
-}
-
-.users-toolbar__btn {
-  min-width: 64px;
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-size: 0.9rem;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.users-toolbar__btn:hover:not(:disabled) {
-  background-color: var(--color-hover);
-}
-
-.users-toolbar__btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.users-toolbar__btn--primary {
-  border-color: var(--checkbox-checked-color);
-  color: var(--checkbox-checked-color);
-}
-
-.users-toolbar__btn--primary:hover:not(:disabled) {
-  background-color: var(--checkbox-checked-color);
-  color: #fff;
 }
 
 /* ── 分页 ── */
@@ -785,7 +758,6 @@ html.dark .users-table {
   padding: 0 8px;
   border: 1px solid var(--color-border);
   background-color: var(--color-bg);
-  font-family: 'FangSong', '仿宋', STFangsong, serif;
   font-size: 0.9rem;
   color: var(--color-text);
 }
