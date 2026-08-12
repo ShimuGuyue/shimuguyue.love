@@ -62,25 +62,43 @@ export const useAuthStore = defineStore('auth', () => {
     /**
      * 修改当前登录用户的用户名。
      *
-     * 调用后端接口更新，成功后立即更新本地用户名并持久化。
+     * 通过自助接口更新，成功后立即更新本地用户名并持久化。
      *
      * @param name 新用户名；空字符串表示清空用户名。
      * @return 成功返回 null，失败返回错误消息。
      */
     async function updateOwnUsername(name: string): Promise<string | null> {
-        const resp = await fetch('/api/manage/user/update', {
+        return updateOwnProfile({ username: name })
+    }
+
+    /**
+     * 自助更新当前登录用户的信息（用户名 / 密钥可用状态 / 密码）。
+     *
+     * 只允许修改自己，不需要 manage 权限；成功后立即同步本地用户名。
+     *
+     * @param payload 要更新的字段（可选）。
+     * @return 成功返回 null，失败返回错误消息。
+     */
+    async function updateOwnProfile(payload: {
+        username?: string
+        key_enabled?: boolean
+        password?: string
+    }): Promise<string | null> {
+        const resp = await fetch('/api/user/update', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + token.value,
             },
-            body: JSON.stringify({ id: id.value, username: name }),
+            body: JSON.stringify(payload),
         })
         const data = await resp.json().catch(() => ({}))
         if (!resp.ok) {
             return data.error ?? '保存失败'
         }
-        setUsername(name === '' ? null : name)
+        if (payload.username !== undefined) {
+            setUsername(payload.username === '' ? null : payload.username)
+        }
         return null
     }
 
@@ -119,5 +137,5 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem(STORAGE_KEY)
     }
 
-    return { isLoggedIn, id, username, token, expiresAt, login, logout, setUsername, updateOwnUsername, refreshUsername }
+    return { isLoggedIn, id, username, token, expiresAt, login, logout, setUsername, updateOwnUsername, updateOwnProfile, refreshUsername }
 })
