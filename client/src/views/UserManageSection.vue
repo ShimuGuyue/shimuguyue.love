@@ -744,11 +744,11 @@ html.dark .users-table {
 .create-box__field > span {
   flex-shrink: 0;
   width: 64px;
-  color: var(--color-text-secondary);
+  color: var(--manage-label-color);
 }
 
 .create-box__field--inline > span {
-  color: var(--color-text);
+  color: var(--manage-label-color);
 }
 
 .create-box__input {
@@ -785,6 +785,7 @@ html.dark .users-table {
   font-size: 0.85rem;
   white-space: nowrap;
   cursor: pointer;
+  color: var(--manage-info-color);
 }
 
 .create-box__actions {
