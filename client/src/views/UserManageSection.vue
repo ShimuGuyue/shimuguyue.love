@@ -425,7 +425,6 @@ async function saveChanges() {
     <div
       v-if="showCreateDialog"
       class="create-mask"
-      @click.self="showCreateDialog = false"
     >
       <div class="create-box" role="dialog" aria-modal="true">
         <h2 class="create-box__title">新建用户</h2>
