@@ -1,0 +1,32 @@
+/* ============================================================
+ * 后台管理页按钮统一样式
+ * ============================================================ */
+
+.manage-btn {
+  min-width: 64px;
+  padding: 6px 16px;
+  border: 1px solid var(--color-text-secondary);
+  background: transparent;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.manage-btn:hover:not(:disabled) {
+  background-color: var(--color-hover);
+}
+
+.manage-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.manage-btn--primary {
+  border-color: var(--color-text-secondary);
+  color: var(--color-text);
+}
+
+.manage-btn--primary:hover:not(:disabled) {
+  background-color: var(--color-hover);
+  color: var(--color-text);
+}

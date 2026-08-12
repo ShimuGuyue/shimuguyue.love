@@ -52,6 +52,39 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     /**
+     * 更新当前登录用户的用户名并持久化（修改后导航栏立即生效）。
+     */
+    function setUsername(name: string | null) {
+        username.value = name
+        save(isLoggedIn.value, id.value, name, token.value, expiresAt.value)
+    }
+
+    /**
+     * 修改当前登录用户的用户名。
+     *
+     * 调用后端接口更新，成功后立即更新本地用户名并持久化。
+     *
+     * @param name 新用户名；空字符串表示清空用户名。
+     * @return 成功返回 null，失败返回错误消息。
+     */
+    async function updateOwnUsername(name: string): Promise<string | null> {
+        const resp = await fetch('/api/manage/user/update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token.value,
+            },
+            body: JSON.stringify({ id: id.value, username: name }),
+        })
+        const data = await resp.json().catch(() => ({}))
+        if (!resp.ok) {
+            return data.error ?? '保存失败'
+        }
+        setUsername(name === '' ? null : name)
+        return null
+    }
+
+    /**
      * 退出登录，清除认证状态。
      */
     function logout() {
@@ -63,5 +96,5 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem(STORAGE_KEY)
     }
 
-    return { isLoggedIn, id, username, token, expiresAt, login, logout }
+    return { isLoggedIn, id, username, token, expiresAt, login, logout, setUsername, updateOwnUsername }
 })

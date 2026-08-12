@@ -1,0 +1,31 @@
+/* ============================================================
+ * 后台管理页文本样式统一
+ * 信息文字与输入控件：仿宋
+ * 标题与按钮：默认字体
+ * ============================================================ */
+
+/* 标题：默认字体 */
+.admin-content__title {
+  font-family: inherit;
+}
+
+/* 信息文字：仿宋 */
+.info-list,
+.info-list__hint,
+.perm-item,
+.users-table th,
+.users-table td {
+  font-family: 'FangSong', '仿宋', STFangsong, serif;
+}
+
+/* 输入控件：仿宋 */
+.info-list__input,
+.users-table__input,
+.create-box__input {
+  font-family: 'FangSong', '仿宋', STFangsong, serif;
+}
+
+/* 按钮：默认字体 */
+.manage-btn {
+  font-family: inherit;
+}
