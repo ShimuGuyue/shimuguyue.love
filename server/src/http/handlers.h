@@ -52,6 +52,14 @@ void handle_user_info(
     const std::string&      allowed);
 
 /**
+ * @brief 处理 POST /api/user/update 请求（用户自助更新自己的信息）。
+ */
+void handle_user_update(
+    const httplib::Request& req,
+    httplib::Response&      res,
+    const std::string&      allowed);
+
+/**
  * @brief 处理 GET /api/manage/users 请求（需 manage 权限）。
  */
 void handle_manage_users(

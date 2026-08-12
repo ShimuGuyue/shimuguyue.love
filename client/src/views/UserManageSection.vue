@@ -41,6 +41,8 @@ const drafts = ref<EditDraft[]>([])
 
 const showCreateDialog = ref(false)
 const creating = ref(false)
+const permDialogDraft = ref<EditDraft | null>(null)
+const permDialogSelection = ref<string[]>([])
 const createForm = ref({
   username: '',
   key: '',
@@ -168,6 +170,25 @@ async function submitCreate() {
   } finally {
     creating.value = false
   }
+}
+
+/** 打开某行的权限编辑弹窗。 */
+function openPermDialog(draft: EditDraft) {
+  permDialogSelection.value = [...draft.permissions]
+  permDialogDraft.value = draft
+}
+
+/** 确认权限修改：写回对应行草稿。 */
+function confirmPermDialog() {
+  if (permDialogDraft.value) {
+    permDialogDraft.value.permissions = [...permDialogSelection.value]
+  }
+  permDialogDraft.value = null
+}
+
+/** 取消权限修改。 */
+function cancelPermDialog() {
+  permDialogDraft.value = null
 }
 
 /** 保存：只提交有改动的行。 */
@@ -362,19 +383,21 @@ async function saveChanges() {
                 <span v-else-if="row.user" class="users-hint">无</span>
               </td>
               <td>
-                <div v-if="editing && row.draft" class="users-table__perms">
-                  <label
-                    v-for="perm in allPermissions"
-                    :key="perm"
-                    class="users-table__perm"
+                <div v-if="editing && row.draft" class="users-table__perms-edit">
+                  <span class="users-table__perms-summary">
+                    {{
+                      row.draft.permissions.length
+                        ? row.draft.permissions.join('、')
+                        : '无'
+                    }}
+                  </span>
+                  <button
+                    type="button"
+                    class="manage-btn users-table__perms-btn"
+                    @click="openPermDialog(row.draft)"
                   >
-                    <input
-                      type="checkbox"
-                      :value="perm"
-                      v-model="row.draft.permissions"
-                    />
-                    {{ perm }}
-                  </label>
+                    编辑权限
+                  </button>
                 </div>
                 <template v-else-if="row.user">
                   <span v-if="row.user.permissions.length">
@@ -425,7 +448,6 @@ async function saveChanges() {
     <div
       v-if="showCreateDialog"
       class="create-mask"
-      @click.self="showCreateDialog = false"
     >
       <div class="create-box" role="dialog" aria-modal="true">
         <h2 class="create-box__title">新建用户</h2>
@@ -490,17 +512,56 @@ async function saveChanges() {
         <div class="create-box__actions">
           <button
             type="button"
-            class="create-box__btn create-box__btn--primary"
+            class="manage-btn manage-btn--primary"
             :disabled="creating"
             @click="submitCreate"
           >
-            {{ creating ? '创建中...' : '创建' }}
+            {{ creating ? '创建中...' : '创建用户' }}
           </button>
           <button
             type="button"
-            class="create-box__btn"
+            class="manage-btn"
             :disabled="creating"
             @click="showCreateDialog = false"
+          >
+            取消创建
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="permDialogDraft" class="create-mask">
+      <div class="create-box" role="dialog" aria-modal="true">
+        <h2 class="create-box__title">编辑权限</h2>
+
+        <div class="create-box__perms">
+          <label
+            v-for="perm in allPermissions"
+            :key="perm"
+            class="create-box__perm"
+          >
+            <input
+              type="checkbox"
+              :value="perm"
+              v-model="permDialogSelection"
+              class="create-box__checkbox"
+            />
+            {{ perm }}
+          </label>
+        </div>
+
+        <div class="create-box__actions">
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            @click="confirmPermDialog"
+          >
+            确认
+          </button>
+          <button
+            type="button"
+            class="manage-btn"
+            @click="cancelPermDialog"
           >
             取消
           </button>
@@ -615,20 +676,27 @@ html.dark .users-table {
   border-color: var(--color-text-secondary);
 }
 
-.users-table__perms {
+.users-table__perms-edit {
   display: flex;
-  flex-wrap: nowrap;
-  gap: 4px 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  max-width: 100%;
 }
 
-.users-table__perm {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  color: var(--color-text);
+.users-table__perms-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
+}
+
+.users-table__perms-btn {
+  flex-shrink: 0;
+  min-width: auto;
+  padding: 3px 10px;
+  font-size: 0.85rem;
 }
 
 .users-table__perm input {
@@ -745,11 +813,11 @@ html.dark .users-table {
 .create-box__field > span {
   flex-shrink: 0;
   width: 64px;
-  color: var(--color-text-secondary);
+  color: var(--manage-label-color);
 }
 
 .create-box__field--inline > span {
-  color: var(--color-text);
+  color: var(--manage-label-color);
 }
 
 .create-box__input {
@@ -786,6 +854,7 @@ html.dark .users-table {
   font-size: 0.85rem;
   white-space: nowrap;
   cursor: pointer;
+  color: var(--manage-info-color);
 }
 
 .create-box__actions {
@@ -795,32 +864,4 @@ html.dark .users-table {
   margin-top: 20px;
 }
 
-.create-box__btn {
-  min-width: 72px;
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-size: 0.9rem;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.create-box__btn:hover:not(:disabled) {
-  background-color: var(--color-hover);
-}
-
-.create-box__btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.create-box__btn--primary {
-  border-color: #3366ff;
-  color: #3366ff;
-}
-
-.create-box__btn--primary:hover:not(:disabled) {
-  background-color: #3366ff;
-  color: #fff;
-}
 </style>

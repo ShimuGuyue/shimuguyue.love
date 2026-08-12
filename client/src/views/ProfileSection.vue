@@ -11,11 +11,23 @@ const loading = ref(false)
 const editingUsername = ref(false)
 const savingUsername = ref(false)
 const usernameDraft = ref('')
+const keyEnabled = ref(false)
+const hasPassword = ref(false)
+const keyEnabledDraft = ref(true)
+const passwordDraft = ref('')
 
 onMounted(async () => {
   if (!auth.id) return
   loading.value = true
   try {
+    const infoResp = await fetch('/api/user/info', {
+      headers: { 'Authorization': 'Bearer ' + auth.token }
+    })
+    if (infoResp.ok) {
+      const data = await infoResp.json()
+      keyEnabled.value = data.key_enabled ?? false
+      hasPassword.value = data.has_password ?? false
+    }
     const resp = await fetch('/api/user/permissions', {
       headers: { 'Authorization': 'Bearer ' + auth.token }
     })
@@ -33,17 +45,33 @@ onMounted(async () => {
 /** 进入修改用户名模式。 */
 function startEditUsername() {
   usernameDraft.value = auth.username ?? ''
+  keyEnabledDraft.value = keyEnabled.value
+  passwordDraft.value = ''
   editingUsername.value = true
 }
 
-/** 保存用户名：成功后导航栏立即更新。 */
+/** 保存个人信息：用户名 / 密钥可用状态 / 密码一次提交，成功后导航栏立即更新。 */
 async function saveUsername() {
   savingUsername.value = true
   try {
-    const err = await auth.updateOwnUsername(usernameDraft.value)
+    const payload: Record<string, unknown> = {}
+    if (usernameDraft.value !== (auth.username ?? '')) {
+      payload.username = usernameDraft.value
+    }
+    if (keyEnabledDraft.value !== keyEnabled.value) {
+      payload.key_enabled = keyEnabledDraft.value
+    }
+    if (passwordDraft.value) {
+      payload.password = passwordDraft.value
+    }
+    const err = await auth.updateOwnProfile(payload)
     if (err) {
       window.alert(err)
       return
+    }
+    keyEnabled.value = keyEnabledDraft.value
+    if (passwordDraft.value) {
+      hasPassword.value = true
     }
     editingUsername.value = false
   } catch {
@@ -55,7 +83,7 @@ async function saveUsername() {
 </script>
 
 <template>
-  <div>
+  <div class="profile-section">
     <div class="profile-header">
       <h1 class="admin-content__title">个人信息</h1>
       <template v-if="editingUsername">
@@ -89,7 +117,7 @@ async function saveUsername() {
     </div>
 
     <dl class="info-list">
-      <div class="info-list__row info-list__row--username">
+      <div class="info-list__row info-list__row--fixed">
         <dt>用户名</dt>
         <dd>
           <template v-if="editingUsername">
@@ -102,6 +130,40 @@ async function saveUsername() {
           <template v-else>
             <span>{{ auth.username ?? '匿名用户' }}</span>
           </template>
+        </dd>
+      </div>
+
+      <div class="info-list__row info-list__row--fixed">
+        <dt>密钥可用状态</dt>
+        <dd>
+          <input
+            v-if="editingUsername"
+            v-model="keyEnabledDraft"
+            type="checkbox"
+            class="profile-checkbox"
+          />
+          <input
+            v-else
+            type="checkbox"
+            :checked="keyEnabled"
+            disabled
+            class="profile-checkbox"
+          />
+        </dd>
+      </div>
+
+      <div class="info-list__row info-list__row--fixed">
+        <dt>密码</dt>
+        <dd>
+          <input
+            v-if="editingUsername"
+            v-model="passwordDraft"
+            type="password"
+            class="info-list__input"
+            placeholder="留空不修改"
+          />
+          <span v-else-if="hasPassword">？？？？？？？？？</span>
+          <span v-else class="info-list__hint">无</span>
         </dd>
       </div>
 
@@ -126,6 +188,14 @@ async function saveUsername() {
 </template>
 
 <style scoped>
+.profile-section {
+  --checkbox-checked-color: #3366ff;
+}
+
+html.dark .profile-section {
+  --checkbox-checked-color: #598bff;
+}
+
 .admin-content__title {
   margin: 0;
   font-size: 1.5rem;
@@ -156,7 +226,7 @@ async function saveUsername() {
   border-bottom: 1px solid var(--color-border);
 }
 
-.info-list__row--username {
+.info-list__row--fixed {
   height: 44px;
   align-items: center;
   padding: 0;
@@ -205,6 +275,36 @@ async function saveUsername() {
 .info-list__input:focus {
   outline: none;
   border-color: var(--color-text-secondary);
+}
+
+.profile-checkbox {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  vertical-align: middle;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--color-text-secondary);
+  background-color: var(--color-nav-bg);
+  cursor: pointer;
+  position: relative;
+}
+
+.profile-checkbox:checked {
+  border-color: var(--checkbox-checked-color);
+  background-color: var(--checkbox-checked-color);
+}
+
+.profile-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 6px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 </style>

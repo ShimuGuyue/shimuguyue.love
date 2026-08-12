@@ -29,3 +29,11 @@
 .manage-btn {
   font-family: inherit;
 }
+
+/* 后台管理文本颜色：
+ * 指示文本与信息文本颜色
+ */
+.admin-content {
+  --manage-label-color: var(--color-text-secondary);
+  --manage-info-color: var(--color-text);
+}

@@ -53,6 +53,14 @@ namespace http
             }
         );
 
+        // POST /api/user/update — 用户自助更新自己的信息（用户名 / 密钥可用状态 / 密码）
+        svr.Post("/api/user/update",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_user_update(req, res, allowed);
+            }
+        );
+
         // GET /api/manage/users — 获取用户列表（需要 manage 权限）
         svr.Get("/api/manage/users",
             [allowed](const auto& req, auto& res)
