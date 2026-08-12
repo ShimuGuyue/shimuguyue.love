@@ -13,12 +13,12 @@
 # 环境变量：
 #   FILE_PATH         — 文件根目录，博客内容根目录为 $FILE_PATH/doc
 #   SYNC_REMOTE       — 推送到的远程仓库名（默认 origin）
-#   SYNC_BRANCH       — 推送到的分支名（默认 auto）
+#   SYNC_BRANCH       — 推送到的分支名（默认 auto；本地不在该分支时自动切换）
 #
 # 工作原理：
 #   $FILE_PATH/doc/blogs 是独立的 git 仓库。
-#   每次运行时，通过 git diff 检测已跟踪文件相对上次提交是否有变化
-#   （修改 / 删除可检测到，未跟踪的新文件不同步）。
+#   每次运行时，暂存已跟踪文件的修改/删除，以及新增或修改的 .md 文件；
+#   未跟踪的非 .md 文件（临时文件等）不参与同步。
 #   如果有变更，执行 git add / commit / push。
 # ============================================================
 
@@ -71,44 +71,42 @@ if ! git rev-parse --git-dir > /dev/null 2>&1; then
     exit 1
 fi
 
-# ---- 变更检测 ----
-HAS_CHANGES=false
+# 目标分支固定为 auto（本地分支不一致时后续自动切换）
+BRANCH="$SYNC_BRANCH"
 
-if $FORCE; then
-    HAS_CHANGES=true
-elif ! git diff --quiet || ! git diff --cached --quiet; then
-    # 仅检测已跟踪文件的修改与删除，未跟踪文件不同步
-    HAS_CHANGES=true
+if $DRY_RUN; then
+    echo "[auto-sync] [DRY-RUN] 检测到以下变更："
+    git status --short || true
+    echo "[auto-sync] [DRY-RUN] 将执行: git checkout $BRANCH && git add -u && git add '*.md' && git commit && git push $SYNC_REMOTE $BRANCH"
+    exit 0
 fi
 
-if ! $HAS_CHANGES; then
+# ---- 确保使用目标分支 ----
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+if [[ -n "$CURRENT_BRANCH" && "$CURRENT_BRANCH" != "$BRANCH" ]]; then
+    echo "[auto-sync] 当前分支 $CURRENT_BRANCH 与目标 $BRANCH 不一致，切换到 $BRANCH。"
+    if git show-ref --verify --quiet "refs/heads/$BRANCH"; then
+        git checkout "$BRANCH"
+    elif git show-ref --verify --quiet "refs/remotes/$SYNC_REMOTE/$BRANCH"; then
+        git checkout -b "$BRANCH" "$SYNC_REMOTE/$BRANCH"
+    else
+        git checkout -b "$BRANCH"
+    fi
+fi
+
+# ---- 变更检测与暂存 ----
+# 仅暂存：已跟踪文件的修改/删除 + 新增或修改的 .md 文件；
+# 未跟踪的非 .md 文件（临时文件等）不参与同步
+git add -u
+git add '*.md'
+
+if ! $FORCE && git diff --cached --quiet; then
+    echo "[auto-sync] $(date '+%Y-%m-%d %H:%M') 无变更。"
     exit 0
 fi
 
 # ---- Git 操作 ----
 echo "[auto-sync] $(date '+%Y-%m-%d %H:%M') 检测到博客文件变更，准备同步..."
-
-# 确定分支
-BRANCH="$SYNC_BRANCH"
-if [[ -z "$BRANCH" ]]; then
-    BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
-fi
-
-if $DRY_RUN; then
-    echo "[auto-sync] [DRY-RUN] 检测到以下变更："
-    git status --short || true
-    echo "[auto-sync] [DRY-RUN] 将执行: git add -u && git commit && git push $SYNC_REMOTE $BRANCH"
-    exit 0
-fi
-
-# Git add（仅暂存已跟踪文件的修改与删除）
-git add -u
-
-# 检查是否有暂存变更
-if git diff --cached --quiet; then
-    echo "[auto-sync] 无实际变更（.md 文件无差异），跳过。"
-    exit 0
-fi
 
 # Git commit
 COMMIT_MSG="$(date '+%y-%m-%d:%H:%M')"
