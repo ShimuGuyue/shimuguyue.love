@@ -57,3 +57,33 @@ CREATE TABLE user_permissions (
 COMMENT ON TABLE  user_permissions IS '用户-权限关联表';
 COMMENT ON COLUMN user_permissions.user_id       IS '关联 users.id';
 COMMENT ON COLUMN user_permissions.permission_id IS '关联 permissions.id';
+
+-- ============================================================
+-- 初始数据：权限列表与默认管理员
+-- ============================================================
+
+-- 权限列表
+INSERT INTO permissions (name) VALUES ('create') ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('edit')   ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('drop')   ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('manage') ON CONFLICT (name) DO NOTHING;
+
+-- 默认管理员 root（用户名 / 密码见 README）
+-- 密钥已停用：key_hash 为占位串的固定盐哈希，无实际登录用途
+INSERT INTO users (enabled, key_hash, key_enabled, username, password_hash)
+VALUES (
+    TRUE,
+    '0000000000000000000000000000000000000000000000000000000000000000', -- 占位密钥哈希（无意义，密钥不可用）
+    FALSE,
+    'root',
+    '$argon2id$v=19$m=1048576,t=4,p=1$omPGLmkPgmE1OS9ZHGmQKQ$Br+7hgX33NVy5kOUzrY81tDqQ36+taiN05UV2mVIwJM' -- 密码 root 的随机盐哈希
+)
+ON CONFLICT (username) DO NOTHING;
+
+-- 为 root 授予全部权限
+INSERT INTO user_permissions (user_id, permission_id)
+SELECT u.id, p.id
+FROM users u
+CROSS JOIN permissions p
+WHERE u.username = 'root'
+ON CONFLICT (user_id, permission_id) DO NOTHING;
