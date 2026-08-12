@@ -489,19 +489,19 @@ async function saveChanges() {
         <div class="create-box__actions">
           <button
             type="button"
-            class="create-box__btn create-box__btn--primary"
+            class="manage-btn manage-btn--primary"
             :disabled="creating"
             @click="submitCreate"
           >
-            {{ creating ? '创建中...' : '创建' }}
+            {{ creating ? '创建中...' : '创建用户' }}
           </button>
           <button
             type="button"
-            class="create-box__btn"
+            class="manage-btn"
             :disabled="creating"
             @click="showCreateDialog = false"
           >
-            取消
+            取消创建
           </button>
         </div>
       </div>
@@ -795,32 +795,4 @@ html.dark .users-table {
   margin-top: 20px;
 }
 
-.create-box__btn {
-  min-width: 72px;
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-size: 0.9rem;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.create-box__btn:hover:not(:disabled) {
-  background-color: var(--color-hover);
-}
-
-.create-box__btn:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-.create-box__btn--primary {
-  border-color: #3366ff;
-  color: #3366ff;
-}
-
-.create-box__btn--primary:hover:not(:disabled) {
-  background-color: #3366ff;
-  color: #fff;
-}
 </style>
