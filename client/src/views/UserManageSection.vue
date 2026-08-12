@@ -35,6 +35,16 @@ const editing = ref(false)
 const saving = ref(false)
 const drafts = ref<EditDraft[]>([])
 
+const showCreateDialog = ref(false)
+const creating = ref(false)
+const createForm = ref({
+  username: '',
+  key: '',
+  password: '',
+  key_enabled: true,
+  permissions: [] as string[],
+})
+
 /** 分页：每页固定 15 条 */
 const PAGE_SIZE = 15
 const page = ref(1)
@@ -103,6 +113,56 @@ function startEdit() {
 function cancelEdit() {
   editing.value = false
   drafts.value = []
+}
+
+/** 打开新建用户弹窗。 */
+function openCreateDialog() {
+  createForm.value = {
+    username: '',
+    key: '',
+    password: '',
+    key_enabled: true,
+    permissions: [],
+  }
+  showCreateDialog.value = true
+}
+
+/** 提交新建用户。 */
+async function submitCreate() {
+  if (!createForm.value.key.trim()) {
+    window.alert('新用户必须设置密钥')
+    return
+  }
+  creating.value = true
+  try {
+    const resp = await fetch('/api/manage/user/create', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + auth.token,
+      },
+      body: JSON.stringify({
+        username: createForm.value.username,
+        key: createForm.value.key,
+        password: createForm.value.password,
+        key_enabled: createForm.value.key_enabled,
+        permissions: createForm.value.permissions,
+      }),
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      window.alert(data.error ?? '新建用户失败')
+      return
+    }
+    showCreateDialog.value = false
+    editing.value = false
+    drafts.value = []
+    await loadUsers()
+  } catch {
+    window.alert('新建用户失败')
+  } finally {
+    creating.value = false
+  }
 }
 
 /** 保存：只提交有改动的行。 */
@@ -177,17 +237,25 @@ async function saveChanges() {
             type="button"
             class="users-toolbar__btn users-toolbar__btn--primary"
             :disabled="saving"
-            @click="saveChanges"
+            @click="openCreateDialog"
           >
-            {{ saving ? '保存中...' : '保存' }}
+            新建用户
           </button>
           <button
             type="button"
-            class="users-toolbar__btn"
+            class="users-toolbar__btn users-toolbar__btn--primary"
+            :disabled="saving"
+            @click="saveChanges"
+          >
+            {{ saving ? '保存中...' : '保存修改' }}
+          </button>
+          <button
+            type="button"
+            class="users-toolbar__btn users-toolbar__btn--primary"
             :disabled="saving"
             @click="cancelEdit"
           >
-            取消
+            取消编辑
           </button>
         </template>
         <button
@@ -196,7 +264,7 @@ async function saveChanges() {
           class="users-toolbar__btn users-toolbar__btn--primary"
           @click="startEdit"
         >
-          编辑
+          编辑用户
         </button>
       </div>
     </div>
@@ -328,6 +396,92 @@ async function saveChanges() {
     </template>
 
     <p v-else class="users-hint">暂无用户</p>
+
+    <div
+      v-if="showCreateDialog"
+      class="create-mask"
+      @click.self="showCreateDialog = false"
+    >
+      <div class="create-box" role="dialog" aria-modal="true">
+        <h2 class="create-box__title">新建用户</h2>
+
+        <label class="create-box__field">
+          <span>用户名</span>
+          <input
+            v-model="createForm.username"
+            class="create-box__input"
+            maxlength="10"
+            placeholder="可选"
+          />
+        </label>
+
+        <label class="create-box__field">
+          <span>密钥</span>
+          <input
+            v-model="createForm.key"
+            type="password"
+            class="create-box__input"
+          />
+        </label>
+
+        <label class="create-box__field">
+          <span>密码</span>
+          <input
+            v-model="createForm.password"
+            type="password"
+            class="create-box__input"
+            placeholder="可选"
+          />
+        </label>
+
+        <label class="create-box__field create-box__field--inline">
+          <span>密钥可用</span>
+          <input
+            v-model="createForm.key_enabled"
+            type="checkbox"
+            class="create-box__checkbox"
+          />
+        </label>
+
+        <div class="create-box__field">
+          <span>权限</span>
+          <div class="create-box__perms">
+            <label
+              v-for="perm in allPermissions"
+              :key="perm"
+              class="create-box__perm"
+            >
+              <input
+                type="checkbox"
+                :value="perm"
+                v-model="createForm.permissions"
+                class="create-box__checkbox"
+              />
+              {{ perm }}
+            </label>
+          </div>
+        </div>
+
+        <div class="create-box__actions">
+          <button
+            type="button"
+            class="create-box__btn create-box__btn--primary"
+            :disabled="creating"
+            @click="submitCreate"
+          >
+            {{ creating ? '创建中...' : '创建' }}
+          </button>
+          <button
+            type="button"
+            class="create-box__btn"
+            :disabled="creating"
+            @click="showCreateDialog = false"
+          >
+            取消
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -359,7 +513,7 @@ html.dark .users-table {
   white-space: nowrap;
 }
 
-/* 编辑模式保持行高不变，超宽内容裁剪 */
+/* 编辑模式：行高保持 44px，超宽内容裁剪 */
 .users-table--editing th,
 .users-table--editing td {
   overflow: hidden;
@@ -557,5 +711,123 @@ html.dark .users-table {
 .users-pager__btn--active {
   background-color: var(--color-hover);
   font-weight: 600;
+}
+
+/* ── 新建用户弹窗 ── */
+
+.create-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.create-box {
+  width: 380px;
+  padding: 24px;
+  background-color: var(--color-nav-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.create-box__title {
+  margin: 0 0 20px;
+  font-size: 1.2rem;
+  color: var(--color-text);
+}
+
+.create-box__field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.create-box__field > span {
+  flex-shrink: 0;
+  width: 64px;
+  color: var(--color-text-secondary);
+}
+
+.create-box__field--inline > span {
+  color: var(--color-text);
+}
+
+.create-box__input {
+  flex: 1;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  font-family: 'FangSong', '仿宋', STFangsong, serif;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.create-box__input:focus {
+  outline: none;
+  border-color: var(--color-text-secondary);
+}
+
+.create-box__checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #3366ff;
+}
+
+.create-box__perms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.create-box__perm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.create-box__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.create-box__btn {
+  min-width: 72px;
+  padding: 6px 16px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.create-box__btn:hover:not(:disabled) {
+  background-color: var(--color-hover);
+}
+
+.create-box__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.create-box__btn--primary {
+  border-color: #3366ff;
+  color: #3366ff;
+}
+
+.create-box__btn--primary:hover:not(:disabled) {
+  background-color: #3366ff;
+  color: #fff;
 }
 </style>

@@ -537,6 +537,220 @@ namespace http
         );
     }
 
+    void handle_manage_create_user(
+        const httplib::Request& req,
+        httplib::Response&      res,
+        const std::string&      allowed)
+    {
+        db::with_db(
+            [&](pqxx::connection& conn)
+            {
+                res.set_header("Access-Control-Allow-Origin", allowed);
+                res.set_header("Content-Type", "application/json");
+
+                // Session 验证
+                std::string token;  // 提取 Bearer token
+                if (req.has_header("Authorization"))
+                {
+                    const auto& auth_hdr = req.get_header_value("Authorization");
+                    constexpr std::string_view PREFIX = "Bearer ";
+                    if (auth_hdr.size() > PREFIX.size()
+                    &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
+                        token = auth_hdr.substr(PREFIX.size());
+                }
+                const auto session = auth::validate_session(conn, token);
+                if (!session)
+                {
+                    spdlog::info("创建用户失败：未登录或会话已过期。");
+                    res.status = 401;
+                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+                    return;
+                }
+
+                // 权限检查：仅 manage 权限用户可创建用户
+                const auto& perms = session->permissions;
+                if (std::find(perms.begin(), perms.end(), "manage") == perms.end())
+                {
+                    spdlog::info("创建用户失败：用户 {} 无 manage 权限。", session->user_id);
+                    res.status = 403;
+                    res.set_content(R"({"error":"当前用户无 manage 权限"})", "application/json");
+                    return;
+                }
+
+                // 解析请求体
+                const auto body = nlohmann::json::parse(req.body, nullptr, false);
+                if (body.is_discarded())
+                {
+                    res.status = 400;
+                    res.set_content(R"({"error":"无效的 JSON"})", "application/json");
+                    return;
+                }
+
+                // 密钥必填（key_hash 字段 NOT NULL）
+                if (!body.contains("key") || !body["key"].is_string()
+                ||  body["key"].get<std::string>().empty())
+                {
+                    res.status = 400;
+                    res.set_content(R"({"error":"新用户必须设置密钥"})", "application/json");
+                    return;
+                }
+                const std::string key = body["key"].get<std::string>();
+
+                // 用户名（可选，非空时校验长度与唯一性）
+                std::string username;
+                if (body.contains("username"))
+                {
+                    if (!body["username"].is_string())
+                    {
+                        res.status = 400;
+                        res.set_content(R"({"error":"用户名格式无效"})", "application/json");
+                        return;
+                    }
+                    username = body["username"].get<std::string>();
+                    std::size_t char_count = 0;
+                    for (unsigned char c : username)
+                    {
+                        if ((c & 0xC0) != 0x80)
+                        {
+                            ++char_count;
+                        }
+                    }
+                    if (char_count > 10)
+                    {
+                        res.status = 400;
+                        res.set_content(R"({"error":"用户名最多 10 个字符"})", "application/json");
+                        return;
+                    }
+                }
+
+                // 密钥可用状态（可选，默认启用）
+                bool key_enabled = true;
+                if (body.contains("key_enabled"))
+                {
+                    if (!body["key_enabled"].is_boolean())
+                    {
+                        res.status = 400;
+                        res.set_content(R"({"error":"密钥可用状态格式无效"})", "application/json");
+                        return;
+                    }
+                    key_enabled = body["key_enabled"].get<bool>();
+                }
+
+                // 密码（可选，非空时随机盐哈希）
+                std::optional<std::string> password_hash;
+                if (body.contains("password"))
+                {
+                    if (!body["password"].is_string())
+                    {
+                        res.status = 400;
+                        res.set_content(R"({"error":"密码格式无效"})", "application/json");
+                        return;
+                    }
+                    const std::string password = body["password"].get<std::string>();
+                    if (!password.empty())
+                    {
+                        password_hash = crypto::Argon2id::hash_with_random_salt(password);
+                        if (!password_hash)
+                        {
+                            spdlog::error("创建用户失败：密码哈希失败。");
+                            res.status = 500;
+                            res.set_content(R"({"error":"密码哈希失败"})", "application/json");
+                            return;
+                        }
+                    }
+                }
+
+                // 权限列表（可选）
+                nlohmann::json perm_list = body.value("permissions", nlohmann::json::array());
+                if (!perm_list.is_array())
+                {
+                    res.status = 400;
+                    res.set_content(R"({"error":"权限列表格式无效"})", "application/json");
+                    return;
+                }
+
+                pqxx::work txn{ conn };
+
+                // 用户名唯一性
+                if (!username.empty())
+                {
+                    const auto dup_rows = txn.exec(
+                        "SELECT id FROM users WHERE username = $1",
+                        pqxx::params{ username }
+                    );
+                    if (!dup_rows.empty())
+                    {
+                        res.status = 400;
+                        res.set_content(R"({"error":"用户名已存在"})", "application/json");
+                        return;
+                    }
+                }
+
+                // 密钥哈希（固定盐，与密钥登录一致）
+                const auto key_hash = crypto::Argon2id::hash_with_fixed_salt(key);
+                if (!key_hash)
+                {
+                    spdlog::error("创建用户失败：密钥哈希失败。");
+                    res.status = 500;
+                    res.set_content(R"({"error":"密钥哈希失败"})", "application/json");
+                    return;
+                }
+
+                // 密钥唯一性
+                const auto key_dup_rows = txn.exec(
+                    "SELECT id FROM users WHERE key_hash = $1",
+                    pqxx::params{ *key_hash }
+                );
+                if (!key_dup_rows.empty())
+                {
+                    res.status = 400;
+                    res.set_content(R"({"error":"密钥已被其他用户使用"})", "application/json");
+                    return;
+                }
+
+                // 插入用户
+                const std::optional<std::string> username_param =
+                    username.empty() ? std::nullopt : std::optional<std::string>{ username };
+                const auto insert_rows = txn.exec(
+                    "INSERT INTO users (key_hash, key_enabled, username, password_hash) "
+                    "VALUES ($1, $2, $3, $4) RETURNING id",
+                    pqxx::params{
+                        *key_hash,
+                        key_enabled,
+                        username_param,
+                        password_hash
+                    }
+                );
+                const int user_id = insert_rows[0]["id"].as<int>();
+
+                // 权限
+                for (const auto& perm : perm_list)
+                {
+                    if (!perm.is_string())
+                    {
+                        continue;
+                    }
+                    const auto perm_rows = txn.exec(
+                        "SELECT id FROM permissions WHERE name = $1",
+                        pqxx::params{ perm.get<std::string>() }
+                    );
+                    if (perm_rows.empty())
+                    {
+                        continue;
+                    }
+                    txn.exec(
+                        "INSERT INTO user_permissions (user_id, permission_id) VALUES ($1, $2)",
+                        pqxx::params{ user_id, perm_rows[0]["id"].as<int>() }
+                    );
+                }
+
+                txn.commit();
+                spdlog::info("创建用户成功：用户 {}。", user_id);
+                res.set_content(nlohmann::json{{"ok", true}, {"id", user_id}}.dump(), "application/json");
+            }
+        );
+    }
+
     void handle_get_categories(
         const httplib::Request& req,
         httplib::Response&      res,
