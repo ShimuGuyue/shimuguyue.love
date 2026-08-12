@@ -242,7 +242,7 @@ namespace http
                 // 查询所有用户及其权限列表
                 pqxx::work txn{ conn };
                 const auto rows = txn.exec(
-                    "SELECT u.id, u.username, u.key_enabled, u.password_hash, p.name "
+                    "SELECT u.id, u.username, u.key_enabled, u.enabled, u.password_hash, p.name "
                     "FROM users u "
                     "LEFT JOIN user_permissions up ON up.user_id = u.id "
                     "LEFT JOIN permissions p ON p.id = up.permission_id "
@@ -268,6 +268,7 @@ namespace http
                                         ? nlohmann::json(nullptr)
                                         : nlohmann::json(row["username"].as<std::string>())},
                             {"key_enabled", row["key_enabled"].as<bool>()},
+                            {"enabled", row["enabled"].as<bool>()},
                             {"has_password", !row["password_hash"].is_null()},
                             {"permissions", nlohmann::json::array()}
                         };
@@ -353,6 +354,7 @@ namespace http
                 const int user_id = body["id"].get<int>();
                 const bool has_username  = body.contains("username");
                 const bool has_key_state = body.contains("key_enabled");
+                const bool has_enabled   = body.contains("enabled");
                 const bool has_key       = body.contains("key");
                 const bool has_password  = body.contains("password");
                 const bool has_perms     = body.contains("permissions");
@@ -390,6 +392,12 @@ namespace http
                     res.set_content(R"({"error":"密钥可用状态格式无效"})", "application/json");
                     return;
                 }
+                if (has_enabled && !body["enabled"].is_boolean())
+                {
+                    res.status = 400;
+                    res.set_content(R"({"error":"用户可用状态格式无效"})", "application/json");
+                    return;
+                }
                 if (has_key && !body["key"].is_string())
                 {
                     res.status = 400;
@@ -413,7 +421,7 @@ namespace http
 
                 // 查询当前用户信息（缺失时拒绝）
                 const auto user_rows = txn.exec(
-                    "SELECT username, key_enabled, password_hash, key_hash FROM users WHERE id = $1",
+                    "SELECT username, key_enabled, enabled, password_hash, key_hash FROM users WHERE id = $1",
                     pqxx::params{ user_id }
                 );
                 if (user_rows.empty())
@@ -484,6 +492,8 @@ namespace http
                        : std::optional<std::string>{ user_row["username"].as<std::string>() });
                 const bool final_key_enabled =
                     has_key_state ? body["key_enabled"].get<bool>() : user_row["key_enabled"].as<bool>();
+                const bool final_enabled =
+                    has_enabled ? body["enabled"].get<bool>() : user_row["enabled"].as<bool>();
                 const std::optional<std::string> final_password_hash =
                     password_hash.has_value()
                     ? password_hash
@@ -498,8 +508,8 @@ namespace http
                        : std::optional<std::string>{ user_row["key_hash"].as<std::string>() });
 
                 txn.exec(
-                    "UPDATE users SET username = $1, key_enabled = $2, password_hash = $3, key_hash = $4 WHERE id = $5",
-                    pqxx::params{ final_username, final_key_enabled, final_password_hash, final_key_hash, user_id }
+                    "UPDATE users SET username = $1, key_enabled = $2, enabled = $3, password_hash = $4, key_hash = $5 WHERE id = $6",
+                    pqxx::params{ final_username, final_key_enabled, final_enabled, final_password_hash, final_key_hash, user_id }
                 );
 
                 // 权限列表（提供时整体替换）
@@ -636,6 +646,19 @@ namespace http
                     key_enabled = body["key_enabled"].get<bool>();
                 }
 
+                // 用户可用状态（可选，默认启用）
+                bool enabled = true;
+                if (body.contains("enabled"))
+                {
+                    if (!body["enabled"].is_boolean())
+                    {
+                        res.status = 400;
+                        res.set_content(R"({"error":"用户可用状态格式无效"})", "application/json");
+                        return;
+                    }
+                    enabled = body["enabled"].get<bool>();
+                }
+
                 // 密码（可选，非空时随机盐哈希）
                 std::optional<std::string> password_hash;
                 if (body.contains("password"))
@@ -712,11 +735,12 @@ namespace http
                 const std::optional<std::string> username_param =
                     username.empty() ? std::nullopt : std::optional<std::string>{ username };
                 const auto insert_rows = txn.exec(
-                    "INSERT INTO users (key_hash, key_enabled, username, password_hash) "
-                    "VALUES ($1, $2, $3, $4) RETURNING id",
+                    "INSERT INTO users (key_hash, key_enabled, enabled, username, password_hash) "
+                    "VALUES ($1, $2, $3, $4, $5) RETURNING id",
                     pqxx::params{
                         *key_hash,
                         key_enabled,
+                        enabled,
                         username_param,
                         password_hash
                     }

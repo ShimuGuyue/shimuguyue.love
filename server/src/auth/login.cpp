@@ -68,11 +68,11 @@ namespace auth
 
         pqxx::work txn{ conn };
 
-        // Step 3: 在数据库中精确查找该哈希值（仅生效的密钥）
+        // Step 3: 在数据库中精确查找该哈希值（仅生效且可用的密钥）
         const auto row = txn.exec(
-            "SELECT id, username, key_enabled "
+            "SELECT id, username "
             "FROM users "
-            "WHERE key_hash = $1 AND key_enabled = true",
+            "WHERE key_hash = $1 AND key_enabled = true AND enabled = true",
             pqxx::params{ *hash }
         );
 
@@ -109,11 +109,11 @@ namespace auth
 
         pqxx::work txn{ conn };
 
-        // 在数据库中查找用户记录
+        // 在数据库中查找用户记录（仅可用用户）
         const auto row = txn.exec( 
             "SELECT id, username, password_hash "
             "FROM users "
-            "WHERE username = $1",
+            "WHERE username = $1 AND enabled = true",
             pqxx::params{ std::string{ username } }
         );
 

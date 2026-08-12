@@ -9,6 +9,7 @@
 
 CREATE TABLE users (
     id            SERIAL       PRIMARY KEY,
+    enabled       BOOLEAN      NOT NULL DEFAULT TRUE,
     key_hash      TEXT         NOT NULL UNIQUE,
     key_enabled   BOOLEAN      NOT NULL DEFAULT TRUE,
     username      VARCHAR(10)  UNIQUE,
@@ -17,6 +18,7 @@ CREATE TABLE users (
 
 COMMENT ON TABLE  users IS '用户表';
 COMMENT ON COLUMN users.id            IS '主键，自增';
+COMMENT ON COLUMN users.enabled       IS '用户可用状态，FALSE 表示已停用（软删除）';
 COMMENT ON COLUMN users.key_hash      IS 'Argon2id 哈希，个人身份认证 token';
 COMMENT ON COLUMN users.key_enabled   IS '认证 key 是否可用';
 COMMENT ON COLUMN users.username      IS '用户名，最多 10 个半角字符';

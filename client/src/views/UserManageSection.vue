@@ -6,6 +6,7 @@ interface ManageUser {
   id: number
   username: string | null
   key_enabled: boolean
+  enabled: boolean
   has_password: boolean
   permissions: string[]
 }
@@ -14,6 +15,7 @@ interface EditDraft {
   id: number
   username: string
   key_enabled: boolean
+  enabled: boolean
   key: string
   password: string
   permissions: string[]
@@ -102,6 +104,7 @@ function startEdit() {
     id: user.id,
     username: user.username ?? '',
     key_enabled: user.key_enabled,
+    enabled: user.enabled,
     key: '',
     password: '',
     permissions: [...user.permissions],
@@ -182,6 +185,10 @@ async function saveChanges() {
       }
       if (draft.key_enabled !== original.key_enabled) {
         payload.key_enabled = draft.key_enabled
+        changed = true
+      }
+      if (draft.enabled !== original.enabled) {
+        payload.enabled = draft.enabled
         changed = true
       }
       if (draft.key) {
@@ -278,6 +285,7 @@ async function saveChanges() {
           <thead>
             <tr>
               <th class="users-table__id">ID</th>
+              <th class="users-table__status">用户可用状态</th>
               <th class="users-table__username">用户名</th>
               <th class="users-table__mask">密钥</th>
               <th class="users-table__status">密钥可用状态</th>
@@ -288,6 +296,19 @@ async function saveChanges() {
           <tbody>
             <tr v-for="(row, index) in pageRows" :key="index">
               <td class="users-table__id">{{ row.user?.id ?? '' }}</td>
+              <td class="users-table__status">
+                <input
+                  v-if="row.draft"
+                  v-model="row.draft.enabled"
+                  type="checkbox"
+                />
+                <input
+                  v-else-if="row.user"
+                  type="checkbox"
+                  :checked="row.user.enabled"
+                  disabled
+                />
+              </td>
               <td>
                 <input
                   v-if="editing && row.draft"

@@ -95,9 +95,12 @@ namespace auth
             "WHERE expires_at <= NOW()"
         );
 
+        // 仅验证可用用户（软删除后会话立即失效）
         const auto result = txn.exec(
-            "SELECT user_id, permissions FROM sessions "
-            "WHERE token = $1 AND expires_at > NOW()",
+            "SELECT s.user_id, s.permissions "
+            "FROM sessions s "
+            "JOIN users u ON u.id = s.user_id "
+            "WHERE s.token = $1 AND s.expires_at > NOW() AND u.enabled = true",
             pqxx::params{ std::string{token} }
         );
 
