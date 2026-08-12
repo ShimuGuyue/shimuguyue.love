@@ -85,6 +85,29 @@ export const useAuthStore = defineStore('auth', () => {
     }
 
     /**
+     * 从后端一次性刷新当前登录用户的用户名。
+     *
+     * 与本地不一致时更新并持久化；由保存操作后调用，不做定时轮询。
+     */
+    async function refreshUsername(): Promise<void> {
+        if (!isLoggedIn.value || !token.value) return
+        try {
+            const resp = await fetch('/api/user/info', {
+                headers: { 'Authorization': 'Bearer ' + token.value },
+            })
+            if (!resp.ok) return
+            const data = await resp.json()
+            const name: string | null =
+                typeof data.username === 'string' ? data.username : null
+            if (name !== username.value) {
+                setUsername(name)
+            }
+        } catch {
+            // 静默忽略
+        }
+    }
+
+    /**
      * 退出登录，清除认证状态。
      */
     function logout() {
@@ -96,5 +119,5 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.removeItem(STORAGE_KEY)
     }
 
-    return { isLoggedIn, id, username, token, expiresAt, login, logout, setUsername, updateOwnUsername }
+    return { isLoggedIn, id, username, token, expiresAt, login, logout, setUsername, updateOwnUsername, refreshUsername }
 })

@@ -44,6 +44,14 @@ void handle_user_permissions(
     const std::string&      allowed);
 
 /**
+ * @brief 处理 GET /api/user/info 请求。
+ */
+void handle_user_info(
+    const httplib::Request& req,
+    httplib::Response&      res,
+    const std::string&      allowed);
+
+/**
  * @brief 处理 GET /api/manage/users 请求（需 manage 权限）。
  */
 void handle_manage_users(

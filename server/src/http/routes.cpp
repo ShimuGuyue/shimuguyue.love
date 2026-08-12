@@ -45,6 +45,14 @@ namespace http
             }
         );
 
+        // GET /api/user/info — 获取当前登录用户信息（保存后一次性刷新导航栏用户名）
+        svr.Get("/api/user/info",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_user_info(req, res, allowed);
+            }
+        );
+
         // GET /api/manage/users — 获取用户列表（需要 manage 权限）
         svr.Get("/api/manage/users",
             [allowed](const auto& req, auto& res)

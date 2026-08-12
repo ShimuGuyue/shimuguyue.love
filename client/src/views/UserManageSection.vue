@@ -225,6 +225,8 @@ async function saveChanges() {
         return
       }
     }
+    // 与个人信息页同款刷新逻辑：保存后从后端刷新当前用户名，导航栏即时同步
+    await auth.refreshUsername()
     editing.value = false
     drafts.value = []
     await loadUsers()
