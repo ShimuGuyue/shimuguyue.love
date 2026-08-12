@@ -164,42 +164,12 @@ cd ${PROJECT_PATH}
 
 ### 项目配置
 
-+   为自己创建超级管理员帐号
+默认管理员账号由 `sql/create_users.sql` 自动创建：
 
-    首先在 `server/main.cpp` 添加以下代码并运行为自己的密钥/密码拿到哈希值
+- 用户名：`root`
+- 密码：`root`
 
-    ！拿到值后请立刻删除语句。
-    ！固定盐哈希依赖环境变量 `FIXED_SALT`，请把语句放在 `config::init();` 之后。
-
-    ```cpp
-    std:cout << *crypto::Argon2id::hash_with_random_salt("${KEY}")     << std::endl; ///< 密钥哈希值
-    std:cout << *crypto::Argon2id::hash_with_fixed_salt("${PASSWORD}") << std::endl; ///< 密码哈希值
-    ```
-
-    在数据库创建管理员用户。
-
-    ```postgresql
-    # 默认当前数据库表均为空，则对应条目的 id 可知
-
-    # 添加管理员用户信息
-    INSERT INTO users (key_hash, key_enabled, username, password_hash)
-    VALUES (
-        '${KEY_HASH}',      # 密钥哈希值
-        'TRUE',             # 密钥可用状态，不暴露固定盐值情况下可以安全开启
-        '${USERNAME}',      # 用户名
-        '${PASSWORD_HASH}', # 密码哈希值
-    ); # id 为 1
-
-    # 添加权限列表
-    INSERT INTO permissions (name) VALUES ('create'); #id 为 1
-    INSERT INTO permissions (name) VALUES ('edit');   #id 为 2
-    INSERT INTO permissions (name) VALUES ('drop');   #id 为 3
-
-    # 为管理员授予权限
-    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 1);
-    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 2);
-    INSERT INTO user_permissions (user_id, permission_id) VALUES (1, 3);
-    ```
+root 的密钥已停用（因固定盐需自行设定），仅支持密码登录；可在「后台管理 → 用户管理」中自行设置密钥并启用。
 
 ### 自动化（可选）
 

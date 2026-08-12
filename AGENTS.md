@@ -90,7 +90,6 @@ PostgreSQL
 - **Vue**：`<script setup lang="ts">`，`<style scoped>` 默认。
 - **TypeScript**：`@vue/tsconfig` 基座，`noUncheckedIndexedAccess` 开启。路径别名 `@/` 映射到 `src/`。
 - **导入**：Node 内置模块用 `node:url` 格式；ES module（`"type": "module"`）。
-- **CSS**：无 CSS 框架，全部自定义 CSS 变量（`App.vue` 中 `:root` / `html.dark`），共用样式文件在 `client/src/assets/`。
 - **网络请求**：无 API 封装模块，直接用 `fetch()`。认证 token 从 `useAuthStore()` 取出，拼接 `Authorization: Bearer <token>` 请求头。
 
 ## 目录速查
@@ -119,7 +118,7 @@ PostgreSQL
 | `client/public/assets/note-background.png` | 博客背景图 |
 | `client/src/main.ts` | 前端入口：挂载 App、注册 Pinia 与路由 |
 | `client/src/App.vue` | 根组件：全局 CSS 变量（`:root` / `html.dark`） |
-| `client/src/router/index.ts` | 13 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
+| `client/src/router/index.ts` | 14 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
 | `client/src/stores/auth.ts` | 认证状态（token、username），localStorage 持久化 |
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
 | `client/src/components/NavBar.vue` | 唯一公共组件：导航栏、主题切换、用户入口 |
@@ -130,6 +129,7 @@ PostgreSQL
 | `client/src/views/About.vue` | 关于我页面（渲染 README） |
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
+| `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage 权限） |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |

@@ -45,6 +45,30 @@ namespace http
             }
         );
 
+        // GET /api/manage/users — 获取用户列表（需要 manage 权限）
+        svr.Get("/api/manage/users",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_manage_users(req, res, allowed);
+            }
+        );
+
+        // POST /api/manage/user/update — 更新用户（需要 manage 权限）
+        svr.Post("/api/manage/user/update",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_manage_update_user(req, res, allowed);
+            }
+        );
+
+        // POST /api/manage/user/create — 新建用户（需要 manage 权限）
+        svr.Post("/api/manage/user/create",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_manage_create_user(req, res, allowed);
+            }
+        );
+
         svr.Get("/api/categories",
             [allowed](const auto& req, auto& res)
             {
