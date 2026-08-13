@@ -1,0 +1,22 @@
+/* ═══════════════════════════════════════════════════════
+   公共按钮样式：登录按钮
+   ═══════════════════════════════════════════════════════ */
+
+.form-submit {
+  margin-top: auto;
+  align-self: center;
+  width: 160px;
+  padding: 12px 0;
+  border: none;
+  border-radius: 2px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-card-bg, var(--color-nav-bg));
+  background-color: var(--color-text);
+  cursor: pointer;
+  transition: opacity var(--transition-speed);
+}
+
+.form-submit:hover {
+  opacity: 0.85;
+}

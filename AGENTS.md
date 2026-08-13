@@ -140,6 +140,7 @@ PostgreSQL
 | `client/src/assets/background.css` | 全局背景主题（粉色 × 紫色系） |
 | `client/src/assets/blog-layout.css` | 博客页布局共用样式 |
 | `client/src/assets/blog.css` | 博客卡片、标签、分类公共样式 |
+| `client/src/assets/common/button.css` | 公共按钮样式 |
 | `client/src/assets/glass.css` | 毛玻璃工具类 |
 | `client/src/assets/markdown.css` | Markdown 渲染样式（PinkFairy 主题） |
 | `client/src/assets/manage/button.css` | 后台管理页按钮统一样式（个人信息页与用户管理页共用） |
