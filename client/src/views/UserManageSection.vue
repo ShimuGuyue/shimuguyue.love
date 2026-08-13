@@ -86,6 +86,12 @@ const permDialogGroups = computed(() => {
   return groups
 })
 
+/** 权限显示名：去掉「模块:」前缀，只保留操作部分。 */
+function permLabel(perm: string): string {
+  const idx = perm.indexOf(':')
+  return idx === -1 ? perm : perm.slice(idx + 1)
+}
+
 /** 打开指定用户的完整权限弹窗。 */
 function openFullPerm(user: ManageUser) {
   fullPermUser.value = user
@@ -571,7 +577,7 @@ async function saveChanges() {
                 v-model="createForm.permissions"
                 class="create-box__checkbox"
               />
-              {{ perm }}
+              {{ permLabel(perm) }}
             </label>
           </div>
         </div>
@@ -627,7 +633,7 @@ async function saveChanges() {
                       v-model="permDialogSelection"
                       class="create-box__checkbox"
                     />
-                    {{ perm }}
+                    {{ permLabel(perm) }}
                   </label>
                 </div>
                 <span v-else class="users-hint">无</span>
@@ -674,7 +680,7 @@ async function saveChanges() {
               <th>{{ group.label }}</th>
               <td>
                 <span v-if="group.perms.length" class="perm-item">
-                  {{ group.perms.join('、') }}
+                  {{ group.perms.map(permLabel).join('、') }}
                 </span>
                 <span v-else class="users-hint">无</span>
               </td>

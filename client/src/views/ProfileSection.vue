@@ -33,6 +33,12 @@ const permissionGroups = computed(() =>
   }))
 )
 
+/** 权限显示名：去掉「模块:」前缀，只保留操作部分。 */
+function permLabel(perm: string): string {
+  const idx = perm.indexOf(':')
+  return idx === -1 ? perm : perm.slice(idx + 1)
+}
+
 onMounted(async () => {
   if (!auth.id) return
   loading.value = true
@@ -201,7 +207,7 @@ async function saveUsername() {
                 <th>{{ group.label }}</th>
                 <td>
                   <span v-if="group.perms.length" class="perm-item">
-                    {{ group.perms.join('、') }}
+                    {{ group.perms.map(permLabel).join('、') }}
                   </span>
                   <span v-else class="info-list__hint">无</span>
                 </td>
