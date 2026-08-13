@@ -222,8 +222,8 @@ function onWallClick(e: MouseEvent) {
 
 async function exitEdit() {
   const changed = hasChanges() || pendingDeletes.value.size > 0
-  if (changed && !permissions.value.includes('edit')) {
-    alert('当前用户无 edit 权限，修改无法生效')
+  if (changed && !permissions.value.includes('photo-wall_edit')) {
+    alert('操作失败：该操作需要 photo-wall_edit 权限')
     pendingDeletes.value = new Set()
     pendingUploads.value = new Set()
     revertChanges()
@@ -362,14 +362,18 @@ function markDelete(img: ImageItem) {
   if (pendingDeletes.value.has(img.id)) {
     pendingDeletes.value.delete(img.id)
   } else {
+    if (!permissions.value.includes('photo-wall_delete')) {
+      alert('操作失败：该操作需要 photo-wall_delete 权限')
+      return
+    }
     pendingDeletes.value.add(img.id)
   }
   pendingDeletes.value = new Set(pendingDeletes.value)
 }
 
 async function uploadImage() {
-  if (!permissions.value.includes('edit')) {
-    alert('当前用户无 edit 权限，无法上传图片')
+  if (!permissions.value.includes('photo-wall_upload')) {
+    alert('操作失败：该操作需要 photo-wall_upload 权限')
     return
   }
   const input = document.createElement('input')
@@ -608,7 +612,7 @@ function imgStyle(img: ImageItem) {
         :style="{ backgroundImage: 'url(/assets/note-background.png)' }"
       >
         <textarea
-          v-if="editMode && permissions.includes('edit')"
+          v-if="editMode && permissions.includes('photo-wall_edit')"
           v-model="editDesc"
           class="home__preview-textarea"
           @click.stop
