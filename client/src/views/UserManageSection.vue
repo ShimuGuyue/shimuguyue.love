@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import '@/assets/manage/button.css'
 import '@/assets/manage/font.css'
+import '@/assets/manage/table.css'
 
 interface ManageUser {
   id: number
@@ -583,137 +584,6 @@ async function saveChanges() {
 </template>
 
 <style scoped>
-.users-table {
-  width: 100%;
-  /* 固定高度：表头 + 15 行，每行 44px */
-  height: calc(44px * 16);
-  table-layout: fixed;
-  border-collapse: collapse;
-  text-align: left;
-  /* 自定义复选框颜色 */
-  --checkbox-checked-color: #3366ff;
-}
-
-html.dark .users-table {
-  --checkbox-checked-color: #598bff;
-}
-
-.users-table th,
-.users-table td {
-  height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  font-size: 0.95rem;
-  color: var(--color-text);
-  vertical-align: middle;
-  white-space: nowrap;
-}
-
-/* 编辑模式：行高保持 44px，超宽内容裁剪 */
-.users-table--editing th,
-.users-table--editing td {
-  overflow: hidden;
-}
-
-.users-table th {
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  background-color: var(--color-hover);
-}
-
-.users-table__id {
-  width: 80px;
-}
-
-.users-table__username {
-  width: 18%;
-}
-
-.users-table__status {
-  width: 8em;
-  text-align: center;
-}
-
-.users-table__mask {
-  width: 12em;
-}
-
-/* ── 自定义复选框 ── */
-
-.users-table input[type='checkbox'] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  vertical-align: middle;
-  appearance: none;
-  -webkit-appearance: none;
-  border: 2px solid var(--color-text-secondary);
-  background-color: var(--color-nav-bg);
-  cursor: default;
-  position: relative;
-}
-
-.users-table input[type='checkbox']:checked {
-  border-color: var(--checkbox-checked-color);
-  background-color: var(--checkbox-checked-color);
-}
-
-.users-table input[type='checkbox']:checked::after {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 1px;
-  width: 6px;
-  height: 10px;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-/* ── 编辑输入控件 ── */
-
-.users-table__input {
-  width: 100%;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--color-border);
-  background-color: var(--color-nav-bg);
-  font-size: 0.9rem;
-  color: var(--color-text);
-}
-
-.users-table__input:focus {
-  outline: none;
-  border-color: var(--color-text-secondary);
-}
-
-.users-table__perms-edit {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  max-width: 100%;
-}
-
-.users-table__perms-summary {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.users-table__perms-btn {
-  flex-shrink: 0;
-  min-width: auto;
-  padding: 3px 10px;
-  font-size: 0.85rem;
-}
-
-.users-table__perm input {
-  cursor: pointer;
-}
-
 .users-hint {
   margin: 0;
   font-size: 0.9rem;
@@ -754,52 +624,6 @@ html.dark .users-table {
 .users-toolbar {
   display: flex;
   gap: 8px;
-}
-
-/* ── 分页 ── */
-
-.users-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.users-pager {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  width: 100%;
-  margin-top: 16px;
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-}
-
-.users-pager__pages {
-  display: flex;
-  gap: 4px;
-}
-
-.users-pager__btn {
-  min-width: 32px;
-  padding: 4px 10px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-size: 0.875rem;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.users-pager__btn:hover:not(:disabled) {
-  background-color: var(--color-hover);
-}
-
-.users-pager__btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.users-pager__btn--active {
-  background-color: var(--color-hover);
-  font-weight: 600;
 }
 
 /* ── 新建用户弹窗 ── */
