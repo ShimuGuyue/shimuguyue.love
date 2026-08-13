@@ -157,7 +157,7 @@ namespace http
             }
         );
 
-        // POST /api/blog/save — 保存博客
+        // POST /api/blog/save — 新建博客（需要 blog_create 权限）
         svr.Post("/api/blog/save",
             [allowed](const auto& req, auto& res)
             {
@@ -165,7 +165,7 @@ namespace http
             }
         );
 
-        // PUT /api/blog/update — 编辑已有博客
+        // PUT /api/blog/update — 编辑已有博客（需要 blog_edit 权限）
         svr.Put("/api/blog/update",
             [allowed](const auto& req, auto& res)
             {
@@ -173,7 +173,7 @@ namespace http
             }
         );
 
-        // DELETE /api/blog/delete — 删除博客
+        // DELETE /api/blog/delete — 删除博客（需要 blog_delete 权限）
         svr.Delete("/api/blog/delete",
             [allowed](const auto& req, auto& res)
             {

@@ -21,8 +21,7 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const permissions = ref<string[]>([])
-const canDrop = computed(() => permissions.value.includes('drop'))
-const canEdit = computed(() => permissions.value.includes('edit'))
+const canDrop = computed(() => permissions.value.includes('blog_delete'))
 
 const md = new MarkdownIt({
   html: true,
@@ -297,10 +296,6 @@ onUnmounted(() => {
 
 /// 跳转到编辑页面
 function editBlog() {
-  if (!canEdit.value) {
-    alert('当前用户无 edit 权限，无法编辑博客')
-    return
-  }
   const fp = route.params.file_path as string
   router.push({ name: 'blog-edit', params: { file_path: fp } })
 }
@@ -308,7 +303,7 @@ function editBlog() {
 /// 删除当前博客
 async function deleteBlog() {
   if (!canDrop.value) {
-    alert('当前用户无 drop 权限，无法删除博客')
+    alert('操作失败：该操作需要 blog_delete 权限')
     return
   }
   if (!window.confirm('确定要删除这篇博客吗？此操作不可撤销。')) return

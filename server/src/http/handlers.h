@@ -156,7 +156,7 @@ void handle_delete_image(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/blog/save 请求。
+ * @brief 处理 POST /api/blog/save 请求（需 blog_create 权限）。
  */
 void handle_save_blog(
     const httplib::Request& req,
@@ -164,7 +164,7 @@ void handle_save_blog(
     const std::string&      allowed);
 
 /**
- * @brief 处理 PUT /api/blog/update 请求。
+ * @brief 处理 PUT /api/blog/update 请求（需 blog_edit 权限）。
  */
 void handle_update_blog(
     const httplib::Request& req,
@@ -172,7 +172,7 @@ void handle_update_blog(
     const std::string&      allowed);
 
 /**
- * @brief 处理 DELETE /api/blog/delete 请求。
+ * @brief 处理 DELETE /api/blog/delete 请求（需 blog_delete 权限）。
  */
 void handle_delete_blog(
     const httplib::Request& req,

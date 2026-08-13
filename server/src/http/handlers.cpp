@@ -1423,13 +1423,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查
+                // 权限检查：仅 blog_create 权限用户可新建博客
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "create") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "blog_create") == perms.end())
                 {
-                    spdlog::info("保存博客失败：用户 {} 无 create 权限。", session->user_id);
+                    spdlog::info("保存博客失败：用户 {} 无 blog_create 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 create 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 blog_create 权限"})", "application/json");
                     return;
                 }
 
@@ -1525,13 +1525,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查
+                // 权限检查：仅 blog_edit 权限用户可编辑博客
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "edit") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "blog_edit") == perms.end())
                 {
-                    spdlog::info("更新博客失败：用户 {} 无 edit 权限。", session->user_id);
+                    spdlog::info("更新博客失败：用户 {} 无 blog_edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 blog_edit 权限"})", "application/json");
                     return;
                 }
 
@@ -1618,13 +1618,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查
+                // 权限检查：仅 blog_delete 权限用户可删除博客
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "drop") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "blog_delete") == perms.end())
                 {
-                    spdlog::info("删除博客失败：用户 {} 无 drop 权限。", session->user_id);
+                    spdlog::info("删除博客失败：用户 {} 无 blog_delete 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 drop 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 blog_delete 权限"})", "application/json");
                     return;
                 }
 

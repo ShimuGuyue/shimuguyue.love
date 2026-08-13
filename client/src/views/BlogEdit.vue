@@ -26,6 +26,7 @@ const editFilePath = ref<string | null>(
 )
 const editorRef = ref<HTMLDivElement | null>(null)
 const savedSuccessfully = ref(false)
+const permissions = ref<string[]>([])
 
 /// 判断是否有任何字段非空（有内容就拦截离开）
 function hasContent(): boolean {
@@ -45,6 +46,19 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 
 onMounted(async () => {
   window.addEventListener('beforeunload', onBeforeUnload)
+
+  // 获取当前用户权限（用于保存按钮的权限拦截）
+  if (auth.isLoggedIn && auth.token) {
+    try {
+      const resp = await fetch('/api/user/permissions', {
+        headers: { 'Authorization': 'Bearer ' + auth.token }
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        permissions.value = data.permissions || []
+      }
+    } catch { /* 权限获取失败静默 */ }
+  }
 
   // 编辑模式：加载已有博客数据
   if (isEditing.value && editFilePath.value) {
@@ -124,6 +138,17 @@ async function importFile() {
 async function saveBlog() {
   if (!auth.isLoggedIn) {
     alert('请先登录')
+    return
+  }
+
+  // 权限拦截：新建页需 blog_create，编辑页需 blog_edit
+  if (isEditing.value) {
+    if (!permissions.value.includes('blog_edit')) {
+      alert('操作失败：该操作需要 blog_edit 权限')
+      return
+    }
+  } else if (!permissions.value.includes('blog_create')) {
+    alert('操作失败：该操作需要 blog_create 权限')
     return
   }
 
