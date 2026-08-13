@@ -2,7 +2,7 @@
 import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router'
 
-import '@/assets/blog.css'
+import '@/assets/blog/selector.css'
 
 const router = useRouter()
 const route = useRoute()
@@ -242,13 +242,13 @@ onMounted(async () => {
       <!-- 分类筛选 -->
       <div class="filter-row">
         <span class="filter-label">分类</span>
-        <button class="filter-mode-btn" @click="categoryMulti = !categoryMulti">{{ categoryMulti ? '多选' : '单选' }}</button>
+        <button class="filter-mode-btn tag-pink" @click="categoryMulti = !categoryMulti">{{ categoryMulti ? '多选' : '单选' }}</button>
         <div class="filter-chips">
           <button
             v-for="cat in categories"
             :key="cat.id"
-            class="chip"
-            :class="{ 'chip--active': selectedCategoryIds.includes(cat.id) }"
+            class="tag-normal"
+            :class="{ 'tag--active': selectedCategoryIds.includes(cat.id) }"
             @click="toggleCategory(cat.id)"
           >
             {{ cat.name }}
@@ -259,13 +259,13 @@ onMounted(async () => {
       <!-- 标签筛选 -->
       <div class="filter-row">
         <span class="filter-label">标签</span>
-        <button class="filter-mode-btn" @click="tagMulti = !tagMulti">{{ tagMulti ? '多选' : '单选' }}</button>
+        <button class="filter-mode-btn tag-pink" @click="tagMulti = !tagMulti">{{ tagMulti ? '多选' : '单选' }}</button>
         <div class="filter-chips">
           <button
             v-for="tag in visibleTags"
             :key="tag.name"
-            class="chip"
-            :class="{ 'chip--active': tagIdsByName(tag.name).some(id => selectedTagIds.includes(id)) }"
+            class="tag-normal"
+            :class="{ 'tag--active': tagIdsByName(tag.name).some(id => selectedTagIds.includes(id)) }"
             @click="toggleTag(tag.name)"
           >
             {{ tag.name }}
@@ -298,11 +298,11 @@ onMounted(async () => {
         <h3 class="blog-card__title">{{ blog.title }}</h3>
         <p class="blog-card__desc">{{ blog.description }}</p>
         <div class="blog-card__meta blog-tags">
-          <span v-if="blog.category" class="blog-category">{{ blog.category }}</span>
+          <span v-if="blog.category" class="tag-pink">{{ blog.category }}</span>
           <span
             v-for="tag in blog.tags"
             :key="tag"
-            class="blog-tag"
+            class="tag-normal"
           >{{ tag }}</span>
         </div>
         <time class="blog-card__time">{{ blog.update_time }}</time>
@@ -339,107 +339,8 @@ onMounted(async () => {
   transition: opacity var(--transition-speed);
 }
 
-/* ── 筛选器 ── */
-.filter-bar {
-  background-color: var(--color-card-bg, var(--color-nav-bg));
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  padding: 20px 24px;
-  margin-bottom: 28px;
-}
 .new-blog-btn:hover {
   opacity: 0.85;
-}
-
-.filter-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.filter-label {
-  flex-shrink: 0;
-  width: 48px;
-  padding-top: 6px;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: var(--color-text);
-  text-align: right;
-  transform: translateY(-7px);
-}
-
-.filter-chips {
-  flex: 1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.chip {
-  padding: 4px 14px;
-  font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  cursor: pointer;
-  transition: all var(--transition-speed);
-}
-
-.chip:hover {
-  border-color: var(--color-text-secondary);
-  color: var(--color-text);
-}
-
-.chip--active {
-  color: #fff;
-  background-color: var(--color-text);
-  border-color: var(--color-text);
-}
-
-.filter-mode-btn {
-  flex-shrink: 0;
-  margin-top: 2px;
-  padding: 2px 10px;
-  font-size: 0.75rem;
-  color: var(--color-text-secondary);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all var(--transition-speed);
-}
-
-.filter-mode-btn:hover {
-  color: var(--color-text);
-  border-color: var(--color-text-secondary);
-}
-
-.filter-search {
-  margin-top: 4px;
-}
-
-.search-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 8px 14px;
-  font-size: 0.9rem;
-  color: var(--color-text);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  outline: none;
-  transition: border-color var(--transition-speed);
-}
-
-.search-input::placeholder {
-  color: var(--color-text-secondary);
-  opacity: 0.5;
-}
-
-.search-input:focus {
-  border-color: var(--color-text-secondary);
 }
 
 /* ── 状态提示 ── */

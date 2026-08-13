@@ -1,0 +1,294 @@
+/* ═══════════════════════════════════════════════════════════
+   博客组件统一样式
+   ─────────────────────────────────────────────────────────
+   集中管理博客页面共用的视觉组件：
+     1. 标签（tag-normal / tag-pink）       —— 卡片与筛选器共用
+     2. 筛选栏（filter-bar）                —— 分类/标签筛选、搜索
+     3. 选择按钮（tag-normal + tag--active）—— 分类/标签勾选
+     4. 多选/单选切换按钮（filter-mode-btn）—— 复用 tag-pink
+     5. 搜索框（search-input）
+     6. 博客卡片（blog-card）
+
+   主题策略：
+     - 全局共享变量（--blog-surface-bg）定义在 :root / html.dark，
+       筛选栏与博客卡片使用同一背景，保证亮/暗主题下视觉统一。
+     - 筛选器专属变量（--selector-*）定义在 .filter-bar 上，
+       仅作用于筛选器内部组件，避免污染全局。
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── 标签统一样式 ─────────────────────────────────────────
+   普通标签与粉色标签共用的基础样式。
+   卡片中的分类/标签、筛选器中的选择按钮均复用这两个类。
+   ------------------------------------------------------- */
+
+/* 粉色标签：用于强调标签（粉色文字 + 淡粉底 + 粉边） */
+.tag-pink {
+  padding: 2px 0.6rem;
+  font-size: 0.8rem;
+  color: #FF77CC;
+  background-color: rgba(255, 119, 204, 0.12);
+  border: 1px solid rgba(255, 119, 204, 0.12);
+  border-radius: 3px;
+}
+
+/* 普通标签：用于一般标签（次要文字色 + 中性底 + 粉边） */
+.tag-normal {
+  padding: 2px 0.6rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  background-color: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 119, 204, 0.12);
+  border-radius: 3px;
+}
+
+/* 暗色模式：普通标签底色由「黑 5%」反转为「白 5%」，保证在深色背景上可见 */
+html.dark .tag-normal {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 标签容器：多个标签横向排列，放不下自动换行，间距 6px */
+.blog-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ── 主题变量 ────────────────────────────────────────────
+   亮色为默认值，暗色通过 html.dark 覆盖。
+   --blog-surface-bg：筛选栏与卡片共用的半透明背景色
+     · 亮色：淡粉半透明白（rgba(255, 246, 251, 0.72)）
+     · 暗色：半透明深紫灰（rgba(28, 22, 26, 0.65)）
+   半透明让全局渐变背景透出，避免纯色块显得突兀。
+   ------------------------------------------------------- */
+
+/* 亮色主题下的共享背景 */
+:root {
+  --blog-surface-bg: rgba(255, 246, 251, 0.72);
+}
+
+/* 暗色主题下的共享背景 */
+html.dark {
+  --blog-surface-bg: rgba(28, 22, 26, 0.65);
+}
+
+/* 筛选器专属变量（亮色）：
+   --selector-bar-border       筛选栏边框色
+   --selector-input-bg         搜索框背景色
+   --selector-input-border     搜索框边框色
+   --selector-input-focus-ring 搜索框聚焦光圈色 */
+.filter-bar {
+  --selector-bar-border: #f0dce8;
+  --selector-input-bg: rgba(255, 119, 204, 0.04);
+  --selector-input-border: #f0c8e2;
+  --selector-input-focus-ring: rgba(255, 119, 204, 0.25);
+}
+
+/* 筛选器专属变量（暗色）：与上方一一对应，仅调整色值适配深色背景 */
+html.dark .filter-bar {
+  --selector-bar-border: #3d2c38;
+  --selector-input-bg: rgba(255, 119, 204, 0.06);
+  --selector-input-border: #55374c;
+  --selector-input-focus-ring: rgba(255, 119, 204, 0.30);
+}
+
+/* ── 筛选栏容器 ─────────────────────────────────────────
+   整块筛选区域的容器：
+     · 背景复用共享变量 --blog-surface-bg（半透明）
+     · 12px 圆角 + 细边框 + 轻微阴影，形成独立卡片感
+     · 主题切换时背景与边框平滑过渡 */
+
+.filter-bar {
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--selector-bar-border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+  transition:
+    background-color var(--transition-speed),
+    border-color var(--transition-speed);
+}
+
+/* 筛选行：一行一个筛选维度（分类 / 标签），flex 左对齐排布 */
+.filter-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* 左侧维度名（分类 / 标签）：
+   与右侧按钮同高（22px）并用 flex 垂直居中，
+   使文字与按钮内容处于同一水平线，无需位移 hack */
+.filter-label {
+  flex-shrink: 0;
+  width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  height: 22px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  text-align: right;
+}
+
+/* ── 选择按钮（分类 / 标签） ──────────────────────────────
+   按钮本体复用 .tag-normal（灰色标签外观），
+   选中时叠加 .tag--active（粉色实心）以示区分。*/
+
+/* 选择按钮容器：占满剩余宽度，可换行，按钮间距 8px */
+.filter-chips {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 选中态：粉色实心 + 白字 + 外发光，明确标识当前已选中的筛选项 */
+.tag--active {
+  color: #fff;
+  background-color: var(--pink-hot, #FF77CC);
+  border-color: var(--pink-hot, #FF77CC);
+  box-shadow: 0 2px 8px rgba(255, 119, 204, 0.35);
+}
+
+/* hover：两类标签按钮在筛选器内悬停时粉底略微加深，提供交互反馈 */
+.filter-bar .tag-pink:hover,
+.filter-bar .tag-normal:hover {
+  background-color: rgba(255, 119, 204, 0.20);
+}
+
+/* 按钮统一度量：
+   选择按钮（tag-normal）、多选/单选（tag-pink + filter-mode-btn）
+   统一为 22px 高，inline-flex 垂直水平居中文本。 */
+.filter-bar .tag-pink,
+.filter-bar .tag-normal,
+.filter-bar .filter-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+/* ── 多选 / 单选切换按钮 ─────────────────────────────────
+   外观完全复用 .tag-pink（粉色标签样式），
+   这里只补充布局属性：不收缩、保持可点击。 */
+
+.filter-mode-btn {
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+/* ── 搜索框 ─────────────────────────────────────────────
+   标题/描述/分类/标签的关键字搜索输入框：
+     · 淡粉半透明底 + 粉色细边框，与筛选器整体风格一致
+     · 聚焦时边框变艳粉并带一圈柔光光圈，提示当前编辑位置 */
+
+/* 搜索区与上方筛选行的间距 */
+.filter-search {
+  margin-top: 4px;
+}
+
+/* 搜索输入框本体：占满整行、圆角 8px、无默认聚焦描边 */
+.search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 14px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+  background-color: var(--selector-input-bg);
+  border: 1px solid var(--selector-input-border);
+  border-radius: 8px;
+  outline: none;
+  transition:
+    background-color var(--transition-speed),
+    border-color var(--transition-speed),
+    box-shadow var(--transition-speed);
+}
+
+/* 占位提示文字：次要色、半透明，弱化存在感 */
+.search-input::placeholder {
+  color: var(--color-text-secondary);
+  opacity: 0.6;
+}
+
+/* 聚焦态：粉色边框 + 3px 光圈，光圈颜色来自主题变量 */
+.search-input:focus {
+  border-color: var(--pink-hot, #FF77CC);
+  box-shadow: 0 0 0 3px var(--selector-input-focus-ring);
+}
+
+/* ── 博客卡片 ────────────────────────────────────────────
+   博客列表中的卡片，整体是 <RouterLink> 链接：
+     · 背景复用共享变量 --blog-surface-bg（与筛选栏同款半透明）
+     · 普通点击站内跳转；Ctrl/⌘+点击、中键由浏览器原生新标签打开
+     · hover 加深边框并投下阴影，提示可点击 */
+
+/* 卡片容器：纵向 flex 布局，内容自上而下排列 */
+.blog-card {
+  display: flex;
+  overflow: hidden;
+  flex-direction: column;
+  padding: 20px;
+  color: inherit;
+  text-decoration: none;
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: box-shadow var(--transition-speed), border-color var(--transition-speed);
+}
+
+/* 卡片悬停：边框加深 + 阴影，给出可点击反馈 */
+.blog-card:hover {
+  border-color: var(--color-text-secondary);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 卡片标题：单行省略，超长截断显示省略号 */
+.blog-card__title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 卡片简介：最多显示 2 行，超出部分省略；
+   min-height 保证行数不足时标题下内容仍对齐 */
+.blog-card__desc {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(1.5em * 2);
+}
+
+/* 卡片元信息区：分类 + 标签横向排列可换行；
+   固定两行高度并裁剪溢出，保证不同卡片等高 */
+.blog-card__meta {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+  height: calc(1.8em * 2);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+/* 更新时间：靠底对齐（margin-top: auto），小号次要色 */
+.blog-card__time {
+  margin-top: auto;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}

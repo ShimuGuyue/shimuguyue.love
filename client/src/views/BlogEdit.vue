@@ -4,7 +4,6 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 import '@/assets/blog-layout.css'
-import '@/assets/blog.css'
 import '@/assets/pink-theme.css'
 import '@/assets/glass.css'
 import '@/assets/markdown.css'
@@ -380,4 +379,3 @@ async function saveBlog() {
   min-width: 0;
 }
 </style>
-

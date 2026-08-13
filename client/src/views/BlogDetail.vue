@@ -10,7 +10,7 @@ import 'highlight.js/styles/github.css'
 import katex from 'katex'
 
 import '@/assets/blog-layout.css'
-import '@/assets/blog.css'
+import '@/assets/blog/selector.css'
 import '@/assets/glass.css'
 import '@/assets/markdown.css'
 import '@/assets/pink-theme.css'
@@ -345,9 +345,9 @@ watch(renderedContent, async () => {
         <aside class="blog-detail__side glass">
           <h1 class="blog-detail__title">{{ blog.title }}</h1>
           <p v-if="blog.description" class="blog-detail__desc">{{ blog.description }}</p>
-          <p v-if="blog.category" class="blog-category">{{ blog.category }}</p>
+          <p v-if="blog.category" class="tag-pink">{{ blog.category }}</p>
           <div class="blog-tags">
-            <span v-for="tag in blog.tags" :key="tag" class="blog-tag">{{ tag }}</span>
+            <span v-for="tag in blog.tags" :key="tag" class="tag-normal">{{ tag }}</span>
           </div>
           <time class="blog-detail__time">{{ blog.update_time }}</time>
         </aside>
