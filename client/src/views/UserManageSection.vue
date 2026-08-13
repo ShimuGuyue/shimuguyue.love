@@ -260,7 +260,7 @@ async function saveChanges() {
 </script>
 
 <template>
-  <div>
+  <div class="users-section">
     <div class="users-header">
       <h1 class="admin-content__title">用户管理</h1>
       <div v-if="users.length" class="users-toolbar">
@@ -301,7 +301,7 @@ async function saveChanges() {
       </div>
     </div>
 
-    <p v-if="loading" class="users-hint">加载中...</p>
+    <div v-if="loading" class="page-loading">加载中...</div>
     <p v-else-if="error" class="users-hint">{{ error }}</p>
 
     <template v-else-if="users.length">
@@ -706,6 +706,22 @@ html.dark .users-table {
 .users-hint {
   margin: 0;
   font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.users-section {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 144px);
+}
+
+.page-loading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 0.95rem;
   color: var(--color-text-secondary);
 }
 
