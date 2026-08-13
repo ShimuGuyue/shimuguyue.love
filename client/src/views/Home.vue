@@ -222,8 +222,8 @@ function onWallClick(e: MouseEvent) {
 
 async function exitEdit() {
   const changed = hasChanges() || pendingDeletes.value.size > 0
-  if (changed && !permissions.value.includes('edit')) {
-    alert('当前用户无 edit 权限，修改无法生效')
+  if (changed && !permissions.value.includes('photo-wall_edit')) {
+    alert('操作失败：该操作需要 photo-wall_edit 权限')
     pendingDeletes.value = new Set()
     pendingUploads.value = new Set()
     revertChanges()
@@ -362,14 +362,18 @@ function markDelete(img: ImageItem) {
   if (pendingDeletes.value.has(img.id)) {
     pendingDeletes.value.delete(img.id)
   } else {
+    if (!permissions.value.includes('photo-wall_delete')) {
+      alert('操作失败：该操作需要 photo-wall_delete 权限')
+      return
+    }
     pendingDeletes.value.add(img.id)
   }
   pendingDeletes.value = new Set(pendingDeletes.value)
 }
 
 async function uploadImage() {
-  if (!permissions.value.includes('edit')) {
-    alert('当前用户无 edit 权限，无法上传图片')
+  if (!permissions.value.includes('photo-wall_upload')) {
+    alert('操作失败：该操作需要 photo-wall_upload 权限')
     return
   }
   const input = document.createElement('input')
@@ -470,8 +474,8 @@ function cancelProfileEdit() {
 }
 
 async function saveProfile() {
-  if (!permissions.value.includes('edit')) {
-    alert('当前用户无 edit 权限')
+  if (!permissions.value.includes('introduction-edit')) {
+    alert('操作失败：该操作需要 introduction-edit 权限')
     return
   }
   const resp = await fetch('/api/profile/save', {
@@ -569,7 +573,7 @@ function imgStyle(img: ImageItem) {
         <div class="home__profile-edit-box" :class="{ 'home__profile-edit-box--active': profileEditMode }">
           <div class="home__profile-field home__profile-field--title-row">
             <div class="home__profile-actions" :class="{ 'home__profile-actions--hidden': !profileEditMode }">
-              <button class="home__profile-btn home__profile-btn--save" :disabled="!permissions.includes('edit')" :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }" @click="saveProfile">完成编辑</button>
+              <button class="home__profile-btn home__profile-btn--save" :disabled="!permissions.includes('introduction-edit')" :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }" @click="saveProfile">完成编辑</button>
               <button class="home__profile-btn home__profile-btn--cancel" :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }" @click="cancelProfileEdit">取消编辑</button>
             </div>
             <div class="home__profile-field" :class="{ 'home__profile-field--dashed': profileEditMode }" style="flex:1; margin-right: 4rem">
@@ -608,7 +612,7 @@ function imgStyle(img: ImageItem) {
         :style="{ backgroundImage: 'url(/assets/note-background.png)' }"
       >
         <textarea
-          v-if="editMode && permissions.includes('edit')"
+          v-if="editMode && permissions.includes('photo-wall_edit')"
           v-model="editDesc"
           class="home__preview-textarea"
           @click.stop

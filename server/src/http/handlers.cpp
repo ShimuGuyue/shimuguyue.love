@@ -1218,10 +1218,10 @@ namespace http
                     return;
                 }
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "edit") == perms.end()) {
-                    spdlog::info("保存图片元数据失败：用户 {} 无 edit 权限。", session->user_id);
+                if (std::find(perms.begin(), perms.end(), "photo-wall_edit") == perms.end()) {
+                    spdlog::info("保存图片元数据失败：用户 {} 无 photo-wall_edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 photo-wall_edit 权限"})", "application/json");
                     return;
                 }
 
@@ -1297,11 +1297,11 @@ namespace http
                     return;
                 }
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "edit") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "photo-wall_upload") == perms.end())
                 {
-                    spdlog::info("上传图片失败：用户 {} 无 edit 权限。", session->user_id);
+                    spdlog::info("上传图片失败：用户 {} 无 photo-wall_upload 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 photo-wall_upload 权限"})", "application/json");
                     return;
                 }
 
@@ -1350,11 +1350,11 @@ namespace http
                     return;
                 }
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "edit") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "photo-wall_delete") == perms.end())
                 {
-                    spdlog::info("删除图片失败：用户 {} 无 edit 权限。", session->user_id);
+                    spdlog::info("删除图片失败：用户 {} 无 photo-wall_delete 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 photo-wall_delete 权限"})", "application/json");
                     return;
                 }
 
@@ -1723,11 +1723,11 @@ namespace http
                     return;
                 }
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "edit") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "introduction-edit") == perms.end())
                 {
-                    spdlog::info("更新个人简介失败：用户 {} 无 edit 权限。", session->user_id);
+                    spdlog::info("更新个人简介失败：用户 {} 无 introduction-edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 introduction-edit 权限"})", "application/json");
                     return;
                 }
 

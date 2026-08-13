@@ -133,7 +133,7 @@ namespace http
             }
         );
 
-        // POST /api/image/save — 保存/更新图片元数据（需要 edit 权限）
+        // POST /api/image/save — 保存/更新图片元数据（需要 photo-wall_edit 权限）
         svr.Post("/api/image/save",
             [allowed](const auto& req, auto& res)
             {
@@ -141,7 +141,7 @@ namespace http
             }
         );
 
-        // POST /api/image/upload — 上传图片文件（需要 edit 权限）
+        // POST /api/image/upload — 上传图片文件（需要 photo-wall_upload 权限）
         svr.Post("/api/image/upload",
             [allowed](const auto& req, auto& res)
             {
@@ -149,7 +149,7 @@ namespace http
             }
         );
 
-        // DELETE /api/image/delete — 删除图片（需要 edit 权限）
+        // DELETE /api/image/delete — 删除图片（需要 photo-wall_delete 权限）
         svr.Delete("/api/image/delete",
             [allowed](const auto& req, auto& res)
             {
@@ -197,7 +197,7 @@ namespace http
             }
         );
 
-        // POST /api/profile/save — 更新个人介绍（需要 edit 权限）
+        // POST /api/profile/save — 更新个人介绍（需要 introduction-edit 权限）
         svr.Post("/api/profile/save",
             [allowed](const auto& req, auto& res)
             {

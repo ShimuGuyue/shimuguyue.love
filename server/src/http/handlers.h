@@ -132,7 +132,7 @@ void handle_get_images(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/image/save 请求。
+ * @brief 处理 POST /api/image/save 请求（需 photo-wall_edit 权限）。
  */
 void handle_save_image(
     const httplib::Request& req,
@@ -140,7 +140,7 @@ void handle_save_image(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/image/upload 请求。
+ * @brief 处理 POST /api/image/upload 请求（需 photo-wall_upload 权限）。
  */
 void handle_upload_image(
     const httplib::Request& req,
@@ -148,7 +148,7 @@ void handle_upload_image(
     const std::string&      allowed);
 
 /**
- * @brief 处理 DELETE /api/image/delete 请求。
+ * @brief 处理 DELETE /api/image/delete 请求（需 photo-wall_delete 权限）。
  */
 void handle_delete_image(
     const httplib::Request& req,
@@ -196,7 +196,7 @@ void handle_get_profile(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/profile/save 请求。
+ * @brief 处理 POST /api/profile/save 请求（需 introduction-edit 权限）。
  */
 void handle_save_profile(
     const httplib::Request& req,
