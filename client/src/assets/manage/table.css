@@ -1,0 +1,243 @@
+/* ═══════════════════════════════════════════════════════════
+   后台管理页权限表格样式
+   ─────────────────────────────────────────────────────────
+   当前用户权限：每行一个大类型，行内多个权限用「、」分隔。
+   权限列用 <td class="perm-item">（或“无”提示）。
+   ═══════════════════════════════════════════════════════════ */
+
+/* 权限文本：略小字号，主题文字色 */
+.perm-item {
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+/* 权限表格容器：合并相邻边框，统一样式字号 */
+.perm-table {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+/* 单元格：上下留白 + 行间分隔线，靠左对齐、顶部对齐 */
+.perm-table th,
+.perm-table td {
+  padding: 8px 14px 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+/* 最后一行去掉底部分隔线，避免与所在区块边框重复 */
+.perm-table tbody tr:last-child th,
+.perm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 类型列：固定宽度、加粗、次要文字色、不换行 */
+.perm-table th {
+  width: 88px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   后台管理页用户表格样式（用户管理页大表格）
+   ═══════════════════════════════════════════════════════════ */
+
+/* 表格容器：不允许溢出，内容在单元格内裁剪/省略 */
+.users-table-wrap {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* 用户表格：固定布局；固定高度 = 表头 + 15 行 × 44px，
+   保证翻页时表格高度稳定；自定义复选框颜色 */
+.users-table {
+  width: 100%;
+  height: calc(44px * 16);
+  table-layout: fixed;
+  border-collapse: collapse;
+  text-align: left;
+  --checkbox-checked-color: #3366ff;
+}
+
+html.dark .users-table {
+  --checkbox-checked-color: #598bff;
+}
+
+/* 单元格：固定行高、细边框、不换行 */
+.users-table th,
+.users-table td {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  font-size: 0.95rem;
+  color: var(--color-text);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* 编辑模式：行高保持 44px，超宽内容裁剪 */
+.users-table--editing th,
+.users-table--editing td {
+  overflow: hidden;
+}
+
+/* 表头：加粗、次要文字色、浅色底 */
+.users-table th {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background-color: var(--color-hover);
+}
+
+/* ── 列宽 ── */
+
+.users-table__id {
+  width: 80px;
+}
+
+.users-table__username {
+  width: 18%;
+}
+
+.users-table__status {
+  width: 8em;
+  text-align: center;
+}
+
+.users-table__mask {
+  width: 12em;
+}
+
+/* ── 自定义复选框 ── */
+
+.users-table input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  vertical-align: middle;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--color-text-secondary);
+  background-color: var(--color-nav-bg);
+  cursor: default;
+  position: relative;
+}
+
+.users-table input[type='checkbox']:checked {
+  border-color: var(--checkbox-checked-color);
+  background-color: var(--checkbox-checked-color);
+}
+
+.users-table input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 6px;
+  height: 10px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* ── 编辑输入控件 ── */
+
+.users-table__input {
+  width: 100%;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-nav-bg);
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.users-table__input:focus {
+  outline: none;
+  border-color: var(--color-text-secondary);
+}
+
+.users-table__perms-edit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.users-table__perms-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.users-table__perms-btn {
+  flex-shrink: 0;
+  min-width: auto;
+  padding: 3px 10px;
+  font-size: 0.85rem;
+}
+
+/* 权限条目（非编辑态）：文本省略 + 最右侧“完整权限”按钮 */
+.users-table__perms-view {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.users-table__perms-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.users-table__perm input {
+  cursor: pointer;
+}
+
+/* ── 分页 ── */
+
+.users-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  margin-top: 16px;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.users-pager__pages {
+  display: flex;
+  gap: 4px;
+}
+
+.users-pager__btn {
+  min-width: 32px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  font-size: 0.875rem;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.users-pager__btn:hover:not(:disabled) {
+  background-color: var(--color-hover);
+}
+
+.users-pager__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.users-pager__btn--active {
+  background-color: var(--color-hover);
+  font-weight: 600;
+}

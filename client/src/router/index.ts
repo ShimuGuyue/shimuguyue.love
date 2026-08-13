@@ -40,7 +40,7 @@ const router = createRouter({
           path: 'users',
           name: 'manage-users',
           component: UserManageSection,
-          meta: { requiresPermission: 'manage_view' },
+          meta: { requiresPermission: 'manage:view' },
         },
       ],
     },

@@ -61,7 +61,7 @@ namespace http
             }
         );
 
-        // GET /api/manage/users — 获取用户列表（需要 manage_view 权限）
+        // GET /api/manage/users — 获取用户列表（需要 manage:view 权限）
         svr.Get("/api/manage/users",
             [allowed](const auto& req, auto& res)
             {
@@ -69,7 +69,7 @@ namespace http
             }
         );
 
-        // POST /api/manage/user/update — 更新用户（需要 manage_edit 权限）
+        // POST /api/manage/user/update — 更新用户（需要 manage:edit 权限）
         svr.Post("/api/manage/user/update",
             [allowed](const auto& req, auto& res)
             {
@@ -77,7 +77,7 @@ namespace http
             }
         );
 
-        // POST /api/manage/user/create — 新建用户（需要 manage_edit 权限）
+        // POST /api/manage/user/create — 新建用户（需要 manage:edit 权限）
         svr.Post("/api/manage/user/create",
             [allowed](const auto& req, auto& res)
             {
@@ -133,7 +133,7 @@ namespace http
             }
         );
 
-        // POST /api/image/save — 保存/更新图片元数据（需要 photo-wall_edit 权限）
+        // POST /api/image/save — 保存/更新图片元数据（需要 photo_wall:edit 权限）
         svr.Post("/api/image/save",
             [allowed](const auto& req, auto& res)
             {
@@ -141,7 +141,7 @@ namespace http
             }
         );
 
-        // POST /api/image/upload — 上传图片文件（需要 photo-wall_upload 权限）
+        // POST /api/image/upload — 上传图片文件（需要 photo_wall:upload 权限）
         svr.Post("/api/image/upload",
             [allowed](const auto& req, auto& res)
             {
@@ -149,7 +149,7 @@ namespace http
             }
         );
 
-        // DELETE /api/image/delete — 删除图片（需要 photo-wall_delete 权限）
+        // DELETE /api/image/delete — 删除图片（需要 photo_wall:delete 权限）
         svr.Delete("/api/image/delete",
             [allowed](const auto& req, auto& res)
             {
@@ -157,7 +157,7 @@ namespace http
             }
         );
 
-        // POST /api/blog/save — 新建博客（需要 blog_create 权限）
+        // POST /api/blog/save — 新建博客（需要 blog:create 权限）
         svr.Post("/api/blog/save",
             [allowed](const auto& req, auto& res)
             {
@@ -165,7 +165,7 @@ namespace http
             }
         );
 
-        // PUT /api/blog/update — 编辑已有博客（需要 blog_edit 权限）
+        // PUT /api/blog/update — 编辑已有博客（需要 blog:edit 权限）
         svr.Put("/api/blog/update",
             [allowed](const auto& req, auto& res)
             {
@@ -173,7 +173,7 @@ namespace http
             }
         );
 
-        // DELETE /api/blog/delete — 删除博客（需要 blog_delete 权限）
+        // DELETE /api/blog/delete — 删除博客（需要 blog:delete 权限）
         svr.Delete("/api/blog/delete",
             [allowed](const auto& req, auto& res)
             {
@@ -197,7 +197,7 @@ namespace http
             }
         );
 
-        // POST /api/profile/save — 更新个人介绍（需要 introduction-edit 权限）
+        // POST /api/profile/save — 更新个人介绍（需要 introduction:edit 权限）
         svr.Post("/api/profile/save",
             [allowed](const auto& req, auto& res)
             {

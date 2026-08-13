@@ -60,7 +60,7 @@ void handle_user_update(
     const std::string&      allowed);
 
 /**
- * @brief 处理 GET /api/manage/users 请求（需 manage_view 权限）。
+ * @brief 处理 GET /api/manage/users 请求（需 manage:view 权限）。
  */
 void handle_manage_users(
     const httplib::Request& req,
@@ -68,7 +68,7 @@ void handle_manage_users(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/manage/user/update 请求（需 manage_edit 权限）。
+ * @brief 处理 POST /api/manage/user/update 请求（需 manage:edit 权限）。
  */
 void handle_manage_update_user(
     const httplib::Request& req,
@@ -76,7 +76,7 @@ void handle_manage_update_user(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/manage/user/create 请求（需 manage_edit 权限）。
+ * @brief 处理 POST /api/manage/user/create 请求（需 manage:edit 权限）。
  */
 void handle_manage_create_user(
     const httplib::Request& req,
@@ -132,7 +132,7 @@ void handle_get_images(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/image/save 请求（需 photo-wall_edit 权限）。
+ * @brief 处理 POST /api/image/save 请求（需 photo_wall:edit 权限）。
  */
 void handle_save_image(
     const httplib::Request& req,
@@ -140,7 +140,7 @@ void handle_save_image(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/image/upload 请求（需 photo-wall_upload 权限）。
+ * @brief 处理 POST /api/image/upload 请求（需 photo_wall:upload 权限）。
  */
 void handle_upload_image(
     const httplib::Request& req,
@@ -148,7 +148,7 @@ void handle_upload_image(
     const std::string&      allowed);
 
 /**
- * @brief 处理 DELETE /api/image/delete 请求（需 photo-wall_delete 权限）。
+ * @brief 处理 DELETE /api/image/delete 请求（需 photo_wall:delete 权限）。
  */
 void handle_delete_image(
     const httplib::Request& req,
@@ -156,7 +156,7 @@ void handle_delete_image(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/blog/save 请求（需 blog_create 权限）。
+ * @brief 处理 POST /api/blog/save 请求（需 blog:create 权限）。
  */
 void handle_save_blog(
     const httplib::Request& req,
@@ -164,7 +164,7 @@ void handle_save_blog(
     const std::string&      allowed);
 
 /**
- * @brief 处理 PUT /api/blog/update 请求（需 blog_edit 权限）。
+ * @brief 处理 PUT /api/blog/update 请求（需 blog:edit 权限）。
  */
 void handle_update_blog(
     const httplib::Request& req,
@@ -172,7 +172,7 @@ void handle_update_blog(
     const std::string&      allowed);
 
 /**
- * @brief 处理 DELETE /api/blog/delete 请求（需 blog_delete 权限）。
+ * @brief 处理 DELETE /api/blog/delete 请求（需 blog:delete 权限）。
  */
 void handle_delete_blog(
     const httplib::Request& req,
@@ -196,7 +196,7 @@ void handle_get_profile(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/profile/save 请求（需 introduction-edit 权限）。
+ * @brief 处理 POST /api/profile/save 请求（需 introduction:edit 权限）。
  */
 void handle_save_profile(
     const httplib::Request& req,

@@ -130,7 +130,7 @@ PostgreSQL
 | `client/src/views/About.vue` | 关于我页面（渲染 README） |
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
-| `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage_view 权限，保存编辑/创建用户需 manage_edit 权限） |
+| `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage:view 权限，保存编辑/创建用户需 manage:edit 权限） |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |
@@ -143,8 +143,9 @@ PostgreSQL
 | `client/src/assets/common/button.css` | 公共按钮样式 |
 | `client/src/assets/glass.css` | 毛玻璃工具类 |
 | `client/src/assets/markdown.css` | Markdown 渲染样式（PinkFairy 主题） |
-| `client/src/assets/manage/button.css` | 后台管理页按钮统一样式（个人信息页与用户管理页共用） |
-| `client/src/assets/manage/font.css` | 后台管理页文本样式统一（信息仿宋，标题/按钮默认字体） |
+| `client/src/assets/manage/button.css` | 后台管理页按钮样式 |
+| `client/src/assets/manage/font.css` | 后台管理页文本样式 |
+| `client/src/assets/manage/table.css` | 后台管理页表格样式 |
 | `client/src/assets/pink-theme.css` | PinkFairy 颜色变量 |
 
 **server/**

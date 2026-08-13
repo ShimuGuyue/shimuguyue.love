@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import '@/assets/manage/button.css'
 import '@/assets/manage/font.css'
+import '@/assets/manage/table.css'
 
 interface ManageUser {
   id: number
@@ -44,6 +45,7 @@ const showCreateDialog = ref(false)
 const creating = ref(false)
 const permDialogDraft = ref<EditDraft | null>(null)
 const permDialogSelection = ref<string[]>([])
+const fullPermUser = ref<ManageUser | null>(null)
 const createForm = ref({
   username: '',
   key: '',
@@ -51,6 +53,54 @@ const createForm = ref({
   key_enabled: true,
   permissions: [] as string[],
 })
+
+/** 权限大类型分组：与个人信息页权限表格保持一致。 */
+const PERMISSION_GROUPS = [
+  { label: '用户管理', pattern: /^manage:/ },
+  { label: '博客', pattern: /^blog:/ },
+  { label: '照片墙', pattern: /^photo_wall:/ },
+  { label: '个人简介', pattern: /^introduction:/ },
+]
+
+/** “完整权限”弹窗中按大类型归组后的权限。 */
+const fullPermGroups = computed(() =>
+  PERMISSION_GROUPS.map(group => ({
+    label: group.label,
+    perms: (fullPermUser.value?.permissions ?? []).filter(perm =>
+      group.pattern.test(perm)
+    ),
+  }))
+)
+
+/** “编辑权限”弹窗：全部权限按大类型分组（未匹配的类型归入“其他”）。 */
+const permDialogGroups = computed(() => {
+  const groups = PERMISSION_GROUPS.map(group => ({
+    label: group.label,
+    perms: allPermissions.value.filter(perm => group.pattern.test(perm)),
+  }))
+  const known = groups.flatMap(group => group.perms)
+  const others = allPermissions.value.filter(perm => !known.includes(perm))
+  if (others.length) {
+    groups.push({ label: '其他', perms: others })
+  }
+  return groups
+})
+
+/** 权限显示名：去掉「模块:」前缀，只保留操作部分。 */
+function permLabel(perm: string): string {
+  const idx = perm.indexOf(':')
+  return idx === -1 ? perm : perm.slice(idx + 1)
+}
+
+/** 打开指定用户的完整权限弹窗。 */
+function openFullPerm(user: ManageUser) {
+  fullPermUser.value = user
+}
+
+/** 关闭完整权限弹窗。 */
+function closeFullPerm() {
+  fullPermUser.value = null
+}
 
 /** 分页：每页固定 15 条 */
 const PAGE_SIZE = 15
@@ -104,10 +154,10 @@ async function loadUsers() {
 
 onMounted(loadUsers)
 
-/** 无 manage_edit 权限时弹窗提示并返回 false。 */
+/** 无 manage:edit 权限时弹窗提示并返回 false。 */
 function requireEditPermission(): boolean {
   if (canEdit.value) return true
-  window.alert('操作失败：该操作需要 manage_edit 权限')
+  window.alert('操作失败：该操作需要 manage:edit 权限')
   return false
 }
 
@@ -411,10 +461,22 @@ async function saveChanges() {
                   </button>
                 </div>
                 <template v-else-if="row.user">
-                  <span v-if="row.user.permissions.length">
-                    {{ row.user.permissions.join('、') }}
-                  </span>
-                  <span v-else class="users-hint">无</span>
+                  <div class="users-table__perms-view">
+                    <span
+                      v-if="row.user.permissions.length"
+                      class="users-table__perms-text"
+                    >
+                      {{ row.user.permissions.join('、') }}
+                    </span>
+                    <span v-else class="users-hint users-table__perms-text">无</span>
+                    <button
+                      type="button"
+                      class="manage-btn users-table__perms-btn"
+                      @click="openFullPerm(row.user)"
+                    >
+                      完整权限
+                    </button>
+                  </div>
                 </template>
               </td>
             </tr>
@@ -515,7 +577,7 @@ async function saveChanges() {
                 v-model="createForm.permissions"
                 class="create-box__checkbox"
               />
-              {{ perm }}
+              {{ permLabel(perm) }}
             </label>
           </div>
         </div>
@@ -541,25 +603,44 @@ async function saveChanges() {
       </div>
     </div>
 
-    <div v-if="permDialogDraft" class="create-mask">
-      <div class="create-box" role="dialog" aria-modal="true">
-        <h2 class="create-box__title">编辑权限</h2>
+    <div
+      v-if="permDialogDraft"
+      class="create-mask"
+      @click.self="cancelPermDialog"
+    >
+      <div class="create-box perm-box" role="dialog" aria-modal="true">
+        <h2 class="create-box__title">
+          编辑权限 — {{ permDialogDraft.username || '匿名用户' }}
+        </h2>
 
-        <div class="create-box__perms">
-          <label
-            v-for="perm in allPermissions"
-            :key="perm"
-            class="create-box__perm"
-          >
-            <input
-              type="checkbox"
-              :value="perm"
-              v-model="permDialogSelection"
-              class="create-box__checkbox"
-            />
-            {{ perm }}
-          </label>
-        </div>
+        <table class="perm-table">
+          <tbody>
+            <tr
+              v-for="group in permDialogGroups"
+              :key="group.label"
+            >
+              <th>{{ group.label }}</th>
+              <td>
+                <div v-if="group.perms.length" class="create-box__perms">
+                  <label
+                    v-for="perm in group.perms"
+                    :key="perm"
+                    class="create-box__perm"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="perm"
+                      v-model="permDialogSelection"
+                      class="create-box__checkbox"
+                    />
+                    {{ permLabel(perm) }}
+                  </label>
+                </div>
+                <span v-else class="users-hint">无</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <div class="create-box__actions">
           <button
@@ -579,141 +660,40 @@ async function saveChanges() {
         </div>
       </div>
     </div>
+
+    <div
+      v-if="fullPermUser"
+      class="create-mask"
+      @click.self="closeFullPerm"
+    >
+      <div class="create-box perm-box" role="dialog" aria-modal="true">
+        <h2 class="create-box__title">
+          权限列表：{{ fullPermUser.username ?? '匿名用户' }}
+        </h2>
+
+        <table class="perm-table">
+          <tbody>
+            <tr
+              v-for="group in fullPermGroups"
+              :key="group.label"
+            >
+              <th>{{ group.label }}</th>
+              <td>
+                <span v-if="group.perms.length" class="perm-item">
+                  {{ group.perms.map(permLabel).join('、') }}
+                </span>
+                <span v-else class="users-hint">无</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.users-table {
-  width: 100%;
-  /* 固定高度：表头 + 15 行，每行 44px */
-  height: calc(44px * 16);
-  table-layout: fixed;
-  border-collapse: collapse;
-  text-align: left;
-  /* 自定义复选框颜色 */
-  --checkbox-checked-color: #3366ff;
-}
-
-html.dark .users-table {
-  --checkbox-checked-color: #598bff;
-}
-
-.users-table th,
-.users-table td {
-  height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  font-size: 0.95rem;
-  color: var(--color-text);
-  vertical-align: middle;
-  white-space: nowrap;
-}
-
-/* 编辑模式：行高保持 44px，超宽内容裁剪 */
-.users-table--editing th,
-.users-table--editing td {
-  overflow: hidden;
-}
-
-.users-table th {
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  background-color: var(--color-hover);
-}
-
-.users-table__id {
-  width: 80px;
-}
-
-.users-table__username {
-  width: 18%;
-}
-
-.users-table__status {
-  width: 8em;
-  text-align: center;
-}
-
-.users-table__mask {
-  width: 12em;
-}
-
-/* ── 自定义复选框 ── */
-
-.users-table input[type='checkbox'] {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-  vertical-align: middle;
-  appearance: none;
-  -webkit-appearance: none;
-  border: 2px solid var(--color-text-secondary);
-  background-color: var(--color-nav-bg);
-  cursor: default;
-  position: relative;
-}
-
-.users-table input[type='checkbox']:checked {
-  border-color: var(--checkbox-checked-color);
-  background-color: var(--checkbox-checked-color);
-}
-
-.users-table input[type='checkbox']:checked::after {
-  content: '';
-  position: absolute;
-  left: 4px;
-  top: 1px;
-  width: 6px;
-  height: 10px;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
-
-/* ── 编辑输入控件 ── */
-
-.users-table__input {
-  width: 100%;
-  height: 28px;
-  padding: 0 8px;
-  border: 1px solid var(--color-border);
-  background-color: var(--color-nav-bg);
-  font-size: 0.9rem;
-  color: var(--color-text);
-}
-
-.users-table__input:focus {
-  outline: none;
-  border-color: var(--color-text-secondary);
-}
-
-.users-table__perms-edit {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  max-width: 100%;
-}
-
-.users-table__perms-summary {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.users-table__perms-btn {
-  flex-shrink: 0;
-  min-width: auto;
-  padding: 3px 10px;
-  font-size: 0.85rem;
-}
-
-.users-table__perm input {
-  cursor: pointer;
-}
-
 .users-hint {
   margin: 0;
   font-size: 0.9rem;
@@ -756,52 +736,6 @@ html.dark .users-table {
   gap: 8px;
 }
 
-/* ── 分页 ── */
-
-.users-table-wrap {
-  width: 100%;
-  overflow-x: auto;
-}
-
-.users-pager {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  width: 100%;
-  margin-top: 16px;
-  font-size: 0.9rem;
-  color: var(--color-text-secondary);
-}
-
-.users-pager__pages {
-  display: flex;
-  gap: 4px;
-}
-
-.users-pager__btn {
-  min-width: 32px;
-  padding: 4px 10px;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  font-size: 0.875rem;
-  color: var(--color-text);
-  cursor: pointer;
-}
-
-.users-pager__btn:hover:not(:disabled) {
-  background-color: var(--color-hover);
-}
-
-.users-pager__btn:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.users-pager__btn--active {
-  background-color: var(--color-hover);
-  font-weight: 600;
-}
-
 /* ── 新建用户弹窗 ── */
 
 .create-mask {
@@ -820,6 +754,12 @@ html.dark .users-table {
   background-color: var(--color-nav-bg);
   border: 1px solid var(--color-border);
   box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* 完整权限弹窗：比新建/编辑弹窗略宽，容纳权限表格 */
+.perm-box {
+  width: 480px;
+  max-width: calc(100vw - 48px);
 }
 
 .create-box__title {
