@@ -141,14 +141,14 @@ async function saveBlog() {
     return
   }
 
-  // 权限拦截：新建页需 blog_create，编辑页需 blog_edit
+  // 权限拦截：新建页需 blog:create，编辑页需 blog:edit
   if (isEditing.value) {
-    if (!permissions.value.includes('blog_edit')) {
-      alert('操作失败：该操作需要 blog_edit 权限')
+    if (!permissions.value.includes('blog:edit')) {
+      alert('操作失败：该操作需要 blog:edit 权限')
       return
     }
-  } else if (!permissions.value.includes('blog_create')) {
-    alert('操作失败：该操作需要 blog_create 权限')
+  } else if (!permissions.value.includes('blog:create')) {
+    alert('操作失败：该操作需要 blog:create 权限')
     return
   }
 

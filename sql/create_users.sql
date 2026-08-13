@@ -63,15 +63,15 @@ COMMENT ON COLUMN user_permissions.permission_id IS '关联 permissions.id';
 -- ============================================================
 
 -- 权限列表
-INSERT INTO permissions (name) VALUES ('introduction-edit') ON CONFLICT (name) DO NOTHING;
-INSERT INTO permissions (name) VALUES ('manage_view')       ON CONFLICT (name) DO NOTHING;
-INSERT INTO permissions (name) VALUES ('manage_edit')       ON CONFLICT (name) DO NOTHING;
-INSERT INTO permissions (name) VALUES ('blog_create')       ON CONFLICT (name) DO NOTHING;
-INSERT INTO permissions (name) VALUES ('blog_edit')         ON CONFLICT (name) DO NOTHING;
-INSERT INTO permissions (name) VALUES ('blog_delete')       ON CONFLICT (name) DO NOTHING;
-INSERT INTO permissions (name) VALUES ('photo-wall_upload') ON CONFLICT (name) DO NOTHING;
-INSERT INTO permissions (name) VALUES ('photo-wall_edit')   ON CONFLICT (name) DO NOTHING;
-INSERT INTO permissions (name) VALUES ('photo-wall_delete') ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('introduction:edit') ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('manage:view')       ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('manage:edit')       ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('blog:create')       ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('blog:edit')         ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('blog:delete')       ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('photo_wall:upload') ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('photo_wall:edit')   ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('photo_wall:delete') ON CONFLICT (name) DO NOTHING;
 
 -- 默认管理员 root（用户名 / 密码见 README）
 -- 密钥已停用：key_hash 为占位串的固定盐哈希，无实际登录用途

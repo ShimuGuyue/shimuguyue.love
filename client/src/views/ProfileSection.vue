@@ -19,10 +19,10 @@ const passwordDraft = ref('')
 
 /** 权限大类型分组：每种大类型在权限表格中占一行。 */
 const PERMISSION_GROUPS = [
-  { label: '用户管理', pattern: /^manage/ },
-  { label: '博客', pattern: /^blog/ },
-  { label: '照片墙', pattern: /^photo-wall/ },
-  { label: '个人简介', pattern: /^introduction/ },
+  { label: '用户管理', pattern: /^manage:/ },
+  { label: '博客', pattern: /^blog:/ },
+  { label: '照片墙', pattern: /^photo_wall:/ },
+  { label: '个人简介', pattern: /^introduction:/ },
 ]
 
 /** 按大类型归组后的权限（仅含当前用户拥有的权限）。 */

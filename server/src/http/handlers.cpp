@@ -431,18 +431,18 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 manage_view 权限用户可查看用户列表
+                // 权限检查：仅 manage:view 权限用户可查看用户列表
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "manage_view") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "manage:view") == perms.end())
                 {
-                    spdlog::info("获取用户列表失败：用户 {} 无 manage_view 权限。", session->user_id);
+                    spdlog::info("获取用户列表失败：用户 {} 无 manage:view 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 manage_view 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 manage:view 权限"})", "application/json");
                     return;
                 }
                 // 是否可编辑（保存 / 新建用户）
                 const bool can_edit =
-                    std::find(perms.begin(), perms.end(), "manage_edit") != perms.end();
+                    std::find(perms.begin(), perms.end(), "manage:edit") != perms.end();
 
                 // 查询所有用户及其权限列表
                 pqxx::work txn{ conn };
@@ -539,13 +539,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 manage_edit 权限用户可更新用户
+                // 权限检查：仅 manage:edit 权限用户可更新用户
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "manage_edit") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "manage:edit") == perms.end())
                 {
-                    spdlog::info("更新用户失败：用户 {} 无 manage_edit 权限。", session->user_id);
+                    spdlog::info("更新用户失败：用户 {} 无 manage:edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 manage_edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 manage:edit 权限"})", "application/json");
                     return;
                 }
 
@@ -783,13 +783,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 manage_edit 权限用户可创建用户
+                // 权限检查：仅 manage:edit 权限用户可创建用户
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "manage_edit") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "manage:edit") == perms.end())
                 {
-                    spdlog::info("创建用户失败：用户 {} 无 manage_edit 权限。", session->user_id);
+                    spdlog::info("创建用户失败：用户 {} 无 manage:edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 manage_edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 manage:edit 权限"})", "application/json");
                     return;
                 }
 
@@ -1218,10 +1218,10 @@ namespace http
                     return;
                 }
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "photo-wall_edit") == perms.end()) {
-                    spdlog::info("保存图片元数据失败：用户 {} 无 photo-wall_edit 权限。", session->user_id);
+                if (std::find(perms.begin(), perms.end(), "photo_wall:edit") == perms.end()) {
+                    spdlog::info("保存图片元数据失败：用户 {} 无 photo_wall:edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 photo-wall_edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 photo_wall:edit 权限"})", "application/json");
                     return;
                 }
 
@@ -1297,11 +1297,11 @@ namespace http
                     return;
                 }
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "photo-wall_upload") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "photo_wall:upload") == perms.end())
                 {
-                    spdlog::info("上传图片失败：用户 {} 无 photo-wall_upload 权限。", session->user_id);
+                    spdlog::info("上传图片失败：用户 {} 无 photo_wall:upload 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 photo-wall_upload 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 photo_wall:upload 权限"})", "application/json");
                     return;
                 }
 
@@ -1350,11 +1350,11 @@ namespace http
                     return;
                 }
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "photo-wall_delete") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "photo_wall:delete") == perms.end())
                 {
-                    spdlog::info("删除图片失败：用户 {} 无 photo-wall_delete 权限。", session->user_id);
+                    spdlog::info("删除图片失败：用户 {} 无 photo_wall:delete 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 photo-wall_delete 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 photo_wall:delete 权限"})", "application/json");
                     return;
                 }
 
@@ -1423,13 +1423,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 blog_create 权限用户可新建博客
+                // 权限检查：仅 blog:create 权限用户可新建博客
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "blog_create") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "blog:create") == perms.end())
                 {
-                    spdlog::info("保存博客失败：用户 {} 无 blog_create 权限。", session->user_id);
+                    spdlog::info("保存博客失败：用户 {} 无 blog:create 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 blog_create 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 blog:create 权限"})", "application/json");
                     return;
                 }
 
@@ -1525,13 +1525,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 blog_edit 权限用户可编辑博客
+                // 权限检查：仅 blog:edit 权限用户可编辑博客
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "blog_edit") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "blog:edit") == perms.end())
                 {
-                    spdlog::info("更新博客失败：用户 {} 无 blog_edit 权限。", session->user_id);
+                    spdlog::info("更新博客失败：用户 {} 无 blog:edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 blog_edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 blog:edit 权限"})", "application/json");
                     return;
                 }
 
@@ -1618,13 +1618,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 blog_delete 权限用户可删除博客
+                // 权限检查：仅 blog:delete 权限用户可删除博客
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "blog_delete") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "blog:delete") == perms.end())
                 {
-                    spdlog::info("删除博客失败：用户 {} 无 blog_delete 权限。", session->user_id);
+                    spdlog::info("删除博客失败：用户 {} 无 blog:delete 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 blog_delete 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 blog:delete 权限"})", "application/json");
                     return;
                 }
 
@@ -1723,11 +1723,11 @@ namespace http
                     return;
                 }
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "introduction-edit") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "introduction:edit") == perms.end())
                 {
-                    spdlog::info("更新个人简介失败：用户 {} 无 introduction-edit 权限。", session->user_id);
+                    spdlog::info("更新个人简介失败：用户 {} 无 introduction:edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 introduction-edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 introduction:edit 权限"})", "application/json");
                     return;
                 }
 

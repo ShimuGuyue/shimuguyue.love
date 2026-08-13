@@ -21,7 +21,7 @@ const router = useRouter()
 const auth = useAuthStore()
 
 const permissions = ref<string[]>([])
-const canDrop = computed(() => permissions.value.includes('blog_delete'))
+const canDrop = computed(() => permissions.value.includes('blog:delete'))
 
 const md = new MarkdownIt({
   html: true,
@@ -303,7 +303,7 @@ function editBlog() {
 /// 删除当前博客
 async function deleteBlog() {
   if (!canDrop.value) {
-    alert('操作失败：该操作需要 blog_delete 权限')
+    alert('操作失败：该操作需要 blog:delete 权限')
     return
   }
   if (!window.confirm('确定要删除这篇博客吗？此操作不可撤销。')) return

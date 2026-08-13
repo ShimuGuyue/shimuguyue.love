@@ -56,10 +56,10 @@ const createForm = ref({
 
 /** 权限大类型分组：与个人信息页权限表格保持一致。 */
 const PERMISSION_GROUPS = [
-  { label: '用户管理', pattern: /^manage/ },
-  { label: '博客', pattern: /^blog/ },
-  { label: '照片墙', pattern: /^photo-wall/ },
-  { label: '个人简介', pattern: /^introduction/ },
+  { label: '用户管理', pattern: /^manage:/ },
+  { label: '博客', pattern: /^blog:/ },
+  { label: '照片墙', pattern: /^photo_wall:/ },
+  { label: '个人简介', pattern: /^introduction:/ },
 ]
 
 /** “完整权限”弹窗中按大类型归组后的权限。 */
@@ -148,10 +148,10 @@ async function loadUsers() {
 
 onMounted(loadUsers)
 
-/** 无 manage_edit 权限时弹窗提示并返回 false。 */
+/** 无 manage:edit 权限时弹窗提示并返回 false。 */
 function requireEditPermission(): boolean {
   if (canEdit.value) return true
-  window.alert('操作失败：该操作需要 manage_edit 权限')
+  window.alert('操作失败：该操作需要 manage:edit 权限')
   return false
 }
 
