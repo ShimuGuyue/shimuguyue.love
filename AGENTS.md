@@ -184,6 +184,7 @@ PostgreSQL
 | `sql/create_about.sql` | 关于我内容表（about，单行） |
 | `tools/auto-sync-blogs.sh` | 博客 `.md` 自动同步脚本 |
 | `tools/pull-readme.sh` | README 自动拉取脚本 |
+| `tools/rebuild.sh` | 一键重构脚本：前端构建 → 后端构建 → 重启服务 |
 | `tools/server-run.sh` | 服务端启动脚本 |
 | `tools/server-run.log` | 服务端运行日志（运行产物） |
 | `test/` | 测试用文件（非代码） |
