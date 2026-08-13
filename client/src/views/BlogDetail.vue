@@ -340,7 +340,7 @@ watch(renderedContent, async () => {
         <aside class="blog-detail__side glass">
           <h1 class="blog-detail__title">{{ blog.title }}</h1>
           <p v-if="blog.description" class="blog-detail__desc">{{ blog.description }}</p>
-          <p v-if="blog.category" class="tag-pink">{{ blog.category }}</p>
+          <p v-if="blog.category" class="blog-detail__category tag-pink">{{ blog.category }}</p>
           <div class="blog-tags">
             <span v-for="tag in blog.tags" :key="tag" class="tag-normal">{{ tag }}</span>
           </div>
@@ -439,6 +439,10 @@ watch(renderedContent, async () => {
   font-size: 0.95rem;
   color: var(--color-text);
   line-height: 1.6;
+}
+
+.blog-detail__category {
+  width: fit-content;
 }
 
 .blog-detail__time {
