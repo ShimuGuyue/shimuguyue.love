@@ -44,10 +44,10 @@
    后台管理页用户表格样式（用户管理页大表格）
    ═══════════════════════════════════════════════════════════ */
 
-/* 表格容器：横向溢出时出现滚动条 */
+/* 表格容器：不允许溢出，内容在单元格内裁剪/省略 */
 .users-table-wrap {
   width: 100%;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 /* 用户表格：固定布局；固定高度 = 表头 + 15 行 × 44px，
@@ -179,6 +179,22 @@ html.dark .users-table {
   min-width: auto;
   padding: 3px 10px;
   font-size: 0.85rem;
+}
+
+/* 权限条目（非编辑态）：文本省略 + 最右侧“完整权限”按钮 */
+.users-table__perms-view {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.users-table__perms-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .users-table__perm input {

@@ -45,6 +45,7 @@ const showCreateDialog = ref(false)
 const creating = ref(false)
 const permDialogDraft = ref<EditDraft | null>(null)
 const permDialogSelection = ref<string[]>([])
+const fullPermUser = ref<ManageUser | null>(null)
 const createForm = ref({
   username: '',
   key: '',
@@ -52,6 +53,34 @@ const createForm = ref({
   key_enabled: true,
   permissions: [] as string[],
 })
+
+/** 权限大类型分组：与个人信息页权限表格保持一致。 */
+const PERMISSION_GROUPS = [
+  { label: '用户管理', pattern: /^manage/ },
+  { label: '博客', pattern: /^blog/ },
+  { label: '照片墙', pattern: /^photo-wall/ },
+  { label: '个人简介', pattern: /^introduction/ },
+]
+
+/** “完整权限”弹窗中按大类型归组后的权限。 */
+const fullPermGroups = computed(() =>
+  PERMISSION_GROUPS.map(group => ({
+    label: group.label,
+    perms: (fullPermUser.value?.permissions ?? []).filter(perm =>
+      group.pattern.test(perm)
+    ),
+  }))
+)
+
+/** 打开指定用户的完整权限弹窗。 */
+function openFullPerm(user: ManageUser) {
+  fullPermUser.value = user
+}
+
+/** 关闭完整权限弹窗。 */
+function closeFullPerm() {
+  fullPermUser.value = null
+}
 
 /** 分页：每页固定 15 条 */
 const PAGE_SIZE = 15
@@ -412,10 +441,22 @@ async function saveChanges() {
                   </button>
                 </div>
                 <template v-else-if="row.user">
-                  <span v-if="row.user.permissions.length">
-                    {{ row.user.permissions.join('、') }}
-                  </span>
-                  <span v-else class="users-hint">无</span>
+                  <div class="users-table__perms-view">
+                    <span
+                      v-if="row.user.permissions.length"
+                      class="users-table__perms-text"
+                    >
+                      {{ row.user.permissions.join('、') }}
+                    </span>
+                    <span v-else class="users-hint users-table__perms-text">无</span>
+                    <button
+                      type="button"
+                      class="manage-btn users-table__perms-btn"
+                      @click="openFullPerm(row.user)"
+                    >
+                      完整权限
+                    </button>
+                  </div>
                 </template>
               </td>
             </tr>
@@ -580,6 +621,36 @@ async function saveChanges() {
         </div>
       </div>
     </div>
+
+    <div
+      v-if="fullPermUser"
+      class="create-mask"
+      @click.self="closeFullPerm"
+    >
+      <div class="create-box perm-box" role="dialog" aria-modal="true">
+        <h2 class="create-box__title">
+          权限列表：{{ fullPermUser.username ?? '匿名用户' }}
+        </h2>
+
+        <table class="perm-table">
+          <tbody>
+            <tr
+              v-for="group in fullPermGroups"
+              :key="group.label"
+            >
+              <th>{{ group.label }}</th>
+              <td>
+                <span v-if="group.perms.length" class="perm-item">
+                  {{ group.perms.join('、') }}
+                </span>
+                <span v-else class="users-hint">无</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+      </div>
+    </div>
   </div>
 </template>
 
@@ -644,6 +715,12 @@ async function saveChanges() {
   background-color: var(--color-nav-bg);
   border: 1px solid var(--color-border);
   box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+/* 完整权限弹窗：比新建/编辑弹窗略宽，容纳权限表格 */
+.perm-box {
+  width: 480px;
+  max-width: calc(100vw - 48px);
 }
 
 .create-box__title {
