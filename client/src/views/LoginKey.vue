@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import '@/assets/common/button.css'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -190,25 +191,6 @@ async function handleSubmit() {
   line-height: 1.4;
   font-size: 0.85rem;
   color: #e53e3e;
-}
-
-.form-submit {
-  margin-top: auto;
-  align-self: center;
-  width: 160px;
-  padding: 12px 0;
-  border: none;
-  border-radius: 2px;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--color-card-bg, var(--color-nav-bg));
-  background-color: var(--color-text);
-  cursor: pointer;
-  transition: opacity var(--transition-speed);
-}
-
-.form-submit:hover {
-  opacity: 0.85;
 }
 
 .login-card__switch {
