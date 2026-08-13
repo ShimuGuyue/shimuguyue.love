@@ -1,7 +1,9 @@
-/* ============================================================
- * 后台管理页按钮统一样式
- * ============================================================ */
+/* ═══════════════════════════════════════════════════════════
+   后台管理页按钮统一样式
+   ═══════════════════════════════════════════════════════════ */
 
+/* 基础按钮：描边透明底（默认态），文字与边框取主题色，
+   亮/暗主题自动适配；min-width 保证短文本按钮也有合适宽度 */
 .manage-btn {
   min-width: 64px;
   padding: 6px 16px;
@@ -12,20 +14,25 @@
   cursor: pointer;
 }
 
+/* 悬停态：仅未禁用时填充淡色背景；禁用按钮不触发悬停样式 */
 .manage-btn:hover:not(:disabled) {
   background-color: var(--color-hover);
 }
 
+/* 禁用态：半透明 + 默认箭头光标，明确告知按钮不可用 */
 .manage-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
+/* 主操作按钮：与基础按钮同款外观（描边 + 主题文字色），
+   语义上标记主要动作（保存/创建等），便于后续单独定制强调色 */
 .manage-btn--primary {
   border-color: var(--color-text-secondary);
   color: var(--color-text);
 }
 
+/* 主按钮悬停：与基础按钮一致地填充淡色背景 */
 .manage-btn--primary:hover:not(:disabled) {
   background-color: var(--color-hover);
   color: var(--color-text);
