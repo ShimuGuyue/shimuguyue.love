@@ -361,7 +361,7 @@ async function saveChanges() {
                 <input
                   v-if="editing && row.draft"
                   v-model="row.draft.key"
-                  type="password"
+                  type="text"
                   class="users-table__input"
                   placeholder="留空不修改"
                 />
@@ -384,7 +384,7 @@ async function saveChanges() {
                 <input
                   v-if="editing && row.draft"
                   v-model="row.draft.password"
-                  type="password"
+                  type="text"
                   class="users-table__input"
                   placeholder="留空不修改"
                 />
@@ -477,7 +477,7 @@ async function saveChanges() {
           <span>密钥</span>
           <input
             v-model="createForm.key"
-            type="password"
+            type="text"
             class="create-box__input"
           />
         </label>
@@ -486,7 +486,7 @@ async function saveChanges() {
           <span>密码</span>
           <input
             v-model="createForm.password"
-            type="password"
+            type="text"
             class="create-box__input"
             placeholder="可选"
           />
