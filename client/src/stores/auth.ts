@@ -74,7 +74,7 @@ export const useAuthStore = defineStore('auth', () => {
     /**
      * 自助更新当前登录用户的信息（用户名 / 密钥可用状态 / 密码）。
      *
-     * 只允许修改自己，不需要 manage 权限；成功后立即同步本地用户名。
+     * 只允许修改自己；成功后立即同步本地用户名。
      *
      * @param payload 要更新的字段（可选）。
      * @return 成功返回 null，失败返回错误消息。

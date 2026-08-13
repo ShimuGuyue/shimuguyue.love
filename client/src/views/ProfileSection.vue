@@ -20,19 +20,21 @@ onMounted(async () => {
   if (!auth.id) return
   loading.value = true
   try {
-    const infoResp = await fetch('/api/user/info', {
-      headers: { 'Authorization': 'Bearer ' + auth.token }
-    })
+    const [infoResp, permResp] = await Promise.all([
+      fetch('/api/user/info', {
+        headers: { 'Authorization': 'Bearer ' + auth.token }
+      }),
+      fetch('/api/user/permissions', {
+        headers: { 'Authorization': 'Bearer ' + auth.token }
+      })
+    ])
     if (infoResp.ok) {
       const data = await infoResp.json()
       keyEnabled.value = data.key_enabled ?? false
       hasPassword.value = data.has_password ?? false
     }
-    const resp = await fetch('/api/user/permissions', {
-      headers: { 'Authorization': 'Bearer ' + auth.token }
-    })
-    if (resp.ok) {
-      const data = await resp.json()
+    if (permResp.ok) {
+      const data = await permResp.json()
       permissions.value = data.permissions ?? []
     }
   } catch {
@@ -110,13 +112,16 @@ async function saveUsername() {
         v-else
         type="button"
         class="manage-btn manage-btn--primary"
+        :disabled="loading"
         @click="startEditUsername"
       >
         编辑个人信息
       </button>
     </div>
 
-    <dl class="info-list">
+    <div v-if="loading" class="page-loading">加载中...</div>
+
+    <dl v-else class="info-list">
       <div class="info-list__row info-list__row--fixed">
         <dt>用户名</dt>
         <dd>
@@ -170,8 +175,7 @@ async function saveUsername() {
       <div class="info-list__row">
         <dt>权限</dt>
         <dd>
-          <span v-if="loading" class="info-list__hint">加载中...</span>
-          <template v-else-if="permissions.length">
+          <template v-if="permissions.length">
             <span
               v-for="perm in permissions"
               :key="perm"
@@ -189,6 +193,9 @@ async function saveUsername() {
 
 <style scoped>
 .profile-section {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 144px);
   --checkbox-checked-color: #3366ff;
 }
 
@@ -260,6 +267,16 @@ html.dark .profile-section {
 .info-list__hint {
   font-size: 0.85rem;
   font-style: italic;
+  color: var(--color-text-secondary);
+}
+
+.page-loading {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  font-size: 0.95rem;
   color: var(--color-text-secondary);
 }
 

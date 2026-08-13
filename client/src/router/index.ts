@@ -40,7 +40,7 @@ const router = createRouter({
           path: 'users',
           name: 'manage-users',
           component: UserManageSection,
-          meta: { requiresPermission: 'manage' },
+          meta: { requiresPermission: 'manage_view' },
         },
       ],
     },
@@ -76,7 +76,7 @@ router.beforeEach(async (to) => {
   if (required) {
     const permissions = await fetchPermissions(auth.token)
     if (!permissions.includes(required)) {
-      window.alert(`该页面仅 ${required} 权限用户可访问`)
+      window.alert(`操作失败：进入该页面需要 ${required} 权限`)
       return { name: 'manage-profile' }
     }
   }
