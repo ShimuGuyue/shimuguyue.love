@@ -209,13 +209,6 @@ function onSearchInput() {
   searchTimer = setTimeout(fetchBlogs, 300)
 }
 
-function goToBlog(filePath: string) {
-  const routeData = router.resolve({
-    path: `/blogs/${filePath.replace(/^\/+/, "")}`
-  });
-  window.open(routeData.href, '_blank');
-}
-
 // ── 生命周期 ──
 
 onMounted(async () => {
@@ -296,11 +289,11 @@ onMounted(async () => {
     <p v-if="loading" class="blog-status">加载中...</p>
     <p v-else-if="!blogs.length" class="blog-status">未检索到对应博客</p>
     <section v-else class="blog-grid">
-      <article
+      <RouterLink
         v-for="blog in blogs"
         :key="blog.id"
         class="blog-card"
-        @click="goToBlog(blog.file_path || '')"
+        :to="`/blogs/${(blog.file_path ?? '').replace(/^\/+/, '')}`"
       >
         <h3 class="blog-card__title">{{ blog.title }}</h3>
         <p class="blog-card__desc">{{ blog.description }}</p>
@@ -313,7 +306,7 @@ onMounted(async () => {
           >{{ tag }}</span>
         </div>
         <time class="blog-card__time">{{ blog.update_time }}</time>
-      </article>
+      </RouterLink>
     </section>
   </main>
 </template>
@@ -468,4 +461,3 @@ onMounted(async () => {
 
 
 </style>
-
