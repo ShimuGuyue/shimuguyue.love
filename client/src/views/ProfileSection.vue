@@ -163,7 +163,7 @@ async function saveUsername() {
           <input
             v-if="editingUsername"
             v-model="passwordDraft"
-            type="password"
+            type="text"
             class="info-list__input"
             placeholder="留空不修改"
           />
