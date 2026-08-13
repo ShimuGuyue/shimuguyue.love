@@ -72,6 +72,7 @@ PostgreSQL
 - **用户修改优先**：用户手动修改的内容为最终权威；AI 必须先读取当前文件内容再编辑，不得覆盖用户修改。
 - **环境安装权限**：当项目运行所需环境未下载时，AI 应停止任务，向用户指出缺失的环境及下载方式，待用户下载完成后再执行任务。
 - **文件修改记录**：当新建/删除文件时，AI应将其记录到 `AGENTS.md`。
+- **测试数据保留**：AI 在开发/测试过程中创建的数据库测试条目不需要删除，保留即可。
 
 ### C++（C++23）
 
@@ -129,7 +130,7 @@ PostgreSQL
 | `client/src/views/About.vue` | 关于我页面（渲染 README） |
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
-| `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage 权限） |
+| `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage_view 权限，保存编辑/创建用户需 manage_edit 权限） |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |

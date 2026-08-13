@@ -60,7 +60,7 @@ void handle_user_update(
     const std::string&      allowed);
 
 /**
- * @brief 处理 GET /api/manage/users 请求（需 manage 权限）。
+ * @brief 处理 GET /api/manage/users 请求（需 manage_view 权限）。
  */
 void handle_manage_users(
     const httplib::Request& req,
@@ -68,7 +68,7 @@ void handle_manage_users(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/manage/user/update 请求（需 manage 权限）。
+ * @brief 处理 POST /api/manage/user/update 请求（需 manage_edit 权限）。
  */
 void handle_manage_update_user(
     const httplib::Request& req,
@@ -76,7 +76,7 @@ void handle_manage_update_user(
     const std::string&      allowed);
 
 /**
- * @brief 处理 POST /api/manage/user/create 请求（需 manage 权限）。
+ * @brief 处理 POST /api/manage/user/create 请求（需 manage_edit 权限）。
  */
 void handle_manage_create_user(
     const httplib::Request& req,

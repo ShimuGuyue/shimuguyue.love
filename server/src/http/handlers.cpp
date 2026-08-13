@@ -431,15 +431,18 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 manage 权限用户可查看用户列表
+                // 权限检查：仅 manage_view 权限用户可查看用户列表
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "manage") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "manage_view") == perms.end())
                 {
-                    spdlog::info("获取用户列表失败：用户 {} 无 manage 权限。", session->user_id);
+                    spdlog::info("获取用户列表失败：用户 {} 无 manage_view 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 manage 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 manage_view 权限"})", "application/json");
                     return;
                 }
+                // 是否可编辑（保存 / 新建用户）
+                const bool can_edit =
+                    std::find(perms.begin(), perms.end(), "manage_edit") != perms.end();
 
                 // 查询所有用户及其权限列表
                 pqxx::work txn{ conn };
@@ -497,7 +500,8 @@ namespace http
                 res.set_content(
                     nlohmann::json{
                         {"users", std::move(users)},
-                        {"all_permissions", std::move(all_permissions)}
+                        {"all_permissions", std::move(all_permissions)},
+                        {"can_edit", can_edit}
                     }.dump(),
                     "application/json"
                 );
@@ -535,13 +539,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 manage 权限用户可更新用户
+                // 权限检查：仅 manage_edit 权限用户可更新用户
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "manage") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "manage_edit") == perms.end())
                 {
-                    spdlog::info("更新用户失败：用户 {} 无 manage 权限。", session->user_id);
+                    spdlog::info("更新用户失败：用户 {} 无 manage_edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 manage 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 manage_edit 权限"})", "application/json");
                     return;
                 }
 
@@ -779,13 +783,13 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 manage 权限用户可创建用户
+                // 权限检查：仅 manage_edit 权限用户可创建用户
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "manage") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "manage_edit") == perms.end())
                 {
-                    spdlog::info("创建用户失败：用户 {} 无 manage 权限。", session->user_id);
+                    spdlog::info("创建用户失败：用户 {} 无 manage_edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 manage 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 manage_edit 权限"})", "application/json");
                     return;
                 }
 

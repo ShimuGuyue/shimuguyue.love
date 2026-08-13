@@ -61,7 +61,7 @@ namespace http
             }
         );
 
-        // GET /api/manage/users — 获取用户列表（需要 manage 权限）
+        // GET /api/manage/users — 获取用户列表（需要 manage_view 权限）
         svr.Get("/api/manage/users",
             [allowed](const auto& req, auto& res)
             {
@@ -69,7 +69,7 @@ namespace http
             }
         );
 
-        // POST /api/manage/user/update — 更新用户（需要 manage 权限）
+        // POST /api/manage/user/update — 更新用户（需要 manage_edit 权限）
         svr.Post("/api/manage/user/update",
             [allowed](const auto& req, auto& res)
             {
@@ -77,7 +77,7 @@ namespace http
             }
         );
 
-        // POST /api/manage/user/create — 新建用户（需要 manage 权限）
+        // POST /api/manage/user/create — 新建用户（需要 manage_edit 权限）
         svr.Post("/api/manage/user/create",
             [allowed](const auto& req, auto& res)
             {

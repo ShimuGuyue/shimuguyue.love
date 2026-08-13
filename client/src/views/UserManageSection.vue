@@ -32,6 +32,7 @@ const auth = useAuthStore()
 
 const users = ref<ManageUser[]>([])
 const allPermissions = ref<string[]>([])
+const canEdit = ref(false)
 const loading = ref(false)
 const error = ref('')
 
@@ -93,6 +94,7 @@ async function loadUsers() {
     const data = await resp.json()
     users.value = data.users ?? []
     allPermissions.value = data.all_permissions ?? []
+    canEdit.value = data.can_edit ?? false
   } catch {
     error.value = '加载失败'
   } finally {
@@ -101,6 +103,13 @@ async function loadUsers() {
 }
 
 onMounted(loadUsers)
+
+/** 无 manage_edit 权限时弹窗提示并返回 false。 */
+function requireEditPermission(): boolean {
+  if (canEdit.value) return true
+  window.alert('操作失败：该操作需要 manage_edit 权限')
+  return false
+}
 
 /** 进入编辑模式：为所有用户生成草稿。 */
 function startEdit() {
@@ -136,6 +145,7 @@ function openCreateDialog() {
 
 /** 提交新建用户。 */
 async function submitCreate() {
+  if (!requireEditPermission()) return
   if (!createForm.value.key.trim()) {
     window.alert('新用户必须设置密钥')
     return
@@ -193,6 +203,7 @@ function cancelPermDialog() {
 
 /** 保存：只提交有改动的行。 */
 async function saveChanges() {
+  if (!requireEditPermission()) return
   saving.value = true
   try {
     for (const draft of drafts.value) {
