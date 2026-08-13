@@ -72,6 +72,20 @@ const fullPermGroups = computed(() =>
   }))
 )
 
+/** “编辑权限”弹窗：全部权限按大类型分组（未匹配的类型归入“其他”）。 */
+const permDialogGroups = computed(() => {
+  const groups = PERMISSION_GROUPS.map(group => ({
+    label: group.label,
+    perms: allPermissions.value.filter(perm => group.pattern.test(perm)),
+  }))
+  const known = groups.flatMap(group => group.perms)
+  const others = allPermissions.value.filter(perm => !known.includes(perm))
+  if (others.length) {
+    groups.push({ label: '其他', perms: others })
+  }
+  return groups
+})
+
 /** 打开指定用户的完整权限弹窗。 */
 function openFullPerm(user: ManageUser) {
   fullPermUser.value = user
@@ -583,25 +597,44 @@ async function saveChanges() {
       </div>
     </div>
 
-    <div v-if="permDialogDraft" class="create-mask">
-      <div class="create-box" role="dialog" aria-modal="true">
-        <h2 class="create-box__title">编辑权限</h2>
+    <div
+      v-if="permDialogDraft"
+      class="create-mask"
+      @click.self="cancelPermDialog"
+    >
+      <div class="create-box perm-box" role="dialog" aria-modal="true">
+        <h2 class="create-box__title">
+          编辑权限 — {{ permDialogDraft.username || '匿名用户' }}
+        </h2>
 
-        <div class="create-box__perms">
-          <label
-            v-for="perm in allPermissions"
-            :key="perm"
-            class="create-box__perm"
-          >
-            <input
-              type="checkbox"
-              :value="perm"
-              v-model="permDialogSelection"
-              class="create-box__checkbox"
-            />
-            {{ perm }}
-          </label>
-        </div>
+        <table class="perm-table">
+          <tbody>
+            <tr
+              v-for="group in permDialogGroups"
+              :key="group.label"
+            >
+              <th>{{ group.label }}</th>
+              <td>
+                <div v-if="group.perms.length" class="create-box__perms">
+                  <label
+                    v-for="perm in group.perms"
+                    :key="perm"
+                    class="create-box__perm"
+                  >
+                    <input
+                      type="checkbox"
+                      :value="perm"
+                      v-model="permDialogSelection"
+                      class="create-box__checkbox"
+                    />
+                    {{ perm }}
+                  </label>
+                </div>
+                <span v-else class="users-hint">无</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <div class="create-box__actions">
           <button
