@@ -1723,11 +1723,11 @@ namespace http
                     return;
                 }
                 const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "edit") == perms.end())
+                if (std::find(perms.begin(), perms.end(), "introduction-edit") == perms.end())
                 {
-                    spdlog::info("更新个人简介失败：用户 {} 无 edit 权限。", session->user_id);
+                    spdlog::info("更新个人简介失败：用户 {} 无 introduction-edit 权限。", session->user_id);
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 edit 权限"})", "application/json");
+                    res.set_content(R"({"error":"当前用户无 introduction-edit 权限"})", "application/json");
                     return;
                 }
 

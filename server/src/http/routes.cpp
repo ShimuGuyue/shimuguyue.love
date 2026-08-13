@@ -197,7 +197,7 @@ namespace http
             }
         );
 
-        // POST /api/profile/save — 更新个人介绍（需要 edit 权限）
+        // POST /api/profile/save — 更新个人介绍（需要 introduction-edit 权限）
         svr.Post("/api/profile/save",
             [allowed](const auto& req, auto& res)
             {
