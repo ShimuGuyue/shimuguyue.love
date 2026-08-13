@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import '@/assets/manage/button.css'
 import '@/assets/manage/font.css'
+import '@/assets/manage/table.css'
 
 const auth = useAuthStore()
 
@@ -15,6 +16,22 @@ const keyEnabled = ref(false)
 const hasPassword = ref(false)
 const keyEnabledDraft = ref(true)
 const passwordDraft = ref('')
+
+/** 权限大类型分组：每种大类型在权限表格中占一行。 */
+const PERMISSION_GROUPS = [
+  { label: '用户管理', pattern: /^manage/ },
+  { label: '博客', pattern: /^blog/ },
+  { label: '照片墙', pattern: /^photo-wall/ },
+  { label: '个人简介', pattern: /^introduction/ },
+]
+
+/** 按大类型归组后的权限（仅含当前用户拥有的权限）。 */
+const permissionGroups = computed(() =>
+  PERMISSION_GROUPS.map(group => ({
+    label: group.label,
+    perms: permissions.value.filter(perm => group.pattern.test(perm)),
+  }))
+)
 
 onMounted(async () => {
   if (!auth.id) return
@@ -175,16 +192,22 @@ async function saveUsername() {
       <div class="info-list__row">
         <dt>权限</dt>
         <dd>
-          <template v-if="permissions.length">
-            <span
-              v-for="perm in permissions"
-              :key="perm"
-              class="perm-item"
-            >
-              {{ perm }}
-            </span>
-          </template>
-          <span v-else class="info-list__hint">暂无特殊权限</span>
+          <table class="perm-table">
+            <tbody>
+              <tr
+                v-for="group in permissionGroups"
+                :key="group.label"
+              >
+                <th>{{ group.label }}</th>
+                <td>
+                  <span v-if="group.perms.length" class="perm-item">
+                    {{ group.perms.join('、') }}
+                  </span>
+                  <span v-else class="info-list__hint">无</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </dd>
       </div>
     </dl>
@@ -256,11 +279,6 @@ html.dark .profile-section {
   gap: 8px;
   margin: 0;
   font-size: 1rem;
-  color: var(--color-text);
-}
-
-.perm-item {
-  font-size: 0.85rem;
   color: var(--color-text);
 }
 

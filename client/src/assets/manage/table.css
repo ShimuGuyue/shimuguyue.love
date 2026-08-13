@@ -1,0 +1,41 @@
+/* ═══════════════════════════════════════════════════════════
+   后台管理页权限表格样式
+   ─────────────────────────────────────────────────────────
+   当前用户权限：每行一个大类型，行内多个权限用「、」分隔。
+   权限列用 <td class="perm-item">（或“无”提示）。
+   ═══════════════════════════════════════════════════════════ */
+
+/* 权限文本：略小字号，主题文字色 */
+.perm-item {
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+/* 权限表格容器：合并相邻边框，统一样式字号 */
+.perm-table {
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+/* 单元格：上下留白 + 行间分隔线，靠左对齐、顶部对齐 */
+.perm-table th,
+.perm-table td {
+  padding: 8px 14px 8px 0;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+/* 最后一行去掉底部分隔线，避免与所在区块边框重复 */
+.perm-table tbody tr:last-child th,
+.perm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 类型列：固定宽度、加粗、次要文字色、不换行 */
+.perm-table th {
+  width: 88px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
