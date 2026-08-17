@@ -6,7 +6,6 @@
 #include "http/handlers.h"
 
 #include <algorithm>
-#include <ctime>
 #include <sstream>
 
 #include <nlohmann/json.hpp>
@@ -1460,14 +1459,12 @@ namespace http
                     }
                 }
 
-                std::time_t now{ std::time(nullptr) };
-                char buf[16];
-                std::strftime(buf, sizeof buf, "%Y-%m-%d", std::localtime(&now));
+                const auto date = doc::effective_blog_date(body.value("update_time", ""));
 
                 const auto err = doc::save_blog(
                     conn, title, description, category, tagList,
                     pathCat, pathName,
-                    content, buf
+                    content, date
                 );
 
                 if (err)
@@ -1563,13 +1560,11 @@ namespace http
                     }
                 }
 
-                std::time_t now{ std::time(nullptr) };
-                char buf[16];
-                std::strftime(buf, sizeof buf, "%Y-%m-%d", std::localtime(&now));
+                const auto date = doc::effective_blog_date(body.value("update_time", ""));
 
                 const auto err = doc::update_blog(
                     conn, title, description, category, tagList,
-                    old_file_path, pathCat, pathName, content, buf
+                    old_file_path, pathCat, pathName, content, date
                 );
 
                 if (err)

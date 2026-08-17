@@ -14,19 +14,19 @@ const router = useRouter()
 /// 是否为编辑模式（路由含 file_path 参数）
 const isEditing = computed(() => !!route.params.file_path)
 
-const title = ref('')
-const description = ref('')
-const category = ref('')
-const tags = ref('')
-const pathCategory = ref('')
-const pathName = ref('')
+const title             = ref('')
+const description       = ref('')
+const category          = ref('')
+const tags              = ref('')
+const pathCategory      = ref('')
+const pathName          = ref('')
+/// 导入文件 frontmatter 中的更新时间（YYYY-MM-DD，未导入则为空）
+const updateTime        = ref('')
 /// 编辑模式下的原始 file_path（新建时为 null）
-const editFilePath = ref<string | null>(
-  isEditing.value ? String(route.params.file_path) : null
-)
-const editorRef = ref<HTMLDivElement | null>(null)
+const editFilePath      = ref<string | null>(isEditing.value ? String(route.params.file_path) : null)
+const editorRef         = ref<HTMLDivElement | null>(null)
 const savedSuccessfully = ref(false)
-const permissions = ref<string[]>([])
+const permissions       = ref<string[]>([])
 
 /// 判断是否有任何字段非空（有内容就拦截离开）
 function hasContent(): boolean {
@@ -119,6 +119,8 @@ async function importFile() {
       description.value = data.description || ''
       category.value = data.category || ''
       tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || '')
+      const importedUpdateTime = data.update_time || ''
+      updateTime.value = isValidDateString(importedUpdateTime) ? importedUpdateTime : ''
       pathCategory.value = data.file_path_category || ''
       pathName.value = data.file_path_name || ''
 
@@ -133,6 +135,22 @@ async function importFile() {
     }
   }
   input.click()
+}
+
+/// 校验 YYYY-MM-DD 格式且为真实存在的日期
+function isValidDateString(value: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (!m)
+    return false
+  const year = Number(m[1])
+  const month = Number(m[2])
+  const day = Number(m[3])
+  if (month < 1 || month > 12 || day < 1)
+    return false
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+  const daysInMonth = [31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+  const maxDay = daysInMonth[month - 1]
+  return maxDay !== undefined && day <= maxDay
 }
 
 async function saveBlog() {
@@ -204,6 +222,7 @@ async function saveBlog() {
       description: description.value,
       category: category.value,
       tags: tagList,
+      update_time: updateTime.value,
       file_path_category: pathCategory.value,
       file_path_name: pathName.value,
       old_file_path: editFilePath.value,
@@ -213,6 +232,7 @@ async function saveBlog() {
       description: description.value,
       category: category.value,
       tags: tagList,
+      update_time: updateTime.value,
       file_path_category: pathCategory.value,
       file_path_name: pathName.value,
       content,
