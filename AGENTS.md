@@ -131,6 +131,7 @@ PostgreSQL
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
 | `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage:view 权限，保存编辑/创建用户需 manage:edit 权限） |
+| `client/src/views/BlogManageSection.vue` | 博客管理栏目页（路由 /manage/blogs，需 manage:view 权限，表格展示全部博客的 file_path / title / category / tags） |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |
@@ -168,6 +169,9 @@ PostgreSQL
 | `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |
 | `server/src/crypto/argon2id.cpp` / `.h` | Argon2id 密码哈希，随机盐 / 固定盐两种模式 |
 | `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询（博客文件路径来自 `FILE_PATH/doc`） |
+| `server/src/export/export_data.cpp` / `.h` | 后台数据导出 |
+| `server/src/export/export_queries.cpp` / `.h` | 数据导出查询：各数据表读取为 JSON 数组 |
+| `server/src/export/zip_writer.cpp` / `.h` | zip 打包工具（store 方式，无压缩） |
 | `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
 | `server/src/profile/profile_queries.cpp` / `.h` | 个人介绍查询、更新 |
 | `server/src/about/about_queries.cpp` / `.h` | 关于我 README 内容数据库查询 |

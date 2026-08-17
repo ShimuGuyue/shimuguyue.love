@@ -34,6 +34,7 @@ const auth = useAuthStore()
 const users = ref<ManageUser[]>([])
 const allPermissions = ref<string[]>([])
 const canEdit = ref(false)
+const canDownload = ref(false)
 const loading = ref(false)
 const error = ref('')
 
@@ -152,7 +153,50 @@ async function loadUsers() {
   }
 }
 
-onMounted(loadUsers)
+onMounted(async () => {
+  await loadUsers()
+  // 数据下载需要 manage:download 权限
+  if (auth.isLoggedIn && auth.token) {
+    try {
+      const resp = await fetch('/api/user/permissions', {
+        headers: { 'Authorization': 'Bearer ' + auth.token }
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        canDownload.value = (data.permissions || []).includes('manage:download')
+      }
+    } catch { /* 权限获取失败静默 */ }
+  }
+})
+
+/** 下载用户数据 zip */
+async function downloadData() {
+  if (!canDownload.value) {
+    window.alert('操作失败：该操作需要 manage:download 权限')
+    return
+  }
+  try {
+    const resp = await fetch('/api/manage/download?scope=users', {
+      headers: { 'Authorization': 'Bearer ' + auth.token }
+    })
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}))
+      window.alert(data.error ?? '下载失败')
+      return
+    }
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'data-users.zip'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch {
+    window.alert('下载失败')
+  }
+}
 
 /** 无 manage:edit 权限时弹窗提示并返回 false。 */
 function requireEditPermission(): boolean {
@@ -254,6 +298,19 @@ function cancelPermDialog() {
 /** 保存：只提交有改动的行。 */
 async function saveChanges() {
   if (!requireEditPermission()) return
+
+  // 保存前先校验：本次编辑中填写的新密钥不允许重复，避免“先改第一个、其余报错”
+  const keySeen = new Set<string>()
+  for (const draft of drafts.value) {
+    const key = draft.key.trim()
+    if (!key) continue
+    if (keySeen.has(key)) {
+      window.alert('存在重复的密钥')
+      return
+    }
+    keySeen.add(key)
+  }
+
   saving.value = true
   try {
     for (const draft of drafts.value) {
@@ -324,7 +381,15 @@ async function saveChanges() {
   <div class="users-section">
     <div class="users-header">
       <h1 class="admin-content__title">用户管理</h1>
-      <div v-if="users.length" class="users-toolbar">
+      <div class="users-toolbar">
+        <button
+          type="button"
+          class="manage-btn manage-btn--primary"
+          :disabled="saving"
+          @click="downloadData"
+        >
+          导出数据
+        </button>
         <template v-if="editing">
           <button
             type="button"
@@ -522,7 +587,7 @@ async function saveChanges() {
       v-if="showCreateDialog"
       class="create-mask"
     >
-      <div class="create-box" role="dialog" aria-modal="true">
+      <div class="create-box perm-box" role="dialog" aria-modal="true">
         <h2 class="create-box__title">新建用户</h2>
 
         <label class="create-box__field">
@@ -565,21 +630,31 @@ async function saveChanges() {
 
         <div class="create-box__field">
           <span>权限</span>
-          <div class="create-box__perms">
-            <label
-              v-for="perm in allPermissions"
-              :key="perm"
-              class="create-box__perm"
-            >
-              <input
-                type="checkbox"
-                :value="perm"
-                v-model="createForm.permissions"
-                class="create-box__checkbox"
-              />
-              {{ permLabel(perm) }}
-            </label>
-          </div>
+          <table class="perm-table">
+            <tbody>
+              <tr v-for="group in permDialogGroups" :key="group.label">
+                <th>{{ group.label }}</th>
+                <td>
+                  <div v-if="group.perms.length" class="create-box__perms">
+                    <label
+                      v-for="perm in group.perms"
+                      :key="perm"
+                      class="create-box__perm"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="perm"
+                        v-model="createForm.permissions"
+                        class="create-box__checkbox"
+                      />
+                      {{ permLabel(perm) }}
+                    </label>
+                  </div>
+                  <span v-else class="users-hint">无</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <div class="create-box__actions">

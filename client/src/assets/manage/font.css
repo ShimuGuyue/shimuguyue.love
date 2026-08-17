@@ -18,14 +18,17 @@
 .info-list__hint,
 .perm-item,
 .users-table th,
-.users-table td {
+.users-table td,
+.blogs-table th,
+.blogs-table td {
   font-family: 'FangSong', '仿宋', STFangsong, serif;
 }
 
 /* 输入控件：仿宋 */
 .info-list__input,
 .users-table__input,
-.create-box__input {
+.create-box__input,
+.blogs-table__input {
   font-family: 'FangSong', '仿宋', STFangsong, serif;
 }
 

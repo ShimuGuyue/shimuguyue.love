@@ -22,6 +22,9 @@ add_executable(${PROJECT_NAME}
     src/db/connection.cpp
     src/db/connection_pool.cpp
     src/crypto/argon2id.cpp
+    src/export/export_data.cpp
+    src/export/export_queries.cpp
+    src/export/zip_writer.cpp
     src/auth/login.cpp
     src/auth/session.cpp
     src/doc/blog_queries.cpp
