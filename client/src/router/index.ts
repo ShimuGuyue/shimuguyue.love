@@ -4,15 +4,12 @@ import Home from '@/views/Home.vue'
 import Blogs from '@/views/Blogs.vue'
 import Projects from '@/views/Projects.vue'
 import Favorites from '@/views/Favorites.vue'
-import About from '@/views/About.vue'
 import LoginKey from '@/views/LoginKey.vue'
 import LoginPassword from '@/views/LoginPassword.vue'
 import Manage from '@/views/Manage.vue'
 import ProfileSection from '@/views/ProfileSection.vue'
 import UserManageSection from '@/views/UserManageSection.vue'
 import BlogManageSection from '@/views/BlogManageSection.vue'
-import BlogDetail from '@/views/BlogDetail.vue'
-import BlogEdit from '@/views/BlogEdit.vue'
 import Acknowledgments from '@/views/Acknowledgments.vue'
 
 const router = createRouter({
@@ -22,7 +19,7 @@ const router = createRouter({
     { path: '/blogs', name: 'blogs', component: Blogs },
     { path: '/projects', name: 'projects', component: Projects },
     { path: '/favorites', name: 'favorites', component: Favorites },
-    { path: '/about', name: 'about', component: About },
+    { path: '/about', name: 'about', component: () => import('@/views/About.vue') },
     { path: '/thanks', name: 'acknowledgments', component: Acknowledgments },
     { path: '/login/key', name: 'login-key', component: LoginKey },
     { path: '/login/password', name: 'login-password', component: LoginPassword },
@@ -51,9 +48,9 @@ const router = createRouter({
         },
       ],
     },
-    { path: '/blog-edit/new', name: 'blog-edit-new', component: BlogEdit },
-    { path: '/blog-edit/:file_path(.*)', name: 'blog-edit', component: BlogEdit },
-    { path: '/blogs/:file_path(.*)', name: 'blog-detail', component: BlogDetail },
+    { path: '/blog-edit/new', name: 'blog-edit-new', component: () => import('@/views/BlogEdit.vue') },
+    { path: '/blog-edit/:file_path(.*)', name: 'blog-edit', component: () => import('@/views/BlogEdit.vue') },
+    { path: '/blogs/:file_path(.*)', name: 'blog-detail', component: () => import('@/views/BlogDetail.vue') },
   ],
 })
 

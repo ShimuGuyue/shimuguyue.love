@@ -122,12 +122,14 @@ PostgreSQL
 | `client/src/router/index.ts` | 14 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
 | `client/src/stores/auth.ts` | 认证状态（token、username），localStorage 持久化 |
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
-| `client/src/components/NavBar.vue` | 唯一公共组件：导航栏、主题切换、用户入口 |
+| `client/src/components/NavBar.vue` | 公共组件：导航栏、主题切换、用户入口 |
+| `client/src/components/MarkdownPreview.vue` | 共享 Markdown 预览组件：封装 `MdPreview`，跟随暗色主题，标题 id 统一走 `md-editor-setup` 的 slug 规则 |
+| `client/src/lib/md-editor-setup.ts` | md-editor-v3 全局配置：注入本地 highlight.js / katex 实例、`typographer: true` / `breaks: false`，并导出标题 slug 函数 |
 | `client/src/views/Home.vue` | 主页：照片墙浏览、编辑、上传 |
 | `client/src/views/Blogs.vue` | 博客列表页（分类/标签筛选、搜索） |
-| `client/src/views/BlogDetail.vue` | 博客详情页（Markdown 渲染） |
-| `client/src/views/BlogEdit.vue` | 博客新建/编辑页 |
-| `client/src/views/About.vue` | 关于我页面（渲染 README） |
+| `client/src/views/BlogDetail.vue` | 博客详情页（`MarkdownPreview` 渲染，目录来自 `getCatalog` 事件，保留滚动高亮与点击标题滚动） |
+| `client/src/views/BlogEdit.vue` | 博客新建/编辑页（`MdEditor` 编辑器，图片/mermaid/echarts/prettier/全屏按钮禁用） |
+| `client/src/views/About.vue` | 关于我页面（渲染 README，`MarkdownPreview` 预览） |
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
 | `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage:view 权限，保存编辑/创建用户需 manage:edit 权限） |
