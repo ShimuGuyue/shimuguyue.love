@@ -145,7 +145,7 @@ PostgreSQL
 | `client/src/assets/blog/selector.css` | 博客筛选页样式 |
 | `client/src/assets/common/button.css` | 公共按钮样式 |
 | `client/src/assets/glass.css` | 毛玻璃工具类 |
-| `client/src/assets/markdown.css` | Markdown 渲染样式（PinkFairy 主题） |
+| `client/src/assets/markdown/` | Markdown 渲染样式（PinkFairy 主题），按类型拆分：`headings.css`、`divider.css`、`text.css`、`blockquote.css`、`lists.css`、`code.css`、`tables.css`、`images.css`、`tasks.css`、`alerts.css` |
 | `client/src/assets/manage/button.css` | 后台管理页按钮样式 |
 | `client/src/assets/manage/font.css` | 后台管理页文本样式 |
 | `client/src/assets/manage/table.css` | 后台管理页表格样式 |
