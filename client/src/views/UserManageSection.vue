@@ -57,7 +57,7 @@ const createForm = ref({
 
 /** 权限大类型分组：与个人信息页权限表格保持一致。 */
 const PERMISSION_GROUPS = [
-  { label: '用户管理', pattern: /^manage:/ },
+  { label: '后台管理', pattern: /^manage:/ },
   { label: '博客', pattern: /^blog:/ },
   { label: '照片墙', pattern: /^photo_wall:/ },
   { label: '个人简介', pattern: /^introduction:/ },
