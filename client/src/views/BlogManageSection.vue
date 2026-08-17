@@ -82,7 +82,17 @@ async function loadBlogs() {
       error.value = data.error ?? '加载失败'
       return
     }
-    blogs.value = await resp.json()
+    const data = await resp.json() as BlogRow[]
+    // 博客条目按“所属分类 → 标题”排序，分类/标题为空时排在最后
+    blogs.value = data.sort((a, b) => {
+      const catA = a.category || '\uffff'
+      const catB = b.category || '\uffff'
+      const catDiff = catA.localeCompare(catB, 'zh')
+      if (catDiff !== 0) return catDiff
+      const titleA = a.title || '\uffff'
+      const titleB = b.title || '\uffff'
+      return titleA.localeCompare(titleB, 'zh')
+    })
   } catch {
     error.value = '加载失败'
   } finally {
@@ -274,35 +284,16 @@ async function saveChanges() {
         <table class="blogs-table">
           <thead>
             <tr>
-              <th class="blogs-table__file-path">博客路径</th>
               <th class="blogs-table__title">标题</th>
               <th class="blogs-table__category">所属分类</th>
               <th class="blogs-table__tags">标签列表</th>
+              <th class="blogs-table__file-path">博客路径</th>
               <th class="blogs-table__content">博客详情</th>
               <th class="blogs-table__update-time">更新时间</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(row, index) in pageRows" :key="row.blog?.id ?? index">
-              <td class="blogs-table__file-path">
-                <div v-if="editing && row.draft" class="blogs-table__path-row">
-                  <input
-                    v-model="row.draft.file_path_category"
-                    class="blogs-table__input"
-                    placeholder="分类目录"
-                  />
-                  <span class="blogs-table__path-sep">/</span>
-                  <input
-                    v-model="row.draft.file_path_name"
-                    class="blogs-table__input"
-                    placeholder="文件名"
-                  />
-                </div>
-                <span v-else-if="row.blog?.file_path" :title="row.blog.file_path">
-                  {{ row.blog.file_path }}
-                </span>
-                <span v-else-if="row.blog" class="blogs-hint">无</span>
-              </td>
               <td class="blogs-table__title">
                 <input
                   v-if="editing && row.draft"
@@ -346,6 +337,25 @@ async function saveChanges() {
                   </div>
                   <span v-else class="blogs-hint">无</span>
                 </template>
+              </td>
+              <td class="blogs-table__file-path">
+                <div v-if="editing && row.draft" class="blogs-table__path-row">
+                  <input
+                    v-model="row.draft.file_path_category"
+                    class="blogs-table__input"
+                    placeholder="分类目录"
+                  />
+                  <span class="blogs-table__path-sep">/</span>
+                  <input
+                    v-model="row.draft.file_path_name"
+                    class="blogs-table__input"
+                    placeholder="文件名"
+                  />
+                </div>
+                <span v-else-if="row.blog?.file_path" :title="row.blog.file_path">
+                  {{ row.blog.file_path }}
+                </span>
+                <span v-else-if="row.blog" class="blogs-hint">无</span>
               </td>
               <td class="blogs-table__content">
                 <div v-if="row.blog?.file_path" class="blogs-table__content-view">
