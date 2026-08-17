@@ -317,7 +317,7 @@ async function saveChanges() {
           </button>
         </template>
         <button
-          v-else-if="canEdit && blogs.length"
+          v-else
           type="button"
           class="manage-btn manage-btn--primary"
           @click="startEdit"

@@ -390,41 +390,39 @@ async function saveChanges() {
         >
           导出数据
         </button>
-        <template v-if="users.length">
-          <template v-if="editing">
-            <button
-              type="button"
-              class="manage-btn manage-btn--primary"
-              :disabled="saving"
-              @click="saveChanges"
-            >
-              {{ saving ? '保存中...' : '保存编辑' }}
-            </button>
-            <button
-              type="button"
-              class="manage-btn manage-btn--primary"
-              :disabled="saving"
-              @click="cancelEdit"
-            >
-              取消编辑
-            </button>
-          </template>
-          <template v-else>
-            <button
-              type="button"
-              class="manage-btn manage-btn--primary"
-              @click="openCreateDialog"
-            >
-              新建用户
-            </button>
-            <button
-              type="button"
-              class="manage-btn manage-btn--primary"
-              @click="startEdit"
-            >
-              编辑用户
-            </button>
-          </template>
+        <template v-if="editing">
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            :disabled="saving"
+            @click="saveChanges"
+          >
+            {{ saving ? '保存中...' : '保存编辑' }}
+          </button>
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            :disabled="saving"
+            @click="cancelEdit"
+          >
+            取消编辑
+          </button>
+        </template>
+        <template v-else>
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            @click="openCreateDialog"
+          >
+            新建用户
+          </button>
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            @click="startEdit"
+          >
+            编辑用户
+          </button>
         </template>
       </div>
     </div>
