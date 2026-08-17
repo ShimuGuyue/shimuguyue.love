@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import '@/assets/manage/button.css'
 import '@/assets/manage/font.css'
@@ -13,12 +13,34 @@ interface BlogRow {
   tags: string[]
 }
 
+/** 编辑模式下的行草稿：可编辑博客路径、标题、分类、标签 */
+interface BlogDraft {
+  id: number
+  old_file_path: string
+  file_path_category: string
+  file_path_name: string
+  title: string
+  category: string
+  tags: string
+}
+
+/** 表格行：非编辑态显示博客数据，编辑态绑定额外草稿 */
+interface PageRow {
+  blog: BlogRow | null
+  draft: BlogDraft | null
+}
+
 const auth = useAuthStore()
 
 const blogs = ref<BlogRow[]>([])
 const loading = ref(false)
 const error = ref('')
 const tagDialogBlog = ref<BlogRow | null>(null)
+
+const editing = ref(false)
+const saving = ref(false)
+const canEdit = ref(false)
+const drafts = ref<BlogDraft[]>([])
 
 /** 分页：每页固定 15 条（与用户管理页保持一致） */
 const PAGE_SIZE = 15
@@ -32,10 +54,19 @@ const pageNumbers = computed(() =>
   Array.from({ length: pageCount.value }, (_, i) => i + 1)
 )
 
-/** 当前页数据 */
-const pageRows = computed(() => {
+/** 当前页数据：不足 15 条时空行补齐，并带上对应草稿 */
+const pageRows = computed<PageRow[]>(() => {
   const start = (page.value - 1) * PAGE_SIZE
-  return blogs.value.slice(start, start + PAGE_SIZE)
+  return Array.from({ length: PAGE_SIZE }, (_, i) => {
+    const blog = blogs.value[start + i] ?? null
+    return { blog, draft: drafts.value[start + i] ?? null }
+  })
+})
+
+watch([blogs, pageCount], () => {
+  if (page.value > pageCount.value) {
+    page.value = pageCount.value
+  }
 })
 
 async function loadBlogs() {
@@ -58,6 +89,22 @@ async function loadBlogs() {
   }
 }
 
+onMounted(async () => {
+  await loadBlogs()
+  // 编辑保存需要 blog:edit 权限
+  if (auth.isLoggedIn && auth.token) {
+    try {
+      const resp = await fetch('/api/user/permissions', {
+        headers: { 'Authorization': 'Bearer ' + auth.token }
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        canEdit.value = (data.permissions || []).includes('blog:edit')
+      }
+    } catch { /* 权限获取失败静默 */ }
+  }
+})
+
 /** 打开指定博客的完整标签弹窗。 */
 function openTagDialog(blog: BlogRow) {
   tagDialogBlog.value = blog
@@ -68,13 +115,154 @@ function closeTagDialog() {
   tagDialogBlog.value = null
 }
 
-onMounted(loadBlogs)
+/** 进入编辑模式：为所有博客生成草稿。 */
+function startEdit() {
+  drafts.value = blogs.value.map((blog) => {
+    const slash = blog.file_path ? blog.file_path.lastIndexOf('/') : -1
+    return {
+      id: blog.id,
+      old_file_path: blog.file_path ?? '',
+      file_path_category: slash >= 0 ? blog.file_path!.slice(0, slash) : '',
+      file_path_name: slash >= 0 ? blog.file_path!.slice(slash + 1) : (blog.file_path ?? ''),
+      title: blog.title,
+      category: blog.category ?? '',
+      tags: blog.tags.join(', '),
+    }
+  })
+  editing.value = true
+}
+
+/** 取消编辑：丢弃草稿。 */
+function cancelEdit() {
+  editing.value = false
+  drafts.value = []
+}
+
+/** 逗号分隔的标签文本 → 标签数组。 */
+function tagsToArray(tags: string): string[] {
+  return tags.split(',').map(s => s.trim()).filter(Boolean)
+}
+
+/** 保存编辑：仅提交有改动的行（与博客编辑页同款校验规则）。 */
+async function saveChanges() {
+  if (!canEdit.value) {
+    window.alert('操作失败：该操作需要 blog:edit 权限')
+    return
+  }
+
+  const META_RE = /[<>"'\\|*?\/ .!@#$%^&()+=[]{};:'"`,.<>?~\-]/
+  for (const draft of drafts.value) {
+    if (META_RE.test(draft.title)) {
+      window.alert('标题 含有特殊字符')
+      return
+    }
+    if (META_RE.test(draft.category)) {
+      window.alert('分类 含有特殊字符')
+      return
+    }
+    if (META_RE.test(draft.file_path_category) || META_RE.test(draft.file_path_name)) {
+      window.alert('博客路径 含有特殊字符')
+      return
+    }
+    for (const tag of tagsToArray(draft.tags)) {
+      if (META_RE.test(tag)) {
+        window.alert('标签 含有特殊字符')
+        return
+      }
+    }
+  }
+
+  saving.value = true
+  try {
+    for (const draft of drafts.value) {
+      const original = blogs.value.find((blog) => blog.id === draft.id)
+      if (!original) continue
+
+      const tagList = tagsToArray(draft.tags)
+      const newFilePath = `${draft.file_path_category}/${draft.file_path_name}`
+      const changed =
+        draft.title !== original.title ||
+        draft.category !== (original.category ?? '') ||
+        tagList.join(',') !== original.tags.join(',') ||
+        newFilePath !== (original.file_path ?? '')
+      if (!changed) continue
+
+      // 更新接口需要 description 与 content，先从详情接口取回
+      const getResp = await fetch('/api/blog?file_path=' + encodeURIComponent(draft.old_file_path))
+      const existing = await getResp.json().catch(() => ({}))
+      if (!getResp.ok) {
+        window.alert(existing.error ?? '获取博客内容失败')
+        return
+      }
+
+      const resp = await fetch('/api/blog/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + auth.token,
+        },
+        body: JSON.stringify({
+          title: draft.title,
+          description: existing.description ?? '',
+          category: draft.category,
+          tags: tagList,
+          file_path_category: draft.file_path_category,
+          file_path_name: draft.file_path_name,
+          old_file_path: draft.old_file_path,
+          content: existing.content ?? '',
+        }),
+      })
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        window.alert(data.error ?? '保存失败')
+        return
+      }
+    }
+
+    editing.value = false
+    drafts.value = []
+    await loadBlogs()
+    window.alert('保存成功')
+  } catch {
+    window.alert('保存失败')
+  } finally {
+    saving.value = false
+  }
+}
 </script>
 
 <template>
   <div class="blogs-section">
     <div class="blogs-header">
       <h1 class="admin-content__title">博客管理</h1>
+      <div class="blogs-toolbar">
+        <template v-if="editing">
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            :disabled="saving"
+            @click="saveChanges"
+          >
+            {{ saving ? '保存中...' : '保存编辑' }}
+          </button>
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            :disabled="saving"
+            @click="cancelEdit"
+          >
+            取消编辑
+          </button>
+        </template>
+        <button
+          v-else-if="canEdit && blogs.length"
+          type="button"
+          class="manage-btn manage-btn--primary"
+          @click="startEdit"
+        >
+          编辑博客
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="page-loading">加载中...</div>
@@ -93,52 +281,86 @@ onMounted(loadBlogs)
             </tr>
           </thead>
           <tbody>
-            <tr v-for="blog in pageRows" :key="blog.id">
+            <tr v-for="(row, index) in pageRows" :key="row.blog?.id ?? index">
               <td class="blogs-table__file-path">
-                <span v-if="blog.file_path" :title="blog.file_path">
-                  {{ blog.file_path }}
+                <div v-if="editing && row.draft" class="blogs-table__path-row">
+                  <input
+                    v-model="row.draft.file_path_category"
+                    class="blogs-table__input"
+                    placeholder="分类目录"
+                  />
+                  <span class="blogs-table__path-sep">/</span>
+                  <input
+                    v-model="row.draft.file_path_name"
+                    class="blogs-table__input"
+                    placeholder="文件名"
+                  />
+                </div>
+                <span v-else-if="row.blog?.file_path" :title="row.blog.file_path">
+                  {{ row.blog.file_path }}
                 </span>
-                <span v-else class="blogs-hint">无</span>
+                <span v-else-if="row.blog" class="blogs-hint">无</span>
               </td>
               <td class="blogs-table__title">
-                <span v-if="blog.title" :title="blog.title">{{ blog.title }}</span>
-                <span v-else class="blogs-hint">无</span>
+                <input
+                  v-if="editing && row.draft"
+                  v-model="row.draft.title"
+                  class="blogs-table__input"
+                />
+                <span v-else-if="row.blog?.title" :title="row.blog.title">
+                  {{ row.blog.title }}
+                </span>
+                <span v-else-if="row.blog" class="blogs-hint">无</span>
               </td>
               <td class="blogs-table__category">
-                <span v-if="blog.category">{{ blog.category }}</span>
-                <span v-else class="blogs-hint">无</span>
+                <input
+                  v-if="editing && row.draft"
+                  v-model="row.draft.category"
+                  class="blogs-table__input"
+                  placeholder="分类名称"
+                />
+                <span v-else-if="row.blog?.category">{{ row.blog.category }}</span>
+                <span v-else-if="row.blog" class="blogs-hint">无</span>
               </td>
               <td class="blogs-table__tags">
-                <div v-if="blog.tags.length" class="users-table__perms-view">
-                  <span class="users-table__perms-text" :title="blog.tags.join('、')">
-                    {{ blog.tags.join('、') }}
-                  </span>
-                  <button
-                    type="button"
-                    class="manage-btn users-table__perms-btn"
-                    @click="openTagDialog(blog)"
-                  >
-                    完整标签
-                  </button>
-                </div>
-                <span v-else class="blogs-hint">无</span>
+                <input
+                  v-if="editing && row.draft"
+                  v-model="row.draft.tags"
+                  class="blogs-table__input"
+                  placeholder="用英文逗号分隔"
+                />
+                <template v-else-if="row.blog">
+                  <div v-if="row.blog.tags.length" class="users-table__perms-view">
+                    <span class="users-table__perms-text" :title="row.blog.tags.join('、')">
+                      {{ row.blog.tags.join('、') }}
+                    </span>
+                    <button
+                      type="button"
+                      class="manage-btn users-table__perms-btn"
+                      @click="openTagDialog(row.blog)"
+                    >
+                      完整标签
+                    </button>
+                  </div>
+                  <span v-else class="blogs-hint">无</span>
+                </template>
               </td>
               <td class="blogs-table__content">
-                <div v-if="blog.file_path" class="blogs-table__content-view">
+                <div v-if="row.blog?.file_path" class="blogs-table__content-view">
                   <RouterLink
-                    :to="{ name: 'blog-detail', params: { file_path: blog.file_path } }"
+                    :to="{ name: 'blog-detail', params: { file_path: row.blog.file_path } }"
                     class="manage-btn manage-btn--primary blogs-table__link"
                   >
                     博客详情
                   </RouterLink>
                   <RouterLink
-                    :to="{ name: 'blog-edit', params: { file_path: blog.file_path } }"
+                    :to="{ name: 'blog-edit', params: { file_path: row.blog.file_path } }"
                     class="manage-btn manage-btn--primary blogs-table__link"
                   >
                     内容编辑
                   </RouterLink>
                 </div>
-                <span v-else class="blogs-hint">无</span>
+                <span v-else-if="row.blog" class="blogs-hint">无</span>
               </td>
             </tr>
           </tbody>
@@ -217,6 +439,11 @@ onMounted(loadBlogs)
   margin-bottom: 16px;
 }
 
+.blogs-toolbar {
+  display: flex;
+  gap: 8px;
+}
+
 .admin-content__title {
   margin: 0;
   font-size: 1.5rem;
@@ -246,6 +473,18 @@ onMounted(loadBlogs)
   min-width: 0;
   padding: 2px 10px;
   font-size: 0.85rem;
+}
+
+/* ── 编辑模式：路径拆分输入 ── */
+
+.blogs-table__path-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.blogs-table__path-sep {
+  color: var(--color-text-secondary);
 }
 
 /* ── 完整标签弹窗（与用户管理页弹窗同款） ── */
