@@ -1609,13 +1609,25 @@ namespace http
                     return;
                 }
 
-                // 权限检查：仅 blog:edit 权限用户可编辑博客
-                const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "blog:edit") == perms.end())
+                // 权限检查：博客编辑页需 blog:edit；后台管理页（from_manage）仅需 manage:edit
+                const bool  from_manage = body.value("from_manage", false);
+                const auto& perms       = session->permissions;
+                const bool  allowed     = from_manage
+                                        ? std::find(perms.begin(), perms.end(), "manage:edit") != perms.end()
+                                        : std::find(perms.begin(), perms.end(), "blog:edit") != perms.end();
+                if (!allowed)
                 {
-                    spdlog::info("更新博客失败：用户 {} 无 blog:edit 权限。", session->user_id);
+                    spdlog::info(
+                        "更新博客失败：用户 {} 缺少{}权限。",
+                        session->user_id,
+                        from_manage ? " manage:edit" : " blog:edit"
+                    );
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 blog:edit 权限"})", "application/json");
+                    res.set_content(
+                        nlohmann::json{{"error", from_manage ? "当前用户无 manage:edit 权限"
+                                                             : "当前用户无 blog:edit 权限"}}.dump(),
+                        "application/json"
+                    );
                     return;
                 }
 
