@@ -587,7 +587,7 @@ async function saveChanges() {
       v-if="showCreateDialog"
       class="create-mask"
     >
-      <div class="create-box" role="dialog" aria-modal="true">
+      <div class="create-box perm-box" role="dialog" aria-modal="true">
         <h2 class="create-box__title">新建用户</h2>
 
         <label class="create-box__field">
@@ -630,21 +630,31 @@ async function saveChanges() {
 
         <div class="create-box__field">
           <span>权限</span>
-          <div class="create-box__perms">
-            <label
-              v-for="perm in allPermissions"
-              :key="perm"
-              class="create-box__perm"
-            >
-              <input
-                type="checkbox"
-                :value="perm"
-                v-model="createForm.permissions"
-                class="create-box__checkbox"
-              />
-              {{ permLabel(perm) }}
-            </label>
-          </div>
+          <table class="perm-table">
+            <tbody>
+              <tr v-for="group in permDialogGroups" :key="group.label">
+                <th>{{ group.label }}</th>
+                <td>
+                  <div v-if="group.perms.length" class="create-box__perms">
+                    <label
+                      v-for="perm in group.perms"
+                      :key="perm"
+                      class="create-box__perm"
+                    >
+                      <input
+                        type="checkbox"
+                        :value="perm"
+                        v-model="createForm.permissions"
+                        class="create-box__checkbox"
+                      />
+                      {{ permLabel(perm) }}
+                    </label>
+                  </div>
+                  <span v-else class="users-hint">无</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <div class="create-box__actions">
