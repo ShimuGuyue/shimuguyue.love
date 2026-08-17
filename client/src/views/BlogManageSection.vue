@@ -103,7 +103,7 @@ async function loadBlogs() {
 
 onMounted(async () => {
   await loadBlogs()
-  // 编辑保存需要 blog:edit 权限，数据下载需要 manage:download 权限
+  // 编辑保存需要 manage:edit 权限，数据下载需要 manage:download 权限
   if (auth.isLoggedIn && auth.token) {
     try {
       const resp = await fetch('/api/user/permissions', {
@@ -112,7 +112,7 @@ onMounted(async () => {
       if (resp.ok) {
         const data = await resp.json()
         const permissions = data.permissions || []
-        canEdit.value = permissions.includes('blog:edit')
+        canEdit.value = permissions.includes('manage:edit')
         canDownload.value = permissions.includes('manage:download')
       }
     } catch { /* 权限获取失败静默 */ }
@@ -189,7 +189,7 @@ function tagsToArray(tags: string): string[] {
 /** 保存编辑：仅提交有改动的行（与博客编辑页同款校验规则）。 */
 async function saveChanges() {
   if (!canEdit.value) {
-    window.alert('操作失败：该操作需要 blog:edit 权限')
+    window.alert('操作失败：该操作需要 manage:edit 权限')
     return
   }
 
@@ -264,6 +264,7 @@ async function saveChanges() {
           file_path_name: draft.file_path_name,
           old_file_path: draft.old_file_path,
           content: existing.content ?? '',
+          from_manage: true,
         }),
       })
       const data = await resp.json().catch(() => ({}))
