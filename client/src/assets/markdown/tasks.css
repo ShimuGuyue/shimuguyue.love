@@ -1,0 +1,37 @@
+/* ── 任务列表复选框样式 ──
+ * 依赖 pink-theme.css 的 CSS 变量，使用页面需一并引入。
+ */
+
+.blog-detail__content input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  pointer-events: none;
+  position: relative;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0 0.3em 0 0;
+  vertical-align: middle;
+  border: 1px solid var(--pink-soft);
+  border-radius: 0.6rem;
+  background: transparent;
+  cursor: default;
+}
+
+.blog-detail__content .task-list-item {
+  list-style: none;
+}
+.blog-detail__content .task-list-item::before {
+  display: none !important;
+}
+
+/* 选中复选框 */
+.blog-detail__content input[type="checkbox"]:checked::after {
+  content: "♪";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--pink-hot);
+  font-size: 1.5rem;
+  line-height: 1;
+}
