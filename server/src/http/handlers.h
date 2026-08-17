@@ -84,6 +84,14 @@ void handle_manage_create_user(
     const std::string&      allowed);
 
 /**
+ * @brief 处理 GET /api/manage/download 请求（需 manage:download 权限）。
+ */
+void handle_manage_download(
+    const httplib::Request& req,
+    httplib::Response&      res,
+    const std::string&      allowed);
+
+/**
  * @brief 处理 GET /api/categories 请求。
  */
 void handle_get_categories(

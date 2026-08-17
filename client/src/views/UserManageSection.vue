@@ -34,6 +34,7 @@ const auth = useAuthStore()
 const users = ref<ManageUser[]>([])
 const allPermissions = ref<string[]>([])
 const canEdit = ref(false)
+const canDownload = ref(false)
 const loading = ref(false)
 const error = ref('')
 
@@ -152,7 +153,50 @@ async function loadUsers() {
   }
 }
 
-onMounted(loadUsers)
+onMounted(async () => {
+  await loadUsers()
+  // 数据下载需要 manage:download 权限
+  if (auth.isLoggedIn && auth.token) {
+    try {
+      const resp = await fetch('/api/user/permissions', {
+        headers: { 'Authorization': 'Bearer ' + auth.token }
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        canDownload.value = (data.permissions || []).includes('manage:download')
+      }
+    } catch { /* 权限获取失败静默 */ }
+  }
+})
+
+/** 下载用户数据 zip */
+async function downloadData() {
+  if (!canDownload.value) {
+    window.alert('操作失败：该操作需要 manage:download 权限')
+    return
+  }
+  try {
+    const resp = await fetch('/api/manage/download?scope=users', {
+      headers: { 'Authorization': 'Bearer ' + auth.token }
+    })
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}))
+      window.alert(data.error ?? '下载失败')
+      return
+    }
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'data-users.zip'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch {
+    window.alert('下载失败')
+  }
+}
 
 /** 无 manage:edit 权限时弹窗提示并返回 false。 */
 function requireEditPermission(): boolean {
@@ -337,40 +381,50 @@ async function saveChanges() {
   <div class="users-section">
     <div class="users-header">
       <h1 class="admin-content__title">用户管理</h1>
-      <div v-if="users.length" class="users-toolbar">
-        <template v-if="editing">
-          <button
-            type="button"
-            class="manage-btn manage-btn--primary"
-            :disabled="saving"
-            @click="saveChanges"
-          >
-            {{ saving ? '保存中...' : '保存编辑' }}
-          </button>
-          <button
-            type="button"
-            class="manage-btn manage-btn--primary"
-            :disabled="saving"
-            @click="cancelEdit"
-          >
-            取消编辑
-          </button>
-        </template>
-        <template v-else>
-          <button
-            type="button"
-            class="manage-btn manage-btn--primary"
-            @click="openCreateDialog"
-          >
-            新建用户
-          </button>
-          <button
-            type="button"
-            class="manage-btn manage-btn--primary"
-            @click="startEdit"
-          >
-            编辑用户
-          </button>
+      <div class="users-toolbar">
+        <button
+          type="button"
+          class="manage-btn manage-btn--primary"
+          :disabled="saving"
+          @click="downloadData"
+        >
+          导出数据
+        </button>
+        <template v-if="users.length">
+          <template v-if="editing">
+            <button
+              type="button"
+              class="manage-btn manage-btn--primary"
+              :disabled="saving"
+              @click="saveChanges"
+            >
+              {{ saving ? '保存中...' : '保存编辑' }}
+            </button>
+            <button
+              type="button"
+              class="manage-btn manage-btn--primary"
+              :disabled="saving"
+              @click="cancelEdit"
+            >
+              取消编辑
+            </button>
+          </template>
+          <template v-else>
+            <button
+              type="button"
+              class="manage-btn manage-btn--primary"
+              @click="openCreateDialog"
+            >
+              新建用户
+            </button>
+            <button
+              type="button"
+              class="manage-btn manage-btn--primary"
+              @click="startEdit"
+            >
+              编辑用户
+            </button>
+          </template>
         </template>
       </div>
     </div>

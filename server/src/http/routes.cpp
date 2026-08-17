@@ -85,6 +85,14 @@ namespace http
             }
         );
 
+        // GET /api/manage/download — 下载数据表 zip（需要 manage:download 权限）
+        svr.Get("/api/manage/download",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_manage_download(req, res, allowed);
+            }
+        );
+
         svr.Get("/api/categories",
             [allowed](const auto& req, auto& res)
             {
