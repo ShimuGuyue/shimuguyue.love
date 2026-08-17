@@ -2,12 +2,12 @@
  * 依赖 pink-theme.css 的 CSS 变量，使用页面需一并引入。
  */
 
-.blog-detail__content h1,
-.blog-detail__content h2,
-.blog-detail__content h3,
-.blog-detail__content h4,
-.blog-detail__content h5,
-.blog-detail__content h6 {
+.md-editor .md-editor-preview h1,
+.md-editor .md-editor-preview h2,
+.md-editor .md-editor-preview h3,
+.md-editor .md-editor-preview h4,
+.md-editor .md-editor-preview h5,
+.md-editor .md-editor-preview h6 {
   font-family: "微软雅黑", "Microsoft YaHei", sans-serif;
   color: var(--pink-soft);
   font-weight: 800;
@@ -19,7 +19,7 @@
 }
 
 /* 标题锚点链接 # */
-.blog-detail__content .heading-anchor {
+.md-editor .md-editor-preview .heading-anchor {
   position: absolute;
   left: -1.5rem;
   top: 50%;
@@ -31,29 +31,29 @@
   opacity: 0;
   transition: opacity 0.15s;
 }
-.blog-detail__content h1:hover .heading-anchor,
-.blog-detail__content h2:hover .heading-anchor,
-.blog-detail__content h3:hover .heading-anchor,
-.blog-detail__content h4:hover .heading-anchor,
-.blog-detail__content h5:hover .heading-anchor,
-.blog-detail__content h6:hover .heading-anchor {
+.md-editor .md-editor-preview h1:hover .heading-anchor,
+.md-editor .md-editor-preview h2:hover .heading-anchor,
+.md-editor .md-editor-preview h3:hover .heading-anchor,
+.md-editor .md-editor-preview h4:hover .heading-anchor,
+.md-editor .md-editor-preview h5:hover .heading-anchor,
+.md-editor .md-editor-preview h6:hover .heading-anchor {
   opacity: 1;
 }
 
 /* 标题装饰符号 */
-.blog-detail__content h1::before { content: "❀ "; }
-.blog-detail__content h1::after  { content: " ❀"; }
-.blog-detail__content h2::before { content: "➳ "; }
-.blog-detail__content h2::after  { content: " ➳"; }
-.blog-detail__content h3::before { content: "♥ ";  }
-.blog-detail__content h3::after  { content: " ♥";  }
-.blog-detail__content h4::before { content: "♪ ";  }
-.blog-detail__content h4::after  { content: " ♪";  }
+.md-editor .md-editor-preview h1::before { content: "❀ "; }
+.md-editor .md-editor-preview h1::after  { content: " ❀"; }
+.md-editor .md-editor-preview h2::before { content: "➳ "; }
+.md-editor .md-editor-preview h2::after  { content: " ➳"; }
+.md-editor .md-editor-preview h3::before { content: "♥ ";  }
+.md-editor .md-editor-preview h3::after  { content: " ♥";  }
+.md-editor .md-editor-preview h4::before { content: "♪ ";  }
+.md-editor .md-editor-preview h4::after  { content: " ♪";  }
 
 /* 标题字号 */
-.blog-detail__content h1 { font-size: 2.00rem; }
-.blog-detail__content h2 { font-size: 1.80rem; }
-.blog-detail__content h3 { font-size: 1.50rem; }
-.blog-detail__content h4 { font-size: 1.35rem; }
-.blog-detail__content h5 { font-size: 1.20rem; }
-.blog-detail__content h6 { font-size: 1.10rem; }
+.md-editor .md-editor-preview h1 { font-size: 2.00rem; }
+.md-editor .md-editor-preview h2 { font-size: 1.80rem; }
+.md-editor .md-editor-preview h3 { font-size: 1.50rem; }
+.md-editor .md-editor-preview h4 { font-size: 1.35rem; }
+.md-editor .md-editor-preview h5 { font-size: 1.20rem; }
+.md-editor .md-editor-preview h6 { font-size: 1.10rem; }

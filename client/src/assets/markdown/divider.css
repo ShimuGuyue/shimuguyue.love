@@ -2,7 +2,7 @@
  * 依赖 pink-theme.css 的 CSS 变量，使用页面需一并引入。
  */
 
-.blog-detail__content hr {
+.md-editor .md-editor-preview hr {
   height: 0.8px;
   margin: 16px 0;
   border: none;
@@ -12,7 +12,7 @@
     transparent 3px 6px
   );
 }
-html.dark .blog-detail__content hr {
+html.dark .md-editor .md-editor-preview hr {
   background: repeating-linear-gradient(
     to right,
     var(--pink-soft) 0 3px,
