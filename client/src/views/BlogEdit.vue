@@ -396,6 +396,9 @@ async function saveBlog() {
   min-width: 0;
   overflow: hidden;
 }
+.blog-edit__main :deep(.md-editor) {
+  background-color: transparent;
+}
 .blog-edit__hint {
   margin: 4px 0 0;
   font-size: 0.75rem;

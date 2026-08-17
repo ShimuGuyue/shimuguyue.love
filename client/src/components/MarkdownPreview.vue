@@ -30,3 +30,9 @@ function handleGetCatalog(list: HeadList[]) {
     @get-catalog="handleGetCatalog"
   />
 </template>
+
+<style>
+.md-editor.md-editor-previewOnly {
+  background-color: transparent;
+}
+</style>
