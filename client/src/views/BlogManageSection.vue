@@ -183,6 +183,17 @@ async function saveChanges() {
     }
   }
 
+  // 保存前先校验：编辑后的博客路径不允许重复，避免“先改第一个、其余报错”
+  const pathSeen = new Set<string>()
+  for (const draft of drafts.value) {
+    const targetPath = `${draft.file_path_category}/${draft.file_path_name}`
+    if (pathSeen.has(targetPath)) {
+      window.alert(`存在重复的博客路径：${targetPath}`)
+      return
+    }
+    pathSeen.add(targetPath)
+  }
+
   saving.value = true
   try {
     for (const draft of drafts.value) {
