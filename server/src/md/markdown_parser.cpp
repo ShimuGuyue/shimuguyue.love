@@ -38,6 +38,7 @@ namespace md
         json["description"]        = "";
         json["category"]           = "";
         json["tags"]               = nlohmann::json::array();
+        json["update_time"]        = "";
         json["file_path_category"] = "";
         json["file_path_name"]     = "";
         json["content"]            = text;
@@ -86,6 +87,8 @@ namespace md
                 json["tags"].push_back(t.as<std::string>());
             }
         }
+        if (fm["update_time"] && fm["update_time"].IsScalar())
+            json["update_time"] = fm["update_time"].Scalar();
         if (fm["file_path"])
         {
             std::string fp = fm["file_path"].as<std::string>();

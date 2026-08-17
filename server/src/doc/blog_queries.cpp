@@ -5,9 +5,11 @@
 
 #include "doc/blog_queries.h"
 
+#include <ctime>
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 #include <utility>
 
@@ -17,6 +19,23 @@
 
 namespace
 {
+    /**
+     * @brief 判断字符串是否为合法的 YYYY-MM-DD 日期。
+     * @param date 待校验的日期字符串。
+     * @return 合法返回 true，否则返回 false。
+     */
+    auto is_valid_date(const std::string& date) -> bool
+    {
+        std::tm parsed{};
+        std::istringstream ss{ date };
+        ss >> std::get_time(&parsed, "%Y-%m-%d");
+        if (ss.fail())
+            return false;
+        std::ostringstream os;
+        os << std::put_time(&parsed, "%Y-%m-%d");
+        return os.str() == date;
+    }
+
     /**
      * @brief 将 int vector 转换为 PostgreSQL 数组字面量 "{1,2,3}"
      */
@@ -364,6 +383,17 @@ namespace
 
 namespace doc
 {
+    auto effective_blog_date(const std::string& update_time) -> std::string
+    {
+        if (!update_time.empty() && is_valid_date(update_time))
+            return update_time;
+
+        std::time_t now{ std::time(nullptr) };
+        char buf[16];
+        std::strftime(buf, sizeof buf, "%Y-%m-%d", std::localtime(&now));
+        return std::string{ buf };
+    }
+
     auto get_categories(pqxx::connection& conn) -> std::vector<Category>
     {
         spdlog::debug("正在从数据库获取分类列表...");
