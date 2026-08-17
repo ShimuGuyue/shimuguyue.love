@@ -1,0 +1,65 @@
+/* ── 文本排版样式 ──
+ * 依赖 pink-theme.css 的 CSS 变量，使用页面需一并引入。
+ */
+
+/* 预览容器字体与正文颜色：
+ * md-editor 默认使用系统无衬线字体和 --md-theme-color 灰色文字，
+ * 这里统一为仿宋、纯黑（亮色）/ 纯白（暗色）。标题颜色由 headings.css 单独指定。 */
+.blog-detail__content .md-editor-preview {
+  font-family: "仿宋", FangSong, serif;
+  color: #000;
+}
+html.dark .blog-detail__content .md-editor-preview {
+  color: #fff;
+}
+
+/* 段落 */
+.blog-detail__content p {
+  line-height: 28px;
+  margin: 16px 0;
+}
+
+/* 斜体 */
+/* .blog-detail__content em {} */
+
+/* 加粗 */
+.blog-detail__content strong {
+  color: var(--pink-hot);
+}
+
+/* 链接 */
+.blog-detail__content a {
+  color: var(--purple-herrscher);
+  word-wrap: break-word;
+  text-decoration: underline solid;
+  margin: 2px;
+}
+.blog-detail__content a:hover {
+  color: var(--pink-hot);
+}
+html.dark .blog-detail__content a {
+  color: var(--pink-hot);
+  word-wrap: break-word;
+  text-decoration: underline solid;
+  margin: 2px;
+}
+html.dark .blog-detail__content a:hover {
+  color: var(--purple-herrscher);
+}
+
+/* 删除线：常态被侵蚀紫覆盖，hover 显示文字 */
+.blog-detail__content del,
+.blog-detail__content s {
+  background-color: var(--purple-herrscher);
+  color: var(--purple-herrscher);
+  border: 1px solid var(--purple-herrscher);
+  border-radius: 3px;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.blog-detail__content del:hover,
+.blog-detail__content s:hover {
+  background-color: transparent;
+  color: inherit;
+  border: 1px dashed var(--pink-soft);
+}
