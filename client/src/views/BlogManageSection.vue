@@ -11,6 +11,7 @@ interface BlogRow {
   category: string | null
   file_path: string | null
   tags: string[]
+  update_time: string
 }
 
 /** 编辑模式下的行草稿：可编辑博客路径、标题、分类、标签 */
@@ -278,6 +279,7 @@ async function saveChanges() {
               <th class="blogs-table__category">所属分类</th>
               <th class="blogs-table__tags">标签列表</th>
               <th class="blogs-table__content">博客详情</th>
+              <th class="blogs-table__update-time">更新时间</th>
             </tr>
           </thead>
           <tbody>
@@ -360,6 +362,10 @@ async function saveChanges() {
                     内容编辑
                   </RouterLink>
                 </div>
+                <span v-else-if="row.blog" class="blogs-hint">无</span>
+              </td>
+              <td class="blogs-table__update-time">
+                <span v-if="row.blog?.update_time">{{ row.blog.update_time }}</span>
                 <span v-else-if="row.blog" class="blogs-hint">无</span>
               </td>
             </tr>
@@ -466,7 +472,8 @@ async function saveChanges() {
 .blogs-table__content-view {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 12px;
 }
 
 .blogs-table__link {

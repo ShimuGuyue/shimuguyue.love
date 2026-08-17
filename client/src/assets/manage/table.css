@@ -285,15 +285,15 @@ html.dark .users-table {
 /* ── 列宽 ── */
 
 .blogs-table__file-path {
-  width: 28%;
+  width: 24%;
 }
 
 .blogs-table__title {
-  width: 18%;
+  width: 16%;
 }
 
 .blogs-table__category {
-  width: 12%;
+  width: 10%;
 }
 
 .blogs-table__tags {
@@ -301,7 +301,11 @@ html.dark .users-table {
 }
 
 .blogs-table__content {
-  width: 12%;
+  width: 14%;
+}
+
+.blogs-table__update-time {
+  width: 10%;
 }
 
 /* 编辑模式输入控件：与用户表格输入控件同款 */
