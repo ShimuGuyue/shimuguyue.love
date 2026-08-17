@@ -10,6 +10,7 @@ import LoginPassword from '@/views/LoginPassword.vue'
 import Manage from '@/views/Manage.vue'
 import ProfileSection from '@/views/ProfileSection.vue'
 import UserManageSection from '@/views/UserManageSection.vue'
+import BlogManageSection from '@/views/BlogManageSection.vue'
 import BlogDetail from '@/views/BlogDetail.vue'
 import BlogEdit from '@/views/BlogEdit.vue'
 import Acknowledgments from '@/views/Acknowledgments.vue'
@@ -40,6 +41,12 @@ const router = createRouter({
           path: 'users',
           name: 'manage-users',
           component: UserManageSection,
+          meta: { requiresPermission: 'manage:view' },
+        },
+        {
+          path: 'blogs',
+          name: 'manage-blogs',
+          component: BlogManageSection,
           meta: { requiresPermission: 'manage:view' },
         },
       ],

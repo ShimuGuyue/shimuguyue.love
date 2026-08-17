@@ -18,7 +18,9 @@
 .info-list__hint,
 .perm-item,
 .users-table th,
-.users-table td {
+.users-table td,
+.blogs-table th,
+.blogs-table td {
   font-family: 'FangSong', '仿宋', STFangsong, serif;
 }
 

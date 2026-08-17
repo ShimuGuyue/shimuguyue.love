@@ -131,6 +131,7 @@ PostgreSQL
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
 | `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage:view 权限，保存编辑/创建用户需 manage:edit 权限） |
+| `client/src/views/BlogManageSection.vue` | 博客管理栏目页（路由 /manage/blogs，需 manage:view 权限，表格展示全部博客的 file_path / title / category / tags） |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |
