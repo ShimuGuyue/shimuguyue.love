@@ -254,6 +254,19 @@ function cancelPermDialog() {
 /** 保存：只提交有改动的行。 */
 async function saveChanges() {
   if (!requireEditPermission()) return
+
+  // 保存前先校验：本次编辑中填写的新密钥不允许重复，避免“先改第一个、其余报错”
+  const keySeen = new Set<string>()
+  for (const draft of drafts.value) {
+    const key = draft.key.trim()
+    if (!key) continue
+    if (keySeen.has(key)) {
+      window.alert('存在重复的密钥')
+      return
+    }
+    keySeen.add(key)
+  }
+
   saving.value = true
   try {
     for (const draft of drafts.value) {
