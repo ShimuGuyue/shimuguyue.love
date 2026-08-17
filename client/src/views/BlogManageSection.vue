@@ -316,14 +316,23 @@ async function saveChanges() {
             取消编辑
           </button>
         </template>
-        <button
-          v-else
-          type="button"
-          class="manage-btn manage-btn--primary"
-          @click="startEdit"
-        >
-          编辑博客
-        </button>
+        <template v-else>
+          <RouterLink
+            to="/blog-edit/new"
+            target="_blank"
+            rel="noopener"
+            class="manage-btn manage-btn--primary blogs-toolbar__link"
+          >
+            新建博客
+          </RouterLink>
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            @click="startEdit"
+          >
+            编辑博客
+          </button>
+        </template>
       </div>
     </div>
 
@@ -513,6 +522,10 @@ async function saveChanges() {
 .blogs-toolbar {
   display: flex;
   gap: 8px;
+}
+
+.blogs-toolbar__link {
+  text-decoration: none;
 }
 
 .admin-content__title {
