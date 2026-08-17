@@ -1,0 +1,61 @@
+/* ── 列表样式 ──
+ * 依赖 pink-theme.css 的 CSS 变量，使用页面需一并引入。
+ */
+
+.blog-detail__content ul,
+.blog-detail__content ol {
+  list-style: none;
+  padding-left: 4ch;
+  margin: 16px 0;
+}
+.blog-detail__content li {
+  position: relative;
+}
+.blog-detail__content li + li {
+  margin-top: 8px;
+}
+.blog-detail__content li > ul,
+.blog-detail__content li > ol {
+  margin: 8px 0 0;
+}
+
+/* 外层无序列表标记（预览内容包在 .md-editor-preview 内，需穿过该容器） */
+.blog-detail__content .md-editor-preview > ul > li::before,
+.blog-detail__content .md-editor-preview > ol > li::before {
+  content: "❀";
+  position: absolute;
+  left: -4ch;
+  color: var(--pink-hot);
+}
+
+/* 外层有序列表计数器 */
+.blog-detail__content ol {
+  counter-reset: outer-ol-counter;
+}
+.blog-detail__content .md-editor-preview > ol > li::before {
+  counter-increment: outer-ol-counter;
+  content: counter(outer-ol-counter) ".";
+}
+
+/* 内层无序列表标记 */
+.blog-detail__content ul ul li::before,
+.blog-detail__content ol ul li::before {
+  content: "➳";
+  position: absolute;
+  left: -4ch;
+  color: var(--pink-hot);
+}
+
+/* 内层有序列表计数器（小写罗马数字） */
+.blog-detail__content ul ol,
+.blog-detail__content ol ol {
+  counter-reset: inner-ol-counter;
+}
+.blog-detail__content ul ol > li::before,
+.blog-detail__content ol ol > li::before {
+  counter-increment: inner-ol-counter;
+  content: counter(inner-ol-counter, lower-roman) ".";
+  position: absolute;
+  left: -4ch;
+  color: var(--pink-hot);
+}
