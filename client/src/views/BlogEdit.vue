@@ -304,6 +304,7 @@ async function saveBlog() {
           no-echarts
           no-upload-img
           no-prettier
+          no-img-zoom-in
           :toolbars-exclude="['image', 'mermaid', 'prettier', 'github', 'fullscreen', 'pageFullscreen']"
           @on-save="saveBlog"
         />

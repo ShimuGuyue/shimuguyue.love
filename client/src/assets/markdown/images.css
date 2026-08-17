@@ -1,0 +1,33 @@
+/* ── 图片样式 ──
+ * 依赖 pink-theme.css 的 CSS 变量，使用页面需一并引入。
+ */
+
+.md-editor .md-editor-preview img {
+  max-width: 90%;
+  display: inline-block;
+}
+
+/* 链接内的图片（如徽章）：链接改为普通行内盒子，宽度贴合图片且不显示下划线，
+   避免 inline-flex + max-width:90% 造成的“链接比图片宽” */
+.md-editor .md-editor-preview a:has(> img) {
+  display: inline;
+  text-decoration: none;
+}
+/* 悬停时 md-editor 默认主题会用下边框模拟下划线，图片链接一并去掉 */
+.md-editor .md-editor-preview a:has(> img):hover {
+  text-decoration: none;
+  border-block-end: none;
+}
+
+/* 图片说明文字 */
+.md-editor .md-editor-preview figure {
+  display: inline-block;
+  margin: 0.5em;
+  text-align: center;
+  vertical-align: top;
+}
+.md-editor .md-editor-preview figure figcaption {
+  margin-top: 0.2em;
+  font-size: 0.9rem;
+  color: #888;
+}

@@ -36,6 +36,7 @@ function handleGetCatalog(list: HeadList[]) {
     :md-heading-id="headingId"
     no-mermaid
     no-echarts
+    no-img-zoom-in
     @get-catalog="handleGetCatalog"
   />
 </template>

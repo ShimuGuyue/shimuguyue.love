@@ -47,6 +47,11 @@ html.dark .md-editor .md-editor-preview a:hover {
   color: var(--purple-herrscher);
 }
 
+/* 图片外链（如徽章）不显示 md-editor 默认的外链箭头图标 */
+.md-editor .md-editor-preview a[target="_blank"]:has(> img)::after {
+  display: none;
+}
+
 /* 删除线：常态被侵蚀紫覆盖，hover 显示文字 */
 .md-editor .md-editor-preview del,
 .md-editor .md-editor-preview s {

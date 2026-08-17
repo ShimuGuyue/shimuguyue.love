@@ -28,4 +28,14 @@ config({
   markdownItConfig: (md) => {
     md.set({ typographer: true, breaks: false })
   },
+  markdownItPlugins: (plugins) => {
+    // 图片插件默认 figcaption: true 时只认 title 属性；改为 alt，
+    // 让 `![描述](图片)` 的 alt 文本渲染为图片下方的说明
+    return plugins.map((plugin) => {
+      if (plugin.type === 'image') {
+        return { ...plugin, options: { ...plugin.options, figcaption: 'alt' } }
+      }
+      return plugin
+    })
+  },
 })
