@@ -361,12 +361,16 @@ async function saveChanges() {
                 <div v-if="row.blog?.file_path" class="blogs-table__content-view">
                   <RouterLink
                     :to="{ name: 'blog-detail', params: { file_path: row.blog.file_path } }"
+                    target="_blank"
+                    rel="noopener"
                     class="manage-btn manage-btn--primary blogs-table__link"
                   >
                     博客详情
                   </RouterLink>
                   <RouterLink
                     :to="{ name: 'blog-edit', params: { file_path: row.blog.file_path } }"
+                    target="_blank"
+                    rel="noopener"
                     class="manage-btn manage-btn--primary blogs-table__link"
                   >
                     内容编辑
