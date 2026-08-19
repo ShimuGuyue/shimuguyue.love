@@ -52,19 +52,8 @@ html.dark .md-editor .md-editor-preview a:hover {
   display: none;
 }
 
-/* 删除线：常态被侵蚀紫覆盖，hover 显示文字 */
+/* 删除线：颜色改为侵蚀紫 */
 .md-editor .md-editor-preview del,
 .md-editor .md-editor-preview s {
-  background-color: var(--purple-herrscher);
   color: var(--purple-herrscher);
-  border: 1px solid var(--purple-herrscher);
-  border-radius: 3px;
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-.md-editor .md-editor-preview del:hover,
-.md-editor .md-editor-preview s:hover {
-  background-color: transparent;
-  color: inherit;
-  border: 1px dashed var(--pink-soft);
 }
