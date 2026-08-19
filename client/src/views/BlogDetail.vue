@@ -196,14 +196,6 @@ onMounted(async () => {
       }
     } catch { /* 权限获取失败静默 */ }
   }
-
-  // Alt+Z 切换代码块自动换行
-  document.addEventListener('keydown', (e) => {
-    if (e.altKey && e.key === 'z') {
-      e.preventDefault()
-      document.documentElement.toggleAttribute('data-wrap-code')
-    }
-  })
 })
 
 onUnmounted(() => {

@@ -34,6 +34,7 @@ function handleGetCatalog(list: HeadList[]) {
   <MdPreview
     :model-value="modelValue"
     :theme="theme.isDark ? 'dark' : 'light'"
+    preview-theme="github"
     :md-heading-id="headingId"
     no-mermaid
     no-echarts

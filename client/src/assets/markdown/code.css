@@ -1,0 +1,101 @@
+/* ── 代码样式 ──
+ * 块级代码块（fenced code block）完全使用 md-editor-v3 的 GitHub 主题预设
+ * （preview-theme="github" 自动挂载 github-theme 类），由
+ * @vavt/markdown-theme/css/github.css 提供背景、边框、圆角、标题栏与等宽字体。
+ * 本文件仅保留：
+ *   - 行内代码定制（粉色系，非 GitHub 预设覆盖范围）
+ *   - 暗色模式代码高亮配色（github-dark 同款，补足 highlight.js github.css 的浅色）
+ */
+
+/* 行内代码 */
+.md-editor .md-editor-preview code {
+  font-weight: bolder;
+  color: var(--pink-hot);
+  word-wrap: break-word;
+  word-break: break-all;
+  background-color: var(--pink-20);
+  font-family: "仿宋", FangSong, serif;
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+}
+
+/* 代码块字体：覆盖 GitHub 预设的等宽字体，统一为仿宋 */
+.md-editor .md-editor-preview .md-editor-code pre code {
+  font-family: "仿宋", FangSong, serif;
+}
+
+/* 代码高亮暗色模式（Github-dark 同款） */
+
+html.dark .md-editor .md-editor-preview .hljs-keyword,
+html.dark .md-editor .md-editor-preview .hljs-selector-tag,
+html.dark .md-editor .md-editor-preview .hljs-literal,
+html.dark .md-editor .md-editor-preview .hljs-doctag,
+html.dark .md-editor .md-editor-preview .hljs-section {
+  color: #ff7b72;
+}
+
+html.dark .md-editor .md-editor-preview .hljs-string,
+html.dark .md-editor .md-editor-preview .hljs-regexp,
+html.dark .md-editor .md-editor-preview .hljs-addition,
+html.dark .md-editor .md-editor-preview .hljs-attribute,
+html.dark .md-editor .md-editor-preview .hljs-meta .hljs-string {
+  color: #a5d6ff;
+}
+
+html.dark .md-editor .md-editor-preview .hljs-comment,
+html.dark .md-editor .md-editor-preview .hljs-quote,
+html.dark .md-editor .md-editor-preview .hljs-code,
+html.dark .md-editor .md-editor-preview .hljs-formula {
+  color: #8b949e;
+}
+
+html.dark .md-editor .md-editor-preview .hljs-number,
+html.dark .md-editor .md-editor-preview .hljs-built_in,
+html.dark .md-editor .md-editor-preview .hljs-type,
+html.dark .md-editor .md-editor-preview .hljs-symbol,
+html.dark .md-editor .md-editor-preview .hljs-bullet,
+html.dark .md-editor .md-editor-preview .hljs-link,
+html.dark .md-editor .md-editor-preview .hljs-operator {
+  color: #79c0ff;
+}
+
+html.dark .md-editor .md-editor-preview .hljs-title,
+html.dark .md-editor .md-editor-preview .hljs-function .hljs-title,
+html.dark .md-editor .md-editor-preview .hljs-class .hljs-title,
+html.dark .md-editor .md-editor-preview .hljs-name,
+html.dark .md-editor .md-editor-preview .hljs-attr,
+html.dark .md-editor .md-editor-preview .hljs-selector-id,
+html.dark .md-editor .md-editor-preview .hljs-selector-class {
+  color: #d2a8ff;
+}
+
+html.dark .md-editor .md-editor-preview .hljs-params {
+  color: #ffa657;
+}
+
+html.dark .md-editor .md-editor-preview .hljs-meta {
+  color: #ff7b72;
+}
+
+html.dark .md-editor .md-editor-preview .hljs-variable,
+html.dark .md-editor .md-editor-preview .hljs-template-variable {
+  color: #ffa657;
+}
+
+html.dark .md-editor .md-editor-preview .hljs-deletion {
+  color: #ff7b72;
+  background: rgba(255, 123, 114, 0.15);
+}
+
+/* 其余 token 继承浅色主题的深色基础色（#24292e），暗色背景下不可见，
+ * 统一覆盖为 github-dark 的正文浅色 #c9d1d9 */
+html.dark .md-editor .md-editor-preview .hljs-subst,
+html.dark .md-editor .md-editor-preview .hljs-punctuation,
+html.dark .md-editor .md-editor-preview .hljs-property,
+html.dark .md-editor .md-editor-preview .hljs-tag,
+html.dark .md-editor .md-editor-preview .hljs-template,
+html.dark .md-editor .md-editor-preview .hljs-selector,
+html.dark .md-editor .md-editor-preview .hljs-emphasis,
+html.dark .md-editor .md-editor-preview .hljs-strong {
+  color: #c9d1d9;
+}

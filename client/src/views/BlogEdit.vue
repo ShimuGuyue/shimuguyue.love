@@ -298,6 +298,7 @@ async function saveBlog() {
         <MdEditor
           v-model="content"
           :theme="theme.isDark ? 'dark' : 'light'"
+          preview-theme="github"
           :style="{ height: 'calc(100vh - 226px)' }"
           placeholder="在此编辑博客 Markdown 文本..."
           no-mermaid
