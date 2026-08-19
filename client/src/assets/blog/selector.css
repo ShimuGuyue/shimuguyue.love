@@ -83,10 +83,10 @@ html.dark .filter-bar {
 .filter-bar {
   background-color: var(--blog-surface-bg);
   border: 1px solid var(--selector-bar-border);
-  border-radius: 12px;
-  padding: 20px 24px;
+  border-radius: var(--blog-surface-radius);
+  padding: var(--blog-surface-padding);
   margin-bottom: 28px;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--blog-surface-shadow);
   transition:
     background-color var(--transition-speed),
     border-color var(--transition-speed);

@@ -8,7 +8,6 @@ import { headingSlug } from '@/lib/md-editor-setup'
 
 import '@/assets/blog-layout.css'
 import '@/assets/blog/selector.css'
-import '@/assets/glass.css'
 import '@/assets/normal/color.css'
 
 const route = useRoute()
@@ -252,7 +251,7 @@ async function deleteBlog() {
     <div v-else class="blog-detail__layout">
       <!-- 左侧：元信息 -->
       <div class="blog-detail__left">
-        <aside class="blog-detail__side glass">
+        <aside class="blog-detail__side">
           <h1 class="blog-detail__title">{{ blog.title }}</h1>
           <p v-if="blog.description" class="blog-detail__desc">{{ blog.description }}</p>
           <p v-if="blog.category" class="blog-detail__category tag-pink">{{ blog.category }}</p>
@@ -268,12 +267,12 @@ async function deleteBlog() {
       </div>
 
       <!-- 中间：正文 -->
-      <article v-if="blog.content" class="blog-detail__content glass">
+      <article v-if="blog.content" class="blog-detail__content">
         <MarkdownPreview :model-value="blog.content" @get-catalog="handleCatalog" />
       </article>
 
       <!-- 右侧：目录 -->
-      <nav class="blog-detail__toc glass">
+      <nav class="blog-detail__toc">
         <h4 class="toc-title">目录</h4>
         <div v-if="headings.length">
           <ul class="toc-list">
@@ -330,6 +329,22 @@ async function deleteBlog() {
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   gap: 40px;
+}
+
+/* ── 块级背景：元信息 / 正文 / 目录共用 ──
+   复用 --blog-surface-bg（半透明卡片底色，见 background/block.css），
+   与博客卡片、筛选栏保持一致的块级组件外观。 */
+.blog-detail__side,
+.blog-detail__content,
+.blog-detail__toc {
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--blog-surface-radius);
+  padding: var(--blog-surface-padding);
+  box-shadow: var(--blog-surface-shadow);
+  transition:
+    background-color var(--transition-speed),
+    border-color var(--transition-speed);
 }
 
 /* ── 左侧 ── */

@@ -141,7 +141,7 @@ PostgreSQL
 | `client/src/views/Favorites.vue` | 收藏页 |
 | `client/src/types/markdown-it-task-lists.d.ts` | markdown-it-task-lists 插件类型声明 |
 | `client/src/assets/background.css` | 全局背景主题（粉色 × 紫色系） |
-| `client/src/assets/background/block.css` | 块级组件共用背景：卡片/筛选栏共用的半透明底色变量（`--blog-surface-bg`） |
+| `client/src/assets/background/block.css` | 块级组件共用背景与外观 |
 | `client/src/assets/blog-layout.css` | 博客页布局共用样式 |
 | `client/src/assets/blog/selector.css` | 博客筛选页样式（筛选栏 / 标签 / 搜索框） |
 | `client/src/assets/blog/card.css` | 博客卡片样式 |
