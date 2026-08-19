@@ -3,6 +3,7 @@ import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
+import MarkdownItGitHubAlerts from 'markdown-it-github-alerts'
 
 /**
  * 标题 slug 生成规则。
@@ -27,6 +28,7 @@ config({
   },
   markdownItConfig: (md) => {
     md.set({ typographer: true, breaks: false })
+    md.use(MarkdownItGitHubAlerts)
   },
   markdownItPlugins: (plugins) => {
     // 图片插件默认 figcaption: true 时只认 title 属性；改为 alt，
