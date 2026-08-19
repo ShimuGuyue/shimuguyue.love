@@ -1,0 +1,76 @@
+/* ═══════════════════════════════════════════════════════════
+   博客卡片（blog-card）
+   ─────────────────────────────────────────────────────────
+   博客列表中的卡片，整体是 <RouterLink> 链接：
+     · 背景复用共享变量 --blog-surface-bg
+     · 普通点击站内跳转；Ctrl/⌘+点击、中键由浏览器原生新标签打开
+     · hover 加深边框并投下阴影，提示可点击
+   ═══════════════════════════════════════════════════════════ */
+
+@import "@/assets/background/block.css";
+
+/* 卡片容器：纵向 flex 布局，内容自上而下排列 */
+.blog-card {
+  display: flex;
+  overflow: hidden;
+  flex-direction: column;
+  padding: 20px;
+  color: inherit;
+  text-decoration: none;
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: box-shadow var(--transition-speed), border-color var(--transition-speed);
+}
+
+/* 卡片悬停：边框加深 + 阴影，给出可点击反馈 */
+.blog-card:hover {
+  border-color: var(--color-text-secondary);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 卡片标题：单行省略，超长截断显示省略号 */
+.blog-card__title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 卡片简介：最多显示 2 行，超出部分省略；
+   min-height 保证行数不足时标题下内容仍对齐 */
+.blog-card__desc {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(1.5em * 2);
+}
+
+/* 卡片元信息区：分类 + 标签横向排列可换行；
+   固定两行高度并裁剪溢出，保证不同卡片等高 */
+.blog-card__meta {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+  height: calc(1.8em * 2);
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+/* 更新时间：靠底对齐（margin-top: auto），小号次要色 */
+.blog-card__time {
+  margin-top: auto;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}

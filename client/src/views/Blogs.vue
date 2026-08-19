@@ -3,6 +3,7 @@ import { ref, watch, computed, onMounted } from 'vue'
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router'
 
 import '@/assets/blog/selector.css'
+import '@/assets/blog/card.css'
 
 const router = useRouter()
 const route = useRoute()

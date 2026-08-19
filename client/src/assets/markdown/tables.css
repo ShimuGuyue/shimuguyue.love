@@ -1,0 +1,40 @@
+/* ── 表格样式 ──
+ * 依赖 normal/color.css 的 CSS 变量，使用页面需一并引入。
+ */
+
+.md-editor .md-editor-preview table {
+  margin: 20px 0;
+  text-align: left;
+  width: 100%;
+  border-collapse: collapse;
+  /* 取消背景色：覆盖 md-editor 自带的表头/斑马纹背景变量 */
+  --md-theme-table-tr-bg-color: transparent;
+  --md-theme-table-stripe-color: transparent;
+}
+
+/* 取消鼠标悬停行的特殊背景 */
+.md-editor .md-editor-preview table tr:hover {
+  background-color: transparent;
+}
+
+/* 斑马纹：相间行透明度差 5% */
+.md-editor .md-editor-preview tr:nth-child(even) td {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+html.dark .md-editor .md-editor-preview tr:nth-child(even) td {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.md-editor .md-editor-preview th,
+.md-editor .md-editor-preview td {
+  border: 1px solid var(--pink-hot);
+  padding: 5px 0.6rem;
+  min-width: 7rem;
+  vertical-align: top;
+}
+
+.md-editor .md-editor-preview th {
+  font-weight: bold;
+  color: var(--pink-hot);
+  background-color: var(--pink-12);
+}

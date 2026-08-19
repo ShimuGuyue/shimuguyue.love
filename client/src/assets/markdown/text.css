@@ -1,0 +1,50 @@
+/* ── 文本排版样式 ──
+ * 依赖 normal/color.css 的 CSS 变量，使用页面需一并引入。
+ */
+
+/* 预览容器字体与正文颜色：
+ * md-editor 默认使用系统无衬线字体和 --md-theme-color 灰色文字，
+ * 这里统一为仿宋、纯黑（亮色）/ 纯白（暗色）。标题颜色由 headings.css 单独指定。 */
+.md-editor .md-editor-preview {
+  font-family: "仿宋", FangSong, serif;
+  color: #000;
+}
+html.dark .md-editor .md-editor-preview {
+  color: #fff;
+}
+
+/* 段落 */
+.md-editor .md-editor-preview p {
+  line-height: 22px;
+  margin: 16px 0;
+}
+
+/* 斜体 */
+/* .md-editor .md-editor-preview em {} */
+
+/* 加粗 */
+.md-editor .md-editor-preview strong {
+  color: var(--pink-hot);
+}
+
+/* 链接 */
+.md-editor .md-editor-preview a {
+  color: var(--pink-hot);
+  word-wrap: break-word;
+  text-decoration: underline solid;
+  margin: 2px;
+}
+.md-editor .md-editor-preview a:hover {
+  color: var(--purple-herrscher);
+}
+
+/* 图片外链（如徽章）不显示 md-editor 默认的外链箭头图标 */
+.md-editor .md-editor-preview a[target="_blank"]:has(> img)::after {
+  display: none;
+}
+
+/* 删除线：颜色改为侵蚀紫 */
+.md-editor .md-editor-preview del,
+.md-editor .md-editor-preview s {
+  color: var(--purple-herrscher);
+}

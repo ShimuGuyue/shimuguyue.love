@@ -1,0 +1,58 @@
+/* ── GitHub 风格警告框 (Alerts) ──
+ * 主体样式复用 blockquote.css 中的引用块主体，
+ * 各类型仅通过 --md-quote-bg / --md-quote-border 变量覆盖背景色与左侧边框色。
+ */
+
+/* 标题行 */
+.md-editor .md-editor-preview .markdown-alert-title {
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  margin-bottom: 0.15rem;
+  gap: 0.4rem;
+}
+
+/* 图标跟随标题文字颜色，兼容深浅色主题 */
+.md-editor .md-editor-preview .markdown-alert-title svg {
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* 各类型：仅覆盖背景色与左侧边框色 */
+.md-editor .md-editor-preview .markdown-alert-note {
+  --md-quote-bg: rgba(9, 105, 218, 0.10); /* 蓝 */
+  --md-quote-border: #0969da;
+}
+.md-editor .md-editor-preview .markdown-alert-tip {
+  --md-quote-bg: rgba(31, 136, 61, 0.10);  /* 绿 */
+  --md-quote-border: #1f883d;
+}
+.md-editor .md-editor-preview .markdown-alert-important {
+  --md-quote-bg: rgba(215, 165, 0, 0.10);  /* 黄 */
+  --md-quote-border: #d7a500;
+}
+.md-editor .md-editor-preview .markdown-alert-warning {
+  --md-quote-bg: rgba(200, 100, 20, 0.10); /* 橙 */
+  --md-quote-border: #c86414;
+}
+.md-editor .md-editor-preview .markdown-alert-caution {
+  --md-quote-bg: rgba(207, 34, 46, 0.10);  /* 红 */
+  --md-quote-border: #cf222e;
+}
+
+/* 标题文字颜色 */
+.md-editor .md-editor-preview .markdown-alert-note .markdown-alert-title {
+  color: #0969da;
+}
+.md-editor .md-editor-preview .markdown-alert-tip .markdown-alert-title {
+  color: #1f883d;
+}
+.md-editor .md-editor-preview .markdown-alert-important .markdown-alert-title {
+  color: #d7a500;
+}
+.md-editor .md-editor-preview .markdown-alert-warning .markdown-alert-title {
+  color: #c86414;
+}
+.md-editor .md-editor-preview .markdown-alert-caution .markdown-alert-title {
+  color: #cf222e;
+}

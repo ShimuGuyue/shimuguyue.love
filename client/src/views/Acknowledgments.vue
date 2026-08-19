@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import '@/assets/glass.css'
-import '@/assets/pink-theme.css'
+import '@/assets/normal/color.css'
 </script>
 
 <template>
@@ -141,4 +141,3 @@ html.dark .thanks__card a:hover {
   color: var(--purple-herrscher);
 }
 </style>
-

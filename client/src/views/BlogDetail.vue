@@ -1,20 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import MarkdownIt from 'markdown-it'
-import taskLists from 'markdown-it-task-lists'
-import markdownItGitHubAlerts from 'markdown-it-github-alerts'
-import hljs from 'highlight.js'
-import 'highlight.js/styles/github.css'
-import katex from 'katex'
+import MarkdownPreview from '@/components/MarkdownPreview.vue'
+import type { HeadList } from 'md-editor-v3'
+import { headingSlug } from '@/lib/md-editor-setup'
 
 import '@/assets/blog-layout.css'
 import '@/assets/blog/selector.css'
-import '@/assets/glass.css'
-import '@/assets/markdown.css'
-import '@/assets/pink-theme.css'
-import 'katex/dist/katex.min.css'
+import '@/assets/normal/color.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,53 +16,6 @@ const auth = useAuthStore()
 
 const permissions = ref<string[]>([])
 const canDrop = computed(() => permissions.value.includes('blog:delete'))
-
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: true,
-})
-  .use(taskLists, { enabled: true, label: true, labelAfter: true })
-  .use(markdownItGitHubAlerts)
-
-md.enable('strikethrough')
-
-/** 自定义 fence 渲染：在代码块上显示语言标签 */
-const rawFence = md.renderer.rules.fence!
-md.renderer.rules.fence = (tokens, idx, options, env, self): string => {
-  const token = tokens[idx]!
-  const lang = token.info.trim().split(/\s+/)[0] ?? ''
-  const body = rawFence(tokens, idx, options, env, self)
-  if (!lang) return body
-  return `<div class="code-block"><div class="code-block__lang">${md.utils.escapeHtml(lang)}</div>${body}</div>`
-}
-
-/** 自定义 heading_open：添加锚点 id 和 # 链接 */
-const fallbackOpen = (tokens: any, idx: any, options: any, env: any, self: any) => self.renderToken(tokens, idx, options)
-const rawHeadingOpen = md.renderer.rules.heading_open || fallbackOpen
-md.renderer.rules.heading_open = (tokens, idx, options, env, self): string => {
-  const token = tokens[idx]!
-  const nextToken = tokens[idx + 1]
-  let slug = ''
-  if (nextToken && nextToken.type === 'inline') {
-    slug = nextToken.content.replace(/[^a-zA-Z0-9\u4e00-\u9fff]+/g, '-').replace(/^-|-$/g, '').toLowerCase()
-    token.attrSet('id', slug)
-  }
-  const html = rawHeadingOpen(tokens, idx, options, env, self)
-  return slug ? html + '<a class="heading-anchor" href="#' + slug + '">#</a>' : html
-}
-
-/** 自定义 image 渲染：alt 文字作为图片下方说明 */
-const rawImage = md.renderer.rules.image!
-md.renderer.rules.image = (tokens, idx, options, env, self): string => {
-  const token = tokens[idx]!
-  const src = token.attrGet('src') ?? ''
-  const alt = token.content
-  const img = rawImage(tokens, idx, options, env, self)
-  if (!alt) return img
-  const escapedAlt = md.utils.escapeHtml(alt)
-  return `<figure><img src="${md.utils.escapeHtml(src)}" alt="${escapedAlt}" loading="lazy"><figcaption>${escapedAlt}</figcaption></figure>`
-}
 
 interface BlogDetail {
   id: number
@@ -82,22 +29,6 @@ interface BlogDetail {
 
 const blog = ref<BlogDetail | null>(null)
 const loading = ref(true)
-
-const renderedContent = computed(() => {
-  if (!blog.value?.content) return ''
-  let text = blog.value.content
-  text = text.replace(/\$\$([^$]+)\$\$/g, (_, f) => renderKatex(f, true))
-  text = text.replace(/\$([^$]+)\$/g, (_, f) => renderKatex(f, false))
-  return md.render(text)
-})
-
-function renderKatex(formula: string, display: boolean): string {
-  try {
-    return katex.renderToString(formula, { displayMode: display, throwOnError: false })
-  } catch {
-    return display ? `$${formula}$` : `$${formula}$$`
-  }
-}
 
 interface TocItem {
   level: number
@@ -122,19 +53,15 @@ function buildTree(flat: { level: number; text: string; slug: string }[]): TocIt
   return root
 }
 
-const headings = computed<TocItem[]>(() => {
-  if (!blog.value?.content) return []
-  const flat: { level: number; text: string; slug: string }[] = []
-  const re = /^(#{1,6})\s+(.+)$/gm
-  let m: RegExpExecArray | null
-  while ((m = re.exec(blog.value.content)) !== null) {
-    const text = m[2]!.trim()
-    const slug = text.replace(/[^a-zA-Z0-9\u4e00-\u9fff]+/g, '-').replace(/^-|-$/g, '').toLowerCase()
-    const level = m[1]!.length
-    if (level <= 4) flat.push({ level, text, slug })
-  }
-  return buildTree(flat)
-})
+const headings = ref<TocItem[]>([])
+
+/** 由 MdPreview 的 getCatalog 事件生成目录（仅取 h1~h4）。 */
+function handleCatalog(list: HeadList[]) {
+  const flat = list
+    .filter(item => item.level <= 4)
+    .map(item => ({ level: item.level, text: item.text, slug: headingSlug(item.text) }))
+  headings.value = buildTree(flat)
+}
 
 /** 自定义平滑滚动，支持控制滚动时长 */
 function smoothScrollTo(el: HTMLElement, duration = 1000) {
@@ -247,18 +174,9 @@ onMounted(async () => {
   }
   window.addEventListener('scroll', scrollHandler)
 
-  // 拦截标题及其锚点链接的点击，使用 scrollToHeading 统一滚动逻辑
+  // 拦截标题点击，使用 scrollToHeading 统一滚动逻辑
   document.querySelector('.blog-detail__content')?.addEventListener('click', (e) => {
     const target = e.target as HTMLElement
-    // 优先检查锚点链接
-    const anchor = target.closest('.heading-anchor')
-    if (anchor) {
-      e.preventDefault()
-      const href = anchor.getAttribute('href')
-      if (href?.startsWith('#')) scrollToHeading(href.slice(1))
-      return
-    }
-    // 再检查标题本身
     const heading = target.closest('h1, h2, h3, h4, h5, h6')
     if (heading && heading.id) {
       e.preventDefault()
@@ -278,14 +196,6 @@ onMounted(async () => {
       }
     } catch { /* 权限获取失败静默 */ }
   }
-
-  // Alt+Z 切换代码块自动换行
-  document.addEventListener('keydown', (e) => {
-    if (e.altKey && e.key === 'z') {
-      e.preventDefault()
-      document.documentElement.toggleAttribute('data-wrap-code')
-    }
-  })
 })
 
 onUnmounted(() => {
@@ -324,10 +234,6 @@ async function deleteBlog() {
   router.push({ name: 'blogs' })
 }
 
-watch(renderedContent, async () => {
-  await nextTick()
-  hljs.highlightAll()
-})
 </script>
 
 <template>
@@ -337,7 +243,7 @@ watch(renderedContent, async () => {
     <div v-else class="blog-detail__layout">
       <!-- 左侧：元信息 -->
       <div class="blog-detail__left">
-        <aside class="blog-detail__side glass">
+        <aside class="blog-detail__side">
           <h1 class="blog-detail__title">{{ blog.title }}</h1>
           <p v-if="blog.description" class="blog-detail__desc">{{ blog.description }}</p>
           <p v-if="blog.category" class="blog-detail__category tag-pink">{{ blog.category }}</p>
@@ -353,10 +259,12 @@ watch(renderedContent, async () => {
       </div>
 
       <!-- 中间：正文 -->
-      <article v-if="blog.content" class="blog-detail__content glass" v-html="renderedContent"></article>
+      <article v-if="blog.content" class="blog-detail__content">
+        <MarkdownPreview :model-value="blog.content" @get-catalog="handleCatalog" />
+      </article>
 
       <!-- 右侧：目录 -->
-      <nav class="blog-detail__toc glass">
+      <nav class="blog-detail__toc">
         <h4 class="toc-title">目录</h4>
         <div v-if="headings.length">
           <ul class="toc-list">
@@ -415,10 +323,26 @@ watch(renderedContent, async () => {
   gap: 40px;
 }
 
+/* ── 块级背景：元信息 / 正文 / 目录共用 ──
+   复用 --blog-surface-bg（半透明卡片底色，见 background/block.css），
+   与博客卡片、筛选栏保持一致的块级组件外观。 */
+.blog-detail__side,
+.blog-detail__content,
+.blog-detail__toc {
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--blog-surface-radius);
+  padding: var(--blog-surface-padding);
+  box-shadow: var(--blog-surface-shadow);
+  transition:
+    background-color var(--transition-speed),
+    border-color var(--transition-speed);
+}
+
 /* ── 左侧 ── */
 .blog-detail__left {
   position: sticky;
-  top: 110px;
+  top: 112px;
   align-self: start;
 }
 

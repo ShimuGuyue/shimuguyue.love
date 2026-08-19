@@ -1,0 +1,59 @@
+/* ── 标题样式 ──
+ * 依赖 normal/color.css 的 CSS 变量，使用页面需一并引入。
+ */
+
+.md-editor .md-editor-preview h1,
+.md-editor .md-editor-preview h2,
+.md-editor .md-editor-preview h3,
+.md-editor .md-editor-preview h4,
+.md-editor .md-editor-preview h5,
+.md-editor .md-editor-preview h6 {
+  font-family: "微软雅黑", "Microsoft YaHei", sans-serif;
+  color: var(--pink-soft);
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  margin: 1em 0 0.5em;
+  position: relative;
+  scroll-margin-top: 100px;
+}
+
+/* 标题锚点链接 # */
+.md-editor .md-editor-preview .heading-anchor {
+  position: absolute;
+  left: -1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--pink-soft);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.md-editor .md-editor-preview h1:hover .heading-anchor,
+.md-editor .md-editor-preview h2:hover .heading-anchor,
+.md-editor .md-editor-preview h3:hover .heading-anchor,
+.md-editor .md-editor-preview h4:hover .heading-anchor,
+.md-editor .md-editor-preview h5:hover .heading-anchor,
+.md-editor .md-editor-preview h6:hover .heading-anchor {
+  opacity: 1;
+}
+
+/* 标题装饰符号 */
+.md-editor .md-editor-preview h1::before { content: "❀ "; }
+.md-editor .md-editor-preview h1::after  { content: " ❀"; }
+.md-editor .md-editor-preview h2::before { content: "➳ "; }
+.md-editor .md-editor-preview h2::after  { content: " ➳"; }
+.md-editor .md-editor-preview h3::before { content: "♥ ";  }
+.md-editor .md-editor-preview h3::after  { content: " ♥";  }
+.md-editor .md-editor-preview h4::before { content: "♪ ";  }
+.md-editor .md-editor-preview h4::after  { content: " ♪";  }
+
+/* 标题字号 */
+.md-editor .md-editor-preview h1 { font-size: 2.00rem; }
+.md-editor .md-editor-preview h2 { font-size: 1.80rem; }
+.md-editor .md-editor-preview h3 { font-size: 1.50rem; }
+.md-editor .md-editor-preview h4 { font-size: 1.35rem; }
+.md-editor .md-editor-preview h5 { font-size: 1.20rem; }
+.md-editor .md-editor-preview h6 { font-size: 1.10rem; }

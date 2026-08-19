@@ -1,0 +1,32 @@
+/* ═══════════════════════════════════════════════════════════
+   块级组件共用背景（block）
+   ─────────────────────────────────────────────────────────
+  块级组件共用的背景样式：
+    - --blog-surface-bg-rgb：底色 RGB 通道（与透明度分开，便于单独调整颜色）
+    - --blog-surface-bg-opacity：底色透明度
+    - --blog-surface-bg：组合后的半透明卡片底色（rgba），组件直接引用
+      · 亮色：淡粉半透明白
+      · 暗色：半透明深紫灰
+    - --blog-surface-radius：圆角
+    - --blog-surface-padding：内边距（上下左右统一）
+    - --blog-surface-shadow：轻微阴影，形成卡片感
+   ═══════════════════════════════════════════════════════════ */
+
+/* 亮色主题下的共享背景 */
+:root {
+  --blog-surface-bg-rgb: 255, 246, 251; /* 淡粉 RGB */
+  --blog-surface-bg-opacity: 0.50;      /* 透明度 */
+  --blog-surface-bg: rgba(var(--blog-surface-bg-rgb), var(--blog-surface-bg-opacity));
+
+  /* 尺寸与质感 */
+  --blog-surface-radius: 12px;          /* 圆角 */
+  --blog-surface-padding: 24px;         /* 内边距 */
+  --blog-surface-shadow: 0 1px 6px rgba(0, 0, 0, 0.04); /* 轻微阴影 */
+}
+
+/* 暗色主题下的共享背景 */
+html.dark {
+  --blog-surface-bg-rgb: 28, 22, 26;    /* 深紫灰 RGB */
+  --blog-surface-bg-opacity: 0.50;      /* 透明度 */
+  --blog-surface-bg: rgba(var(--blog-surface-bg-rgb), var(--blog-surface-bg-opacity));
+}

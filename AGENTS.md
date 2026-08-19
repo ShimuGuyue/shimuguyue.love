@@ -122,12 +122,14 @@ PostgreSQL
 | `client/src/router/index.ts` | 14 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
 | `client/src/stores/auth.ts` | 认证状态（token、username），localStorage 持久化 |
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
-| `client/src/components/NavBar.vue` | 唯一公共组件：导航栏、主题切换、用户入口 |
+| `client/src/components/NavBar.vue` | 公共组件：导航栏、主题切换、用户入口 |
+| `client/src/components/MarkdownPreview.vue` | 共享 Markdown 预览组件：封装 `MdPreview`，跟随暗色主题，标题 id 统一走 `md-editor-setup` 的 slug 规则 |
+| `client/src/lib/md-editor-setup.ts` | md-editor-v3 全局配置：注入本地 highlight.js / katex 实例、`typographer: true` / `breaks: false`，并导出标题 slug 函数 |
 | `client/src/views/Home.vue` | 主页：照片墙浏览、编辑、上传 |
 | `client/src/views/Blogs.vue` | 博客列表页（分类/标签筛选、搜索） |
-| `client/src/views/BlogDetail.vue` | 博客详情页（Markdown 渲染） |
-| `client/src/views/BlogEdit.vue` | 博客新建/编辑页 |
-| `client/src/views/About.vue` | 关于我页面（渲染 README） |
+| `client/src/views/BlogDetail.vue` | 博客详情页（`MarkdownPreview` 渲染，目录来自 `getCatalog` 事件，保留滚动高亮与点击标题滚动） |
+| `client/src/views/BlogEdit.vue` | 博客新建/编辑页（`MdEditor` 编辑器，图片/mermaid/echarts/prettier/全屏按钮禁用） |
+| `client/src/views/About.vue` | 关于我页面（渲染 README，`MarkdownPreview` 预览） |
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
 | `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage:view 权限，保存编辑/创建用户需 manage:edit 权限） |
@@ -137,17 +139,18 @@ PostgreSQL
 | `client/src/views/Projects.vue` | 项目页 |
 | `client/src/views/Acknowledgments.vue` | 致谢页 |
 | `client/src/views/Favorites.vue` | 收藏页 |
-| `client/src/types/markdown-it-task-lists.d.ts` | markdown-it-task-lists 插件类型声明 |
 | `client/src/assets/background.css` | 全局背景主题（粉色 × 紫色系） |
+| `client/src/assets/background/block.css` | 块级组件共用背景与外观 |
 | `client/src/assets/blog-layout.css` | 博客页布局共用样式 |
-| `client/src/assets/blog/selector.css` | 博客筛选页样式 |
+| `client/src/assets/blog/selector.css` | 博客筛选页样式（筛选栏 / 标签 / 搜索框） |
+| `client/src/assets/blog/card.css` | 博客卡片样式 |
 | `client/src/assets/common/button.css` | 公共按钮样式 |
 | `client/src/assets/glass.css` | 毛玻璃工具类 |
-| `client/src/assets/markdown.css` | Markdown 渲染样式（PinkFairy 主题） |
+| `client/src/assets/markdown/` | Markdown 渲染样式（PinkFairy 主题），按类型拆分：`font.css`、`headings.css`、`divider.css`、`text.css`、`blockquote.css`、`lists.css`、`code.css`、`tables.css`、`images.css`、`tasks.css`、`alerts.css` |
 | `client/src/assets/manage/button.css` | 后台管理页按钮样式 |
 | `client/src/assets/manage/font.css` | 后台管理页文本样式 |
 | `client/src/assets/manage/table.css` | 后台管理页表格样式 |
-| `client/src/assets/pink-theme.css` | PinkFairy 颜色变量 |
+| `client/src/assets/normal/color.css` | 颜色变量集中定义（基础色板 + `--pink-hot-rgb` + 半透明粉色 `--pink-<alpha>`） |
 
 **server/**
 

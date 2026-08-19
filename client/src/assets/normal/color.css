@@ -1,0 +1,31 @@
+/* ═══════════════════════════════════════════════════════════
+   全局颜色变量
+   ─────────────────────────────────────────────────────────
+   集中定义全局共用颜色：
+     - 粉色系基础色板（--pink-* / --purple-herrscher）
+     - --pink-hot-rgb：--pink-hot 的 RGB 通道，用于派生半透明粉色
+     - --pink-<alpha>：由 --pink-hot-rgb 派生的半透明粉色
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  /* 基础色板 */
+  --pink-soft:        #FF9EC8;       /* 柔粉 */
+  --pink-hot:         #FF77CC;       /* 艳粉 */
+  --pink-light:       #ffaaff;       /* 浅粉 */
+  --pink-bright:      #FFEEF8;       /* 亮粉 */
+  --pink-peach:       #F39ACD;       /* 桃粉 */
+  --pink-tender:      #FFF0F5;       /* 嫩粉 */
+  --purple-herrscher: #6D6AA7;       /* 侵蚀紫 */
+
+  /* 艳粉 RGB 通道（255, 119, 204 = #FF77CC） */
+  --pink-hot-rgb: 255, 119, 204;
+
+  /* 半透明粉色 */
+  --pink-04: rgba(var(--pink-hot-rgb), 0.04);
+  --pink-06: rgba(var(--pink-hot-rgb), 0.06);
+  --pink-12: rgba(var(--pink-hot-rgb), 0.12);
+  --pink-20: rgba(var(--pink-hot-rgb), 0.20);
+  --pink-25: rgba(var(--pink-hot-rgb), 0.25);
+  --pink-30: rgba(var(--pink-hot-rgb), 0.30);
+  --pink-35: rgba(var(--pink-hot-rgb), 0.35);
+}

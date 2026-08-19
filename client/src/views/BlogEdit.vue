@@ -2,12 +2,25 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
+import { MdEditor } from 'md-editor-v3'
+import 'md-editor-v3/lib/style.css'
+import '@/assets/markdown/headings.css'
+import '@/assets/markdown/divider.css'
+import '@/assets/markdown/text.css'
+import '@/assets/markdown/blockquote.css'
+import '@/assets/markdown/lists.css'
+import '@/assets/markdown/code.css'
+import '@/assets/markdown/tables.css'
+import '@/assets/markdown/images.css'
+import '@/assets/markdown/tasks.css'
+import '@/assets/markdown/alerts.css'
 
 import '@/assets/blog-layout.css'
-import '@/assets/pink-theme.css'
+import '@/assets/normal/color.css'
 import '@/assets/glass.css'
-import '@/assets/markdown.css'
 const auth = useAuthStore()
+const theme = useThemeStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -24,7 +37,8 @@ const pathName          = ref('')
 const updateTime        = ref('')
 /// 编辑模式下的原始 file_path（新建时为 null）
 const editFilePath      = ref<string | null>(isEditing.value ? String(route.params.file_path) : null)
-const editorRef         = ref<HTMLDivElement | null>(null)
+/// 博客 Markdown 正文
+const content           = ref('')
 const savedSuccessfully = ref(false)
 const permissions       = ref<string[]>([])
 
@@ -33,7 +47,7 @@ function hasContent(): boolean {
   if (savedSuccessfully.value) return false
   if (title.value || description.value || category.value || tags.value ||
       pathCategory.value || pathName.value) return true
-  if (editorRef.value?.textContent?.trim()) return true
+  if (content.value.trim()) return true
   return false
 }
 
@@ -72,11 +86,7 @@ onMounted(async () => {
         tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : ''
         pathCategory.value = data.file_path?.split('/').slice(0, -1).join('/') || ''
         pathName.value = data.file_path?.split('/').pop() || ''
-        if (editorRef.value) {
-          let content = data.content || ''
-          content = content.replace(/\t/g, '    ').replace(/[ \t]+$/gm, '')
-          editorRef.value.textContent = content
-        }
+        content.value = data.content || ''
       }
     } catch (e) {
       console.error('加载博客失败:', e)
@@ -124,11 +134,7 @@ async function importFile() {
       pathCategory.value = data.file_path_category || ''
       pathName.value = data.file_path_name || ''
 
-      if (editorRef.value) {
-        let content = data.content || ''
-        content = content.replace(/\t/g, '    ').replace(/[ \t]+$/gm, '')
-        editorRef.value.textContent = content
-      }
+      content.value = data.content || ''
     } catch (e) {
       // 后端不可用时本地解析
       alert('导入失败: ' + e)
@@ -174,10 +180,10 @@ async function saveBlog() {
   savedSuccessfully.value = false
 
   const tagList = tags.value.split(',').map(s => s.trim()).filter(Boolean)
-  const content = editorRef.value?.innerText || ''
+  const contentText = content.value
 
   if (!title.value || !description.value || !category.value ||
-      !pathCategory.value || !pathName.value || !content) {
+      !pathCategory.value || !pathName.value || !contentText) {
     alert('请填写所有字段后再保存')
     return
   }
@@ -226,7 +232,7 @@ async function saveBlog() {
       file_path_category: pathCategory.value,
       file_path_name: pathName.value,
       old_file_path: editFilePath.value,
-      content,
+      content: contentText,
     } : {
       title: title.value,
       description: description.value,
@@ -235,7 +241,7 @@ async function saveBlog() {
       update_time: updateTime.value,
       file_path_category: pathCategory.value,
       file_path_name: pathName.value,
-      content,
+      content: contentText,
     }),
   })
 
@@ -289,14 +295,22 @@ async function saveBlog() {
         </div>
       </aside>
       <section class="blog-edit__main glass">
-          <div
-            ref="editorRef"
-            class="blog-edit__content"
-            contenteditable="true"
-            placeholder="在此编辑博客 Markdown 文本..."
-          ></div>
+        <MdEditor
+          v-model="content"
+          :theme="theme.isDark ? 'dark' : 'light'"
+          preview-theme="github"
+          :style="{ height: 'calc(100vh - 226px)' }"
+          placeholder="在此编辑博客 Markdown 文本..."
+          :preview="true"
+          no-mermaid
+          no-echarts
+          no-upload-img
+          no-prettier
+          no-img-zoom-in
+          :toolbars="[]"
+          @on-save="saveBlog"
+        />
       </section>
-      <aside class="blog-edit__right"></aside>
     </div>
   </main>
 </template>
@@ -311,7 +325,7 @@ async function saveBlog() {
   max-width: 1400px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
+  grid-template-columns: 300px 1fr;
   gap: 40px;
   align-items: start;
   overflow: visible;
@@ -394,23 +408,12 @@ async function saveBlog() {
   min-width: 0;
   overflow: hidden;
 }
-.blog-edit__content {
-  width: 100%;
-  min-height: calc(100vh - 226px);
-  padding: 16px;
-  font-family: "仿宋", FangSong, serif;
-  background: transparent;
-  border: none;
-  outline: none;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-width: 100%;
-  tab-size: 4;
+.blog-edit__main :deep(.md-editor) {
+  background-color: transparent;
 }
-.blog-edit__content:empty::before {
-  content: attr(placeholder);
-  color: #999;
-  pointer-events: none;
+/* 固定 50/50 分屏：隐藏拖拽分隔条，编辑区与预览区宽度各占一半 */
+.blog-edit__main :deep(.md-editor-resize-operate) {
+  display: none !important;
 }
 .blog-edit__hint {
   margin: 4px 0 0;
@@ -419,8 +422,4 @@ async function saveBlog() {
   opacity: 0.7;
 }
 
-/* ── 右侧预览 ── */
-.blog-edit__right {
-  min-width: 0;
-}
 </style>
