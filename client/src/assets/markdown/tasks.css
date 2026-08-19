@@ -1,6 +1,4 @@
-/* ── 任务列表复选框样式 ──
- * 依赖 normal/color.css 的 CSS 变量，使用页面需一并引入。
- */
+/* ── 任务列表复选框样式 ── */
 
 .md-editor .md-editor-preview input[type="checkbox"] {
   appearance: none;
@@ -24,8 +22,25 @@
   display: none !important;
 }
 
+/* 任务列表缩进 */
+.md-editor .md-editor-preview ul.contains-task-list,
+.md-editor .md-editor-preview ol.contains-task-list {
+  padding-left: 4ch;
+}
+
+/* 任务列表复选框 */
+.md-editor .md-editor-preview ul.contains-task-list li.task-list-item input[type="checkbox"],
+.md-editor .md-editor-preview ol.contains-task-list li.task-list-item input[type="checkbox"] {
+  position: absolute;
+  left: -4ch;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin: 0;
+}
+
 /* 选中复选框 */
-.md-editor .md-editor-preview input[type="checkbox"]:checked::after {
+.md-editor .md-editor-preview ul.contains-task-list li.task-list-item input[type="checkbox"]:checked::after,
+.md-editor .md-editor-preview ol.contains-task-list li.task-list-item input[type="checkbox"]:checked::after {
   content: "♪";
   position: absolute;
   top: 50%;
