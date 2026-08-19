@@ -1,0 +1,22 @@
+/* ── 引用块样式 ──
+ * 引用块与 GitHub 风格提示框（alerts）共用同一套主体样式：
+ * 圆角卡片 + 左侧粗边框 + 紧凑内边距，背景与边框色由 CSS 变量控制。
+ * 引用块默认背景取表格表头色（var(--pink-12)），边框取粉色；
+ * 提示框（alerts.css）复用本主体，仅覆盖 --md-quote-* 变量。
+ */
+
+/* 主体：引用块与提示框共用 */
+.md-editor .md-editor-preview blockquote,
+.md-editor .md-editor-preview .markdown-alert {
+  --md-quote-bg: var(--pink-12);
+  --md-quote-border: var(--pink-soft);
+
+  margin: 1rem 0;
+  padding: 0.1rem 1rem;
+  border-left: 0.25rem solid var(--md-quote-border);
+  border-radius: 6px;
+  background-color: var(--md-quote-bg);
+  font-weight: normal;
+  color: inherit;
+}
+
