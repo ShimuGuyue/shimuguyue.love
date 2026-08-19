@@ -1,0 +1,4 @@
+/* ── md 渲染正文字体 ── */
+.blog-detail__content {
+  font-family: "仿宋", FangSong, serif;
+}

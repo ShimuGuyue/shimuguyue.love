@@ -2,6 +2,7 @@
 import { MdPreview } from 'md-editor-v3'
 import type { HeadList, MdHeadingId } from 'md-editor-v3'
 import 'md-editor-v3/lib/preview.css'
+import '@/assets/markdown/font.css'
 import '@/assets/markdown/headings.css'
 import '@/assets/markdown/divider.css'
 import '@/assets/markdown/text.css'
