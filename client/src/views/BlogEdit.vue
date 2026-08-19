@@ -301,16 +301,16 @@ async function saveBlog() {
           preview-theme="github"
           :style="{ height: 'calc(100vh - 226px)' }"
           placeholder="在此编辑博客 Markdown 文本..."
+          :preview="true"
           no-mermaid
           no-echarts
           no-upload-img
           no-prettier
           no-img-zoom-in
-          :toolbars-exclude="['image', 'mermaid', 'prettier', 'github', 'fullscreen', 'pageFullscreen']"
+          :toolbars="[]"
           @on-save="saveBlog"
         />
       </section>
-      <aside class="blog-edit__right"></aside>
     </div>
   </main>
 </template>
@@ -325,7 +325,7 @@ async function saveBlog() {
   max-width: 1400px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 300px 1fr 300px;
+  grid-template-columns: 300px 1fr;
   gap: 40px;
   align-items: start;
   overflow: visible;
@@ -411,6 +411,10 @@ async function saveBlog() {
 .blog-edit__main :deep(.md-editor) {
   background-color: transparent;
 }
+/* 固定 50/50 分屏：隐藏拖拽分隔条，编辑区与预览区宽度各占一半 */
+.blog-edit__main :deep(.md-editor-resize-operate) {
+  display: none !important;
+}
 .blog-edit__hint {
   margin: 4px 0 0;
   font-size: 0.75rem;
@@ -418,8 +422,4 @@ async function saveBlog() {
   opacity: 0.7;
 }
 
-/* ── 右侧预览 ── */
-.blog-edit__right {
-  min-width: 0;
-}
 </style>
