@@ -342,7 +342,7 @@ async function deleteBlog() {
 /* ── 左侧 ── */
 .blog-detail__left {
   position: sticky;
-  top: 110px;
+  top: 112px;
   align-self: start;
 }
 
