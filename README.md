@@ -21,6 +21,8 @@ git clone git@github.com:${USER_NAME}/${REPO_NAME}.git ${PROJECT_PATH}
 cd ${PROJECT_PATH}
 ```
 
+注：本项目未使用 Github Action，而是使用 `${PROJECT_PATH}/tools/rebuild.sh` 脚本进行一键重新部署。
+
 ### 环境变量
 
 复制项目根目录的 `.env.example` 为 `.env` 并填写。

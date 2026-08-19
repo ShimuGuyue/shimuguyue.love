@@ -9,17 +9,27 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 ROOT="$SCRIPT_DIR/.."
 SERVER_RUN="$SCRIPT_DIR/server-run.sh"
 
-echo "===== [1/4] 前端构建 (npm) ====="
-(cd "$ROOT/client" && npm run build)
+echo "===== [1/5] 拉取最新代码 ====="
+echo "git pull"
+(cd "$ROOT" && git pull)
 
-echo "===== [2/4] 后端构建 (cmake) ====="
+echo "===== [2/5] 前端构建 (npm) ====="
+echo "npm install"
+echo "npm run build"
+(cd "$ROOT/client" && npm install && npm run build)
+
+echo "===== [3/5] 后端构建 (cmake) ====="
+echo "cmake -B build --preset default"
 (cd "$ROOT/server" && cmake -B build --preset default)
+echo "cmake --build build"
 (cd "$ROOT/server" && cmake --build build)
 
-echo "===== [3/4] 停止旧服务 ====="
-"$SERVER_RUN" stop 
+echo "===== [4/5] 停止旧服务 ====="
+echo "$SERVER_RUN" stop
+"$SERVER_RUN" stop
 
-echo "===== [4/4] 启动新服务 ====="
+echo "===== [5/5] 启动新服务 ====="
+echo "$SERVER_RUN" start
 "$SERVER_RUN" start
 
 echo "===== 重构完成 ====="
