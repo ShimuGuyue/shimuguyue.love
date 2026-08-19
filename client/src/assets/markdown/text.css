@@ -29,21 +29,12 @@ html.dark .md-editor .md-editor-preview {
 
 /* 链接 */
 .md-editor .md-editor-preview a {
-  color: var(--purple-herrscher);
+  color: var(--pink-hot);
   word-wrap: break-word;
   text-decoration: underline solid;
   margin: 2px;
 }
 .md-editor .md-editor-preview a:hover {
-  color: var(--pink-hot);
-}
-html.dark .md-editor .md-editor-preview a {
-  color: var(--pink-hot);
-  word-wrap: break-word;
-  text-decoration: underline solid;
-  margin: 2px;
-}
-html.dark .md-editor .md-editor-preview a:hover {
   color: var(--purple-herrscher);
 }
 
