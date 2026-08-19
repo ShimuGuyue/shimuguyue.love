@@ -149,7 +149,7 @@ PostgreSQL
 | `client/src/assets/manage/button.css` | 后台管理页按钮样式 |
 | `client/src/assets/manage/font.css` | 后台管理页文本样式 |
 | `client/src/assets/manage/table.css` | 后台管理页表格样式 |
-| `client/src/assets/pink-theme.css` | PinkFairy 颜色变量 |
+| `client/src/assets/normal/color.css` | 颜色变量集中定义（基础色板 + `--pink-hot-rgb` + 半透明粉色 `--pink-<alpha>`） |
 
 **server/**
 

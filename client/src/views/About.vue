@@ -4,7 +4,7 @@ import MarkdownPreview from '@/components/MarkdownPreview.vue'
 
 import '@/assets/blog-layout.css'
 import '@/assets/glass.css'
-import '@/assets/pink-theme.css'
+import '@/assets/normal/color.css'
 
 const content = ref('')
 const loading = ref(true)

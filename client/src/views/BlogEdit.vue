@@ -17,7 +17,7 @@ import '@/assets/markdown/tasks.css'
 import '@/assets/markdown/alerts.css'
 
 import '@/assets/blog-layout.css'
-import '@/assets/pink-theme.css'
+import '@/assets/normal/color.css'
 import '@/assets/glass.css'
 const auth = useAuthStore()
 const theme = useThemeStore()

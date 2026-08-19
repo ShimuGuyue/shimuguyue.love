@@ -9,7 +9,7 @@ import { headingSlug } from '@/lib/md-editor-setup'
 import '@/assets/blog-layout.css'
 import '@/assets/blog/selector.css'
 import '@/assets/glass.css'
-import '@/assets/pink-theme.css'
+import '@/assets/normal/color.css'
 
 const route = useRoute()
 const router = useRouter()
