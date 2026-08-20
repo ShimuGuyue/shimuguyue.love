@@ -84,6 +84,16 @@ jobs:
           git clone --depth 1 https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
           "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
 
+      - name: 安装 vcpkg 依赖
+        run: |
+          "$VCPKG_ROOT/vcpkg" install \
+              libpqxx:x64-linux \
+              libsodium:x64-linux \
+              cpp-httplib:x64-linux \
+              nlohmann-json:x64-linux \
+              yaml-cpp:x64-linux \
+              spdlog:x64-linux
+
       - name: 克隆 libcpp-pg-pool 第三方库
         run: git clone --depth 1 https://github.com/leventkaragol/libcpp-pg-pool server/third_party/libcpp-pg-pool
 
