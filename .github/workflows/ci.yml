@@ -127,7 +127,7 @@ jobs:
       SERVER_HOST: 127.0.0.1
       SERVER_PORT: 8080
       FRONTEND_ORIGIN: http://localhost:5173
-      FILE_PATH: ${{ runner.temp }}/files
+      FILE_PATH: ${{ github.workspace }}/smoke-files
       FIXED_SALT: 0123456789abcdef0123456789abcdef
       # PostgreSQL 连接参数
       PGHOST: 127.0.0.1
