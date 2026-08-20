@@ -1,0 +1,53 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 并发控制：同一环境下只允许一个部署任务进行，新任务会等待顺序执行。
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: 部署到服务器
+    if: >-
+      vars.DEPLOY_ENABLED == 'true' &&
+      (
+        github.event_name == 'workflow_dispatch' ||
+        (
+          github.event_name == 'workflow_run' &&
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main'
+        )
+      )
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: 连接到部署服务器执行重建脚本
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 5m
+          envs: DEPLOY_PATH
+          script: |
+            cd "$DEPLOY_PATH"
+            bash tools/rebuild.sh
+        env:
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+
+      - name: 部署健康检查
+        run: curl -sf --max-time 5 "$DEPLOY_HEALTH_URL"
+        env:
+          DEPLOY_HEALTH_URL: ${{ vars.DEPLOY_HEALTH_URL }}

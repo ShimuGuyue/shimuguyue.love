@@ -15,6 +15,7 @@
 克隆仓库。
 
 ```bash
+# 使用 SSH 克隆是为了使用 GitHub Action 自动化拉取新更改并重新部署
 git clone git@github.com:${USER_NAME}/${REPO_NAME}.git ${PROJECT_PATH}
 cd ${PROJECT_PATH}
 ```
@@ -222,3 +223,19 @@ root 的密钥已停用（因固定盐需自行设定），仅支持密码登录
     - 前端：`npm ci` → `npm run type-check` → `npm run build`
     - 后端：安装 vcpkg 依赖（含缓存）→ CMake 配置与构建
     - 冒烟测试：启动 PostgreSQL 容器、创建数据表，运行服务端并验证公开 API
+
++   `deploy.yml` — 持续部署】
+    - `main` 分支 CI 通过后自动执行，也可在 Actions 页面手动触发（`workflow_dispatch`）
+    - 通过 SSH 在服务器上执行 `tools/rebuild.sh` 完成项目重建流程
+
+需在 GitHub 仓库 **Settings / Secrets and variables / Actions** 中配置：
+
++   `DEPLOY_ENABLED`    ：设为 `true` 开启自动部署；未设置或为其它值时不执行部署
++   `DEPLOY_SSH_KEY`    ：SSH 私钥
++   `DEPLOY_PATH`       ：服务器上项目根目录路径
++   `DEPLOY_HOST`       ：服务器 IP 或域名
++   `DEPLOY_PORT`       ：SSH 端口，默认 `22`
++   `DEPLOY_USER`       ：SSH 登录用户名
++   `DEPLOY_HEALTH_URL` ：部署完成后的健康检查地址，例如生产环境域名
+
+在 **Settings / Environments** 设置部署环境名为 `production`。

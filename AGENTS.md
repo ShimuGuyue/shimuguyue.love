@@ -103,6 +103,7 @@ PostgreSQL
 | `README.md` | 项目说明文档 |
 | `TODO.md` | 待办清单 |
 | `.github/workflows/ci.yml` | CI：前端 type-check + 构建、后端 vcpkg + CMake 构建、PostgreSQL 冒烟测试 |
+| `.github/workflows/deploy.yml` | CD：CI 通过后 SSH 到服务器执行 `tools/rebuild.sh` 自动部署 |
 
 **client/**
 
