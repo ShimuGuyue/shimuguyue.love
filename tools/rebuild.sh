@@ -15,12 +15,13 @@ echo "git pull"
 
 echo "===== [2/5] 前端构建 (npm) ====="
 echo "npm install"
+(cd "$ROOT/client" && npm install)
 echo "npm run build"
-(cd "$ROOT/client" && npm install && npm run build)
+(cd "$ROOT/client" && npm run build)
 
 echo "===== [3/5] 后端构建 (cmake) ====="
-echo "cmake -B build --preset default"
-(cd "$ROOT/server" && cmake -B build --preset default)
+echo "cmake -B build --preset release"
+(cd "$ROOT/server" && cmake -B build --preset release)
 echo "cmake --build build"
 (cd "$ROOT/server" && cmake --build build)
 
