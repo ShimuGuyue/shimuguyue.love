@@ -1,0 +1,186 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # -------------------- 前端作业 --------------------
+  frontend:
+    name: 前端作业
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22 
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: 安装 npm 依赖
+        run: npm ci
+
+      - name: TypeScript 类型检查
+        run: npm run type-check
+
+      - name: 构建前端产物
+        run: npm run build
+
+      - name: 上传构建包
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-dist
+          path: client/dist
+          if-no-files-found: error
+
+  # -------------------- 后端作业 --------------------
+  backend:
+    name: 后端作业
+    runs-on: ubuntu-latest
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+      VCPKG_BINARY_SOURCES: files,${{ github.workspace }}/vcpkg-cache,readwrite
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+              build-essential \
+              cmake \
+              pkg-config \
+              bison \
+              flex \
+              autoconf \
+              autoconf-archive \
+              automake \
+              libtool
+
+      - name: 缓存 vcpkg 二进制编译依赖
+        uses: actions/cache@v4
+        with:
+          path: vcpkg-cache
+          key: vcpkg-${{ runner.os }}-${{ hashFiles('server/CMakeLists.txt') }}
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: 安装 vcpkg
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg.git "$VCPKG_ROOT"
+          "$VCPKG_ROOT/bootstrap-vcpkg.sh" -disableMetrics
+
+      - name: 克隆 libcpp-pg-pool 第三方库
+        run: git clone --depth 1 https://github.com/leventkaragol/libcpp-pg-pool server/third_party/libcpp-pg-pool
+
+      - name: 生成 CMake 构建目录
+        run: cmake -B build --preset release
+        working-directory: server
+
+      - name: 编译 Camke 构建项目
+        run: cmake --build build -j "$(nproc)"
+        working-directory: server
+
+      - name: 上传构建包
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-build
+          path: server/build/server
+          if-no-files-found: error
+
+# -------------------- 后端冒烟测试作业 --------------------
+  backend-smoke:
+    name: 后端冒烟测试（PostgreSQL）
+    needs: backend
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci"  # 健康检查，检测数据库是否可连接
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # 后端服务配置
+      SERVER_HOST: 127.0.0.1
+      SERVER_PORT: 8080
+      FRONTEND_ORIGIN: http://localhost:5173
+      FILE_PATH: ${{ runner.temp }}/files
+      FIXED_SALT: 0123456789abcdef0123456789abcdef
+      # PostgreSQL 连接参数
+      PGHOST: 127.0.0.1
+      PGPORT: "5432"
+      PGDATABASE: ci
+      PGUSER: ci
+      PGPASSWORD: ci
+      DB_POOL_SIZE: "2"
+      SESSION_TTL_MINUTES: "60"
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 下载后端构建可执行文件
+        uses: actions/download-artifact@v4
+        with:
+          name: server-build
+          path: server-build
+
+      - name: 安装 psql 命令行工具
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: 初始化数据库表
+        run: |
+          for f in sql/create_*.sql; do
+            psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U ci -d ci -f "$f"
+          done
+        env:
+          PGPASSWORD: ci
+
+      - name: 启动后端服务轮询 api 端点
+        run: |
+          chmod +x server-build/server
+          mkdir -p "$FILE_PATH"
+          ./server-build/server > server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://127.0.0.1:8080/api/profile > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "服务器启动超时，未就绪" >&2
+          cat server.log >&2
+          exit 1
+
+      - name: 对公开 GET 接口进行冒烟测试
+        run: |
+          curl -sf http://127.0.0.1:8080/api/profile
+          curl -sf http://127.0.0.1:8080/api/images
+          curl -sf http://127.0.0.1:8080/api/blogs
+          curl -sf http://127.0.0.1:8080/api/categories
+          curl -sf http://127.0.0.1:8080/api/tags
+          curl -sf http://127.0.0.1:8080/api/about

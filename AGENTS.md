@@ -102,6 +102,7 @@ PostgreSQL
 | `AGENTS.md` | 项目规范与协作说明（本文档） |
 | `README.md` | 项目说明文档 |
 | `TODO.md` | 待办清单 |
+| `.github/workflows/ci.yml` | CI：前端 type-check + 构建、后端 vcpkg + CMake 构建、PostgreSQL 冒烟测试 |
 
 **client/**
 

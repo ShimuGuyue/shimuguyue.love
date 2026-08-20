@@ -15,13 +15,9 @@
 克隆仓库。
 
 ```bash
-# 使用 SSH 克隆是为了可自动化拉取新更改并重新部署
-# 如不需要服务器自动化更新，也可用 HTTP 克隆
 git clone git@github.com:${USER_NAME}/${REPO_NAME}.git ${PROJECT_PATH}
 cd ${PROJECT_PATH}
 ```
-
-注：本项目未使用 Github Action，而是使用 `${PROJECT_PATH}/tools/rebuild.sh` 脚本进行一键重新部署。
 
 ### 环境变量
 
@@ -217,3 +213,12 @@ root 的密钥已停用（因固定盐需自行设定），仅支持密码登录
     crontab -e
     0 4 * * * /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
     ```
+
+#### GitHub Actions 自动集成
+
+仓库内置 GitHub Actions 工作流，push 或提交 PR 到 `main` 分支时自动执行：
+
++   `ci.yml` — 持续集成
+    - 前端：`npm ci` → `npm run type-check` → `npm run build`
+    - 后端：安装 vcpkg 依赖（含缓存）→ CMake 配置与构建
+    - 冒烟测试：启动 PostgreSQL 容器、创建数据表，运行服务端并验证公开 API
