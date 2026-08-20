@@ -126,8 +126,9 @@ jobs:
           POSTGRES_DB: ci
         ports:
           - 5432:5432
+        # 健康检查，检测数据库是否可连接
         options: >-
-          --health-cmd "pg_isready -U ci"  # 健康检查，检测数据库是否可连接
+          --health-cmd "pg_isready -U ci"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
