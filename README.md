@@ -96,8 +96,7 @@ cd ${PROJECT_PATH}
 
     ```bash
     cd ${PROJECT_PATH}/sql/
-    psql -f ./create_users.sql       # 角色表
-    psql -f ./create_permissions.sql # 权限表 + 角色-权限关联表
+    psql -f ./create_users.sql       # 角色表 + 权限表 + 角色-权限关联表
     psql -f ./create_blogs.sql       # 博客表 + 分类表 + 标签表 + 博客-标签关联表
     psql -f ./create_sessions.sql    # session表
     psql -f ./create_images.sql      # 图片表

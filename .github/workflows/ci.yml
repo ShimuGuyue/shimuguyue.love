@@ -166,7 +166,13 @@ jobs:
 
       - name: 初始化数据库表
         run: |
-          for f in sql/create_*.sql; do
+          for f in \
+              sql/create_users.sql \
+              sql/create_blogs.sql \
+              sql/create_sessions.sql \
+              sql/create_images.sql \
+              sql/create_profile.sql \
+              sql/create_about.sql; do
             psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U ci -d ci -f "$f"
           done
         env:
