@@ -158,7 +158,7 @@ PostgreSQL
 |---|---|
 | `server/main.cpp` | 服务端入口：初始化 → 建立数据库连接池 → 注册路由 → 监听 |
 | `server/CMakeLists.txt` | CMake 构建配置（源文件列表、vcpkg 依赖） |
-| `server/CMakePresets.json` | CMake 预设（default） |
+| `server/CMakePresets.json` | CMake 预设（default / release，release 继承 default 并设置 `CMAKE_BUILD_TYPE=Release`） |
 | `server/third_party/libcpp-pg-pool/` | 从 GitHub 拉取的连接池库（MIT 协议，纯头文件，基于 libpqxx） |
 | `server/src/http/routes.cpp` | API 路由注册（~180 行），统一调用 handlers 中的处理函数 |
 | `server/src/http/routes.h` | HTTP 服务配置声明（`FRONTEND_ORIGIN` / `SERVER_HOST` / `SERVER_PORT`、`setup_routes`） |
