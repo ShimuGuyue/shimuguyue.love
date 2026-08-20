@@ -178,6 +178,23 @@ jobs:
         env:
           PGPASSWORD: ci
 
+      - name: 生成 .env 配置文件
+        run: |
+          cat > .env <<EOF
+          SERVER_HOST=$SERVER_HOST
+          SERVER_PORT=$SERVER_PORT
+          FRONTEND_ORIGIN=$FRONTEND_ORIGIN
+          FILE_PATH=$FILE_PATH
+          FIXED_SALT=$FIXED_SALT
+          PGHOST=$PGHOST
+          PGPORT=$PGPORT
+          PGDATABASE=$PGDATABASE
+          PGUSER=$PGUSER
+          PGPASSWORD=$PGPASSWORD
+          DB_POOL_SIZE=$DB_POOL_SIZE
+          SESSION_TTL_MINUTES=$SESSION_TTL_MINUTES
+          EOF
+
       - name: 启动后端服务轮询 api 端点
         run: |
           chmod +x server-build/server
