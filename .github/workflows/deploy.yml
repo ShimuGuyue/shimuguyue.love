@@ -45,7 +45,7 @@ jobs:
             cd "$DEPLOY_PATH"
             bash tools/rebuild.sh
         env:
-          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
 
       - name: 部署健康检查
         run: curl -sf --max-time 5 "$DEPLOY_HEALTH_URL"

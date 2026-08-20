@@ -228,14 +228,18 @@ root 的密钥已停用（因固定盐需自行设定），仅支持密码登录
     - `main` 分支 CI 通过后自动执行，也可在 Actions 页面手动触发（`workflow_dispatch`）
     - 通过 SSH 在服务器上执行 `tools/rebuild.sh` 完成项目重建流程
 
-需在 GitHub 仓库 **Settings / Secrets and variables / Actions** 中配置：
+在 GitHub 仓库 **Settings / Environments** 设置部署环境名为 `production`。
 
-+   `DEPLOY_ENABLED`    ：设为 `true` 开启自动部署；未设置或为其它值时不执行部署
-+   `DEPLOY_SSH_KEY`    ：SSH 私钥
-+   `DEPLOY_PATH`       ：服务器上项目根目录路径
-+   `DEPLOY_HOST`       ：服务器 IP 或域名
-+   `DEPLOY_PORT`       ：SSH 端口，默认 `22`
-+   `DEPLOY_USER`       ：SSH 登录用户名
-+   `DEPLOY_HEALTH_URL` ：部署完成后的健康检查地址，例如生产环境域名
+在 GitHub 仓库 **Settings / Secrets and variables / Actions** 中配置环境变量：
 
-在 **Settings / Environments** 设置部署环境名为 `production`。
+| 名称 | 类型 | 说明 |
+|---|---|---|
+| `DEPLOY_ENABLED` | Variable | 设为 `true` 开启自动部署；未设置或为其它值时不执行部署 |
+| `DEPLOY_HOST` | Secret | 服务器 IP 或域名 |
+| `DEPLOY_PORT` | Secret | SSH 端口 |
+| `DEPLOY_USER` | Secret | SSH 登录用户名 |
+| `DEPLOY_SSH_KEY` | Secret | SSH 私钥 |
+| `DEPLOY_PATH` | Variable | 服务器上项目根目录路径 |
+| `DEPLOY_HEALTH_URL` | Variable | 部署完成后的健康检查地址，例如生产环境域名 |
+
+类型与 `deploy.yml` 中的引用方式一致：Variable 通过 `${{ vars.名称 }}` 读取，Secret 通过 `${{ secrets.名称 }}` 读取。
