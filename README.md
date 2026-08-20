@@ -15,13 +15,10 @@
 克隆仓库。
 
 ```bash
-# 使用 SSH 克隆是为了可自动化拉取新更改并重新部署
-# 如不需要服务器自动化更新，也可用 HTTP 克隆
+# 使用 SSH 克隆是为了使用 GitHub Action 自动化拉取新更改并重新部署
 git clone git@github.com:${USER_NAME}/${REPO_NAME}.git ${PROJECT_PATH}
 cd ${PROJECT_PATH}
 ```
-
-注：本项目未使用 Github Action，而是使用 `${PROJECT_PATH}/tools/rebuild.sh` 脚本进行一键重新部署。
 
 ### 环境变量
 
@@ -99,8 +96,7 @@ cd ${PROJECT_PATH}
 
     ```bash
     cd ${PROJECT_PATH}/sql/
-    psql -f ./create_users.sql       # 角色表
-    psql -f ./create_permissions.sql # 权限表 + 角色-权限关联表
+    psql -f ./create_users.sql       # 角色表 + 权限表 + 角色-权限关联表
     psql -f ./create_blogs.sql       # 博客表 + 分类表 + 标签表 + 博客-标签关联表
     psql -f ./create_sessions.sql    # session表
     psql -f ./create_images.sql      # 图片表
@@ -157,7 +153,8 @@ cd ${PROJECT_PATH}
 +   构建并后台运行 `C++` 应用程序
 
     ```bash
-    cmake -B build --preset default
+    cmake -B build --preset default  # 开发构建
+    cmake -B build --preset release  # 发布构建（继承 default，启用 Release 优化）
     cmake --build build
 
     ../tools/server-run.sh start # 启动后端运行
@@ -217,3 +214,28 @@ root 的密钥已停用（因固定盐需自行设定），仅支持密码登录
     crontab -e
     0 4 * * * /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
     ```
+
+#### GitHub Actions 自动集成
+
+仓库内置 GitHub Actions 工作流，push 或提交 PR 到 `main` 分支时自动执行：
+
++   `ci.yml` — 持续集成
+    - 前端：`npm ci` → `npm run type-check` → `npm run build`
+    - 后端：安装 vcpkg 依赖（含缓存）→ 以 `release` 预设配置并构建 CMake
+    - 冒烟测试：启动 PostgreSQL 容器、创建数据表，运行服务端并验证公开 API
+
++   `deploy.yml` — 持续部署】
+    - `main` 分支 CI 通过后自动执行，也可在 Actions 页面手动触发（`workflow_dispatch`）
+    - 通过 SSH 在服务器上执行 `tools/rebuild.sh` 完成项目重建流程
+
+需在 GitHub 仓库 **Settings / Secrets and variables / Actions** 中配置：
+
++   `DEPLOY_ENABLED`    ：设为 `true` 开启自动部署；未设置或为其它值时不执行部署
++   `DEPLOY_SSH_KEY`    ：SSH 私钥
++   `DEPLOY_PATH`       ：服务器上项目根目录路径
++   `DEPLOY_HOST`       ：服务器 IP 或域名
++   `DEPLOY_PORT`       ：SSH 端口，默认 `22`
++   `DEPLOY_USER`       ：SSH 登录用户名
++   `DEPLOY_HEALTH_URL` ：部署完成后的健康检查地址，例如生产环境域名
+
+在 **Settings / Environments** 设置部署环境名为 `production`。

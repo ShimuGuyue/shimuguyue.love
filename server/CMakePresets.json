@@ -11,6 +11,13 @@
         "CMAKE_C_COMPILER": "/usr/bin/gcc",
         "CMAKE_CXX_COMPILER": "/usr/bin/g++"
       }
+    },
+    {
+      "name": "release",
+      "inherits": "default",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ]
 }
