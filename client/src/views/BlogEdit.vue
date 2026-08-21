@@ -2,25 +2,14 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useThemeStore } from '@/stores/theme'
 import { MdEditor } from 'md-editor-v3'
-import 'md-editor-v3/lib/style.css'
-import '@/assets/markdown/headings.css'
-import '@/assets/markdown/divider.css'
-import '@/assets/markdown/text.css'
-import '@/assets/markdown/blockquote.css'
-import '@/assets/markdown/lists.css'
-import '@/assets/markdown/code.css'
-import '@/assets/markdown/tables.css'
-import '@/assets/markdown/images.css'
-import '@/assets/markdown/tasks.css'
-import '@/assets/markdown/alerts.css'
+import { useMdProps } from '@/lib/md-editor-setup'
 
 import '@/assets/blog-layout.css'
 import '@/assets/normal/color.css'
 import '@/assets/glass.css'
 const auth = useAuthStore()
-const theme = useThemeStore()
+const mdProps = useMdProps()
 const route = useRoute()
 const router = useRouter()
 
@@ -331,16 +320,12 @@ async function saveBlog() {
       <section class="blog-edit__main glass">
         <MdEditor
           v-model="content"
-          :theme="theme.isDark ? 'dark' : 'light'"
-          preview-theme="github"
+          v-bind="mdProps"
           :style="{ height: 'calc(100vh - 226px)' }"
           placeholder="在此编辑博客 Markdown 文本..."
           :preview="true"
-          no-mermaid
-          no-echarts
           no-upload-img
           no-prettier
-          no-img-zoom-in
           :toolbars="[]"
           @on-save="saveBlog"
         />
