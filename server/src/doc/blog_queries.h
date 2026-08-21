@@ -60,11 +60,11 @@ struct BlogQuery
 };
 
     /**
-     * @brief 计算博客更新日期：优先使用导入的 update_time，否则取当前日期。
-     * @param update_time 导入更新时间（YYYY-MM-DD）。
-     * @return 有效更新日期字符串（YYYY-MM-DD）。
+     * @brief 校验博客更新时间（YYYY-MM-DD）。
+     * @param update_time 更新时间（YYYY-MM-DD）。
+     * @return 合法时返回原字符串；缺失或格式无效时返回空字符串。
      */
-    [[nodiscard]] auto effective_blog_date(const std::string& update_time) -> std::string;
+    [[nodiscard]] auto valid_blog_date(const std::string& update_time) -> std::string;
 
     /**
      * @brief 查询所有分类。

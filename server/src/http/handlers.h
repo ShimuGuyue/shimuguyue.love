@@ -188,6 +188,14 @@ void handle_delete_blog(
     const std::string&      allowed);
 
 /**
+ * @brief 处理 GET /api/blog/download 请求（需 blog:download 权限）。
+ */
+void handle_download_blog(
+    const httplib::Request& req,
+    httplib::Response&      res,
+    const std::string&      allowed);
+
+/**
  * @brief 处理 GET /api/about 请求。
  */
 void handle_get_about(

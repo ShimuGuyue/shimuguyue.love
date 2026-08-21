@@ -189,6 +189,14 @@ namespace http
             }
         );
 
+        // GET /api/blog/download — 下载博客 .md 文件（需要 blog:download 权限）
+        svr.Get("/api/blog/download",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_download_blog(req, res, allowed);
+            }
+        );
+
         // GET /api/about — 获取《关于我》README 内容（从数据库读取）
         svr.Get("/api/about",
             [allowed](const auto& req, auto& res)

@@ -13,6 +13,8 @@
 
 namespace
 {
+constexpr uint16_t FLAG_FILENAME_UTF8 = 0x0800; ///< 通用标志位：UTF-8 编码（ZIP EFS 标志）。
+
     /**
      * @brief 生成 CRC-32 查找表（首次调用时初始化）。
      * @return CRC-32 查找表。
@@ -100,7 +102,7 @@ namespace zip_writer
             // 本地文件头（store 方式）
             out.append("PK\x03\x04", 4);
             append_u16(out, 20);                                  // 解压所需最低版本号
-            append_u16(out, 0);                                   // 通用标志位
+            append_u16(out, FLAG_FILENAME_UTF8);                  // 通用标志位：文件名 UTF-8
             append_u16(out, 0);                                   // 压缩方式：0 = 不压缩（store）
             append_u16(out, 0);                                   // 修改时间
             append_u16(out, 0x21);                                // 修改日期：1980-01-01
@@ -117,7 +119,7 @@ namespace zip_writer
             entry.append("PK\x01\x02", 4);
             append_u16(entry, 20);                                  // 生成此条目的版本号
             append_u16(entry, 20);                                  // 解压所需最低版本号
-            append_u16(entry, 0);                                   // 通用标志位
+            append_u16(entry, FLAG_FILENAME_UTF8);                  // 通用标志位：文件名 UTF-8
             append_u16(entry, 0);                                   // 压缩方式：0 = 不压缩（store）
             append_u16(entry, 0);                                   // 修改时间
             append_u16(entry, 0x21);                                // 修改日期：1980-01-01

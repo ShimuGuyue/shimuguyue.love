@@ -383,15 +383,11 @@ namespace
 
 namespace doc
 {
-    auto effective_blog_date(const std::string& update_time) -> std::string
+    auto valid_blog_date(const std::string& update_time) -> std::string
     {
-        if (!update_time.empty() && is_valid_date(update_time))
+        if (is_valid_date(update_time))
             return update_time;
-
-        std::time_t now{ std::time(nullptr) };
-        char buf[16];
-        std::strftime(buf, sizeof buf, "%Y-%m-%d", std::localtime(&now));
-        return std::string{ buf };
+        return "";
     }
 
     auto get_categories(pqxx::connection& conn) -> std::vector<Category>
