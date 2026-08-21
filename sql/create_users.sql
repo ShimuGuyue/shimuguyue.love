@@ -70,6 +70,7 @@ INSERT INTO permissions (name) VALUES ('manage:download')   ON CONFLICT (name) D
 INSERT INTO permissions (name) VALUES ('blog:create')       ON CONFLICT (name) DO NOTHING;
 INSERT INTO permissions (name) VALUES ('blog:edit')         ON CONFLICT (name) DO NOTHING;
 INSERT INTO permissions (name) VALUES ('blog:delete')       ON CONFLICT (name) DO NOTHING;
+INSERT INTO permissions (name) VALUES ('blog:download')     ON CONFLICT (name) DO NOTHING;
 INSERT INTO permissions (name) VALUES ('photo_wall:upload') ON CONFLICT (name) DO NOTHING;
 INSERT INTO permissions (name) VALUES ('photo_wall:edit')   ON CONFLICT (name) DO NOTHING;
 INSERT INTO permissions (name) VALUES ('photo_wall:delete') ON CONFLICT (name) DO NOTHING;

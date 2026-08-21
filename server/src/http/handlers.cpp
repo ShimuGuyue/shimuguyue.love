@@ -8,7 +8,10 @@
 #include <algorithm>
 #include <ctime>
 #include <expected>
+#include <filesystem>
+#include <fstream>
 #include <sstream>
+#include <string_view>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -17,6 +20,7 @@
 #include "auth/login.h"
 #include "auth/rate_limit.h"
 #include "auth/session.h"
+#include "config/env.h"
 #include "crypto/argon2id.h"
 #include "db/connection_pool.h"
 #include "doc/blog_queries.h"
@@ -24,6 +28,44 @@
 #include "img/image_queries.h"
 #include "md/markdown_parser.h"
 #include "profile/profile_queries.h"
+
+
+
+
+
+namespace
+{
+    /**
+     * @brief 按 RFC 5987 对 UTF-8 字符串做百分号编码（用于 Content-Disposition filename*）。
+     * @param value 原始字符串。
+     * @return 编码后的 ASCII 字符串。
+     */
+    auto percent_encode(std::string_view value) -> std::string
+    {
+        constexpr char HEX[] = "0123456789ABCDEF";
+        std::string out;
+        out.reserve(value.size());
+        for (const unsigned char c : value)
+        {
+            const bool unreserved = (c >= 'A' && c <= 'Z')
+                                 || (c >= 'a' && c <= 'z')
+                                 || (c >= '0' && c <= '9')
+                                 || c == '-' || c == '_' || c == '.' || c == '~';
+            if (unreserved)
+            {
+                out.push_back(static_cast<char>(c));
+            }
+            else
+            {
+                out.push_back('%');
+                out.push_back(HEX[c >> 4]);
+                out.push_back(HEX[c & 0x0F]);
+            }
+        }
+        return out;
+    }
+
+} // namespace
 
 
 
@@ -1753,6 +1795,110 @@ namespace http
 
                 spdlog::info("博客删除成功：{}。", file_path);
                 res.set_content(R"({"ok":true})", "application/json");
+            }
+        );
+    }
+
+    void handle_download_blog(
+        const httplib::Request& req,
+        httplib::Response&      res,
+        const std::string&      allowed)
+    {
+        db::with_db(
+            [&](pqxx::connection& conn)
+            {
+                res.set_header("Access-Control-Allow-Origin", allowed);
+                res.set_header("Content-Type", "text/markdown");
+
+                // Session 验证
+                std::string token;  // 提取 Bearer token
+                if (req.has_header("Authorization"))
+                {
+                    const auto& auth_hdr = req.get_header_value("Authorization");
+                    constexpr std::string_view PREFIX = "Bearer ";
+                    if (auth_hdr.size() > PREFIX.size()
+                    &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
+                        token = auth_hdr.substr(PREFIX.size());
+                }
+                const auto session = auth::validate_session(conn, token);
+                if (!session)
+                {
+                    spdlog::info("博客下载失败：未登录或会话已过期。");
+                    res.status = 401;
+                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+                    return;
+                }
+
+                // 权限检查：仅 blog:download 权限用户可下载
+                const auto& perms = session->permissions;
+                if (std::find(perms.begin(), perms.end(), "blog:download") == perms.end())
+                {
+                    spdlog::info("博客下载失败：用户 {} 无 blog:download 权限。", session->user_id);
+                    res.status = 403;
+                    res.set_content(R"({"error":"当前用户无 blog:download 权限"})", "application/json");
+                    return;
+                }
+
+                if (!req.has_param("file_path"))
+                {
+                    spdlog::error("博客下载失败：缺少 file_path 参数。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"缺少 file_path 参数"})", "application/json");
+                    return;
+                }
+                const auto fp = req.get_param_value("file_path");
+                auto       blog = doc::get_blog_by_file_path(conn, fp);
+                if (!blog)
+                {
+                    spdlog::error("博客下载失败：{} 不存在。", fp);
+                    res.status = 404;
+                    res.set_content(R"({"error":"博客不存在"})", "application/json");
+                    return;
+                }
+                const auto& safe_fp = blog->file_path.value_or(fp);
+
+                const auto blogs_root = std::filesystem::path{ config::env()["FILE_PATH"] } / "doc" / "blogs";
+                const auto md_path    = blogs_root / (safe_fp + ".md");
+
+                // 防目录穿越：解析后的文件必须仍在博客目录内
+                std::error_code ec;
+                const auto resolved_root = std::filesystem::weakly_canonical(blogs_root, ec);
+                if (ec)
+                {
+                    spdlog::error("博客下载失败：博客目录不可用（{}）。", ec.message());
+                    res.status = 500;
+                    res.set_content(R"({"error":"博客目录不可用"})", "application/json");
+                    return;
+                }
+                const auto resolved_md = std::filesystem::weakly_canonical(md_path, ec);
+                const auto rel         = std::filesystem::relative(resolved_md, resolved_root, ec);
+                if (ec || rel.empty() || rel.string().starts_with(".."))
+                {
+                    spdlog::error("博客下载失败：非法文件路径 {}", safe_fp);
+                    res.status = 400;
+                    res.set_content(R"({"error":"非法文件路径"})", "application/json");
+                    return;
+                }
+
+                std::ifstream ifs{ resolved_md, std::ios::binary };
+                if (!ifs)
+                {
+                    spdlog::error("博客下载失败：读取文件 {} 失败。", resolved_md.string());
+                    res.status = 404;
+                    res.set_content(R"({"error":"博客文件不存在"})", "application/json");
+                    return;
+                }
+                std::ostringstream oss;
+                oss << ifs.rdbuf();
+
+                // 附件文件名：博客文件相对路径的末级文件名（含 .md）
+                const auto file_name = std::filesystem::path{ safe_fp + ".md" }.filename().string();
+                res.set_header(
+                    "Content-Disposition",
+                    "attachment; filename=\"blog.md\"; filename*=UTF-8''" + percent_encode(file_name)
+                );
+                res.set_content(oss.str(), "text/markdown");
+                spdlog::info("博客下载成功：{}。", safe_fp);
             }
         );
     }

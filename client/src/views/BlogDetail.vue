@@ -16,6 +16,7 @@ const auth = useAuthStore()
 
 const permissions = ref<string[]>([])
 const canDrop = computed(() => permissions.value.includes('blog:delete'))
+const canDownload = computed(() => permissions.value.includes('blog:download'))
 
 interface BlogDetail {
   id: number
@@ -234,6 +235,37 @@ async function deleteBlog() {
   router.push({ name: 'blogs' })
 }
 
+/// 下载当前博客对应的 .md 文件
+async function downloadBlog() {
+  if (!canDownload.value) {
+    alert('操作失败：该操作需要 blog:download 权限')
+    return
+  }
+  const fp = route.params.file_path as string
+  try {
+    const resp = await fetch('/api/blog/download?file_path=' + encodeURIComponent(fp), {
+      headers: { 'Authorization': `Bearer ${auth.token}` },
+    })
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: '下载失败' }))
+      alert(err.error || '下载失败')
+      return
+    }
+    const blob = await resp.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    const name = fp.split('/').pop() || 'blog'
+    link.download = name + '.md'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  } catch {
+    alert('下载失败')
+  }
+}
+
 </script>
 
 <template>
@@ -253,6 +285,7 @@ async function deleteBlog() {
           <time class="blog-detail__time">{{ blog.update_time }}</time>
         </aside>
         <div class="blog-detail__actions">
+          <button class="blog-detail__download-btn" @click="downloadBlog">下载博客</button>
           <button class="blog-detail__edit-btn" @click="editBlog">编辑博客</button>
           <button class="blog-detail__delete-btn" @click="deleteBlog">删除博客</button>
         </div>
@@ -382,7 +415,8 @@ async function deleteBlog() {
 }
 
 .blog-detail__edit-btn,
-.blog-detail__delete-btn {
+.blog-detail__delete-btn,
+.blog-detail__download-btn {
   padding: 8px 0;
   width: 100%;
   border: none;
@@ -399,8 +433,13 @@ async function deleteBlog() {
   background: #d44;
   color: #fff;
 }
+.blog-detail__download-btn {
+  background: var(--purple-herrscher);
+  color: #fff;
+}
 .blog-detail__edit-btn:hover,
-.blog-detail__delete-btn:hover {
+.blog-detail__delete-btn:hover,
+.blog-detail__download-btn:hover {
   opacity: 0.85;
 }
 
