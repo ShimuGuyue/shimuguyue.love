@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
@@ -39,6 +39,9 @@ const updateTime        = ref('')
 const editFilePath      = ref<string | null>(isEditing.value ? String(route.params.file_path) : null)
 /// 博客 Markdown 正文
 const content           = ref('')
+/// 编辑模式加载时的原始正文与更新时间（用于判断正文是否被修改）
+const originalContent   = ref('')
+const originalUpdateTime = ref('')
 const savedSuccessfully = ref(false)
 const permissions       = ref<string[]>([])
 
@@ -91,13 +94,21 @@ onMounted(async () => {
         tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : ''
         pathCategory.value = data.file_path?.split('/').slice(0, -1).join('/') || ''
         pathName.value = data.file_path?.split('/').pop() || ''
-        updateTime.value = isValidDateString(data.update_time) ? data.update_time : ''
+        originalContent.value = data.content || ''
+        originalUpdateTime.value = isValidDateString(data.update_time) ? data.update_time : ''
+        updateTime.value = originalUpdateTime.value
         content.value = data.content || ''
       }
     } catch (e) {
       console.error('加载博客失败:', e)
     }
   }
+})
+
+// 编辑模式：正文被修改时更新时间显示为今天；改回原文时恢复原日期
+watch(content, (val) => {
+  if (!isEditing.value) return
+  updateTime.value = val === originalContent.value ? originalUpdateTime.value : todayString()
 })
 
 onUnmounted(() => {
@@ -231,6 +242,10 @@ async function saveBlog() {
   })) return;
   const isEdit = isEditing.value && editFilePath.value != null
   const newFilePath = `${pathCategory.value}/${pathName.value}`
+  // 编辑模式：正文未修改时保留原更新时间，修改后更新为今天；新建时使用当前显示值
+  const dateToSend = isEdit && content.value === originalContent.value
+    ? originalUpdateTime.value
+    : (isEdit ? todayString() : updateTime.value)
 
   const resp = await fetch(isEdit ? '/api/blog/update' : '/api/blog/save', {
     method: isEdit ? 'PUT' : 'POST',
@@ -243,7 +258,7 @@ async function saveBlog() {
       description: description.value,
       category: category.value,
       tags: tagList,
-      update_time: updateTime.value,
+      update_time: dateToSend,
       file_path_category: pathCategory.value,
       file_path_name: pathName.value,
       old_file_path: editFilePath.value,
@@ -253,7 +268,7 @@ async function saveBlog() {
       description: description.value,
       category: category.value,
       tags: tagList,
-      update_time: updateTime.value,
+      update_time: dateToSend,
       file_path_category: pathCategory.value,
       file_path_name: pathName.value,
       content: contentText,
