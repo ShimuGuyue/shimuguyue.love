@@ -136,7 +136,7 @@ async function importFile() {
       category.value = data.category || ''
       tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || '')
       const importedUpdateTime = data.update_time || ''
-      updateTime.value = isValidDateString(importedUpdateTime) ? importedUpdateTime : ''
+      updateTime.value = isValidDateString(importedUpdateTime) ? importedUpdateTime : todayString()
       pathCategory.value = data.file_path_category || ''
       pathName.value = data.file_path_name || ''
 
