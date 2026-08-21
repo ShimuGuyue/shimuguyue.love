@@ -18,7 +18,7 @@ npm run preview      # 预览生产构建
 
 ### 服务端（`server/`）
 
-依赖 vcpkg（`libpqxx`、`libsodium`、`httplib`、`nlohmann-json`、`yaml-cpp`、`spdlog`），需先设 `VCPKG_ROOT`。
+依赖 vcpkg（`libpqxx`、`libsodium`、`httplib`、`nlohmann-json`、`yaml-cpp`、`spdlog`、`redis-plus-plus`），需先设 `VCPKG_ROOT`。
 
 ```bash
 cd server/

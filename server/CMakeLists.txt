@@ -14,6 +14,7 @@ find_package(httplib           CONFIG REQUIRED)
 find_package(nlohmann_json     CONFIG REQUIRED)
 find_package(yaml-cpp          CONFIG REQUIRED)
 find_package(spdlog            CONFIG REQUIRED)
+find_package(redis++           CONFIG REQUIRED)
 
 # 源文件
 add_executable(${PROJECT_NAME}
@@ -54,6 +55,7 @@ target_link_libraries(${PROJECT_NAME}
         nlohmann_json::nlohmann_json
         yaml-cpp::yaml-cpp
         spdlog::spdlog
+        redis++::redis++_static
 )
 
 # ---------- 安装规则 ----------

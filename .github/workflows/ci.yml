@@ -92,7 +92,8 @@ jobs:
               cpp-httplib:x64-linux \
               nlohmann-json:x64-linux \
               yaml-cpp:x64-linux \
-              spdlog:x64-linux
+              spdlog:x64-linux \
+              redis-plus-plus:x64-linux
 
       - name: 克隆 libcpp-pg-pool 第三方库
         run: git clone --depth 1 https://github.com/leventkaragol/libcpp-pg-pool server/third_party/libcpp-pg-pool
@@ -159,10 +160,11 @@ jobs:
           name: server-build
           path: server-build
 
-      - name: 安装 psql 命令行工具
+      - name: 安装 psql 和 redis 命令行工具
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-client
+          sudo apt-get install -y postgresql-client \
+                                  redis-tools
 
       - name: 初始化数据库表
         run: |

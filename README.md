@@ -104,6 +104,15 @@ cd ${PROJECT_PATH}
     psql -f ./create_about.sql       # README页面内容表
     ```
 
+### Redis
+
++   安装 `redis-server`
+
+    ```bash
+    apt install redis-server
+    systemctl enable --now redis-server
+    ```
+
 ### 后端
 
 本条目下操作默认在 `${PROJECT_PATH}/server` 目录下执行。
@@ -142,6 +151,7 @@ cd ${PROJECT_PATH}
     vcpkg install nlohmann-json:x64-linux
     vcpkg install yaml-cpp:x64-linux
     vcpkg install spdlog
+    vcpkg install redis-plus-plus:x64-linux
     ```
 
 +  拉取 `libcpp-pg-pool`（连接池库，纯头文件，基于 `libpqxx`）
