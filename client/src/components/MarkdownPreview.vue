@@ -39,6 +39,7 @@ function handleGetCatalog(list: HeadList[]) {
     no-mermaid
     no-echarts
     no-img-zoom-in
+    :code-foldable="false"
     @get-catalog="handleGetCatalog"
   />
 </template>
