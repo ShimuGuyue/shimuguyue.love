@@ -260,6 +260,7 @@ async function saveChanges() {
           description: existing.description ?? '',
           category: draft.category,
           tags: tagList,
+          update_time: existing.update_time ?? '',
           file_path_category: draft.file_path_category,
           file_path_name: draft.file_path_name,
           old_file_path: draft.old_file_path,

@@ -1588,7 +1588,14 @@ namespace http
                     }
                 }
 
-                const auto date = doc::effective_blog_date(body.value("update_time", ""));
+                const auto date = doc::valid_blog_date(body.value("update_time", ""));
+                if (date.empty())
+                {
+                    spdlog::info("保存博客失败：缺少或无效的更新时间。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"缺少或无效的更新时间"})", "application/json");
+                    return;
+                }
 
                 const auto err = doc::save_blog(
                     conn, title, description, category, tagList,
@@ -1701,7 +1708,14 @@ namespace http
                     }
                 }
 
-                const auto date = doc::effective_blog_date(body.value("update_time", ""));
+                const auto date = doc::valid_blog_date(body.value("update_time", ""));
+                if (date.empty())
+                {
+                    spdlog::info("更新博客失败：缺少或无效的更新时间。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"缺少或无效的更新时间"})", "application/json");
+                    return;
+                }
 
                 const auto err = doc::update_blog(
                     conn, title, description, category, tagList,
