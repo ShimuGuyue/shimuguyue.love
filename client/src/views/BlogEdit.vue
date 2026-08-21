@@ -61,6 +61,11 @@ function onBeforeUnload(e: BeforeUnloadEvent) {
 onMounted(async () => {
   window.addEventListener('beforeunload', onBeforeUnload)
 
+  // 新建博客：更新时间默认显示今天（保存时后端也会默认取当天）
+  if (!isEditing.value) {
+    updateTime.value = todayString()
+  }
+
   // 获取当前用户权限（用于保存按钮的权限拦截）
   if (auth.isLoggedIn && auth.token) {
     try {
@@ -86,6 +91,7 @@ onMounted(async () => {
         tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : ''
         pathCategory.value = data.file_path?.split('/').slice(0, -1).join('/') || ''
         pathName.value = data.file_path?.split('/').pop() || ''
+        updateTime.value = isValidDateString(data.update_time) ? data.update_time : ''
         content.value = data.content || ''
       }
     } catch (e) {
@@ -157,6 +163,15 @@ function isValidDateString(value: string): boolean {
   const daysInMonth = [31, isLeap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
   const maxDay = daysInMonth[month - 1]
   return maxDay !== undefined && day <= maxDay
+}
+
+/// 当前本地日期（YYYY-MM-DD）
+function todayString(): string {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = String(now.getMonth() + 1).padStart(2, '0')
+  const day = String(now.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 async function saveBlog() {
@@ -288,6 +303,10 @@ async function saveBlog() {
                 placeholder="文件名" />
             </div>
           </div>
+          <div class="blog-edit__field">
+            <label class="blog-edit__label">更新时间</label>
+            <input :value="updateTime" readonly class="blog-edit__input blog-edit__input--readonly" />
+          </div>
         </div>
         <div class="blog-edit__actions">
           <button class="blog-edit__btn blog-edit__btn--import" @click="importFile">导入文件</button>
@@ -359,6 +378,14 @@ async function saveBlog() {
 }
 .blog-edit__input:focus {
   border-color: var(--pink-soft);
+}
+.blog-edit__input--readonly {
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.08);
+  color: var(--color-text-secondary);
+}
+.blog-edit__input--readonly:focus {
+  border-color: var(--color-border);
 }
 
 .blog-edit__path-row {
