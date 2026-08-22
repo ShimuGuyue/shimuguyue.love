@@ -133,6 +133,16 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        # 健康检查，检测 Redis 是否可连接
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     env:
       # 后端服务配置
@@ -149,6 +159,10 @@ jobs:
       PGPASSWORD: ci
       DB_POOL_SIZE: "2"
       SESSION_TTL_MINUTES: "60"
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_POOL_SIZE: "4"
 
     steps:
       - name: 拉取代码
@@ -195,6 +209,10 @@ jobs:
           PGPASSWORD=$PGPASSWORD
           DB_POOL_SIZE=$DB_POOL_SIZE
           SESSION_TTL_MINUTES=$SESSION_TTL_MINUTES
+          REDIS_HOST=$REDIS_HOST
+          REDIS_PORT=$REDIS_PORT
+          REDIS_PASSWORD=$REDIS_PASSWORD
+          REDIS_POOL_SIZE=$REDIS_POOL_SIZE
           EOF
 
       - name: 启动后端服务轮询 api 端点

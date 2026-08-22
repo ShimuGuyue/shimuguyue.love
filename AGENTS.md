@@ -62,6 +62,9 @@ PostgreSQL
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
 | `DB_POOL_SIZE` | 数据库连接池大小（正整数，必填） | server |
 | `SESSION_TTL_MINUTES` | 登录会话过期时间（分钟，正整数，必填） | server |
+| `REDIS_HOST` / `REDIS_PORT` | Redis 地址与端口（必填） | server |
+| `REDIS_PASSWORD` | Redis 密码（可选，空字符串表示无密码） | server, tools |
+| `REDIS_POOL_SIZE` | Redis 连接池大小（正整数，必填） | server |
 | `BUILD_DIR` | 前端构建输出目录（默认 `dist`） | client (vite) |
 
 ## 编码约定

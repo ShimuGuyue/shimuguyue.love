@@ -34,6 +34,9 @@ constexpr std::string_view REQUIRED_KEYS[] = {
     "PGPASSWORD",
     "DB_POOL_SIZE",
     "SESSION_TTL_MINUTES",
+    "REDIS_HOST",
+    "REDIS_PORT",
+    "REDIS_POOL_SIZE",
 };
 
     /**
@@ -115,6 +118,10 @@ constexpr std::string_view REQUIRED_KEYS[] = {
     }
 
 } // namespace
+
+
+
+
 
 namespace config
 {
@@ -203,6 +210,39 @@ namespace config
             if (ec != std::errc{} || ptr != ttl_minutes.data() + ttl_minutes.size() || parsed == 0)
             {
                 spdlog::error("环境变量 SESSION_TTL_MINUTES 必须是正整数！");
+                std::exit(1);
+            }
+        }
+
+        // REDIS_PORT 必须是 1~65535 的端口号
+        {
+            const auto& redis_port = EnvMap::env_values["REDIS_PORT"];
+            unsigned int parsed    = 0;
+            const auto [ptr, ec]   = std::from_chars(
+                redis_port.data(),
+                redis_port.data() + redis_port.size(),
+                parsed
+            );
+            if (ec != std::errc{} || ptr != redis_port.data() + redis_port.size()
+            ||  parsed == 0 || parsed > 65535)
+            {
+                spdlog::error("环境变量 REDIS_PORT 必须是有效的端口号！");
+                std::exit(1);
+            }
+        }
+
+        // REDIS_POOL_SIZE 必须是正整数
+        {
+            const auto& pool_size = EnvMap::env_values["REDIS_POOL_SIZE"];
+            std::size_t parsed   = 0;
+            const auto [ptr, ec] = std::from_chars(
+                pool_size.data(),
+                pool_size.data() + pool_size.size(),
+                parsed
+            );
+            if (ec != std::errc{} || ptr != pool_size.data() + pool_size.size() || parsed == 0)
+            {
+                spdlog::error("环境变量 REDIS_POOL_SIZE 必须是正整数！");
                 std::exit(1);
             }
         }
