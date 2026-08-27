@@ -111,6 +111,16 @@ namespace db
         );
         ConnectionPool::instance().create(pool_size);
 
+        // 设置 SQL 级别的 statement_timeout
+        with_db(
+            [](pqxx::connection& conn)
+            {
+                pqxx::nontransaction txn{ conn };
+                txn.exec("SET statement_timeout = '20s'");
+                txn.commit();
+            }
+        );
+
         with_db(
             [](pqxx::connection& conn)
             {
