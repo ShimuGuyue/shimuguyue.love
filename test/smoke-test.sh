@@ -76,6 +76,24 @@ else
     done
 fi
 
+# ---- 种子数据（幂等） ----
+# 空结果不写缓存的策略下，空库的列表接口不会生成缓存键；
+# 写入最小测试数据，保证六个接口都有非空结果、缓存键验证仍然有效。
+echo "[smoke] 写入列表接口种子数据..."
+psql "${DB_ARGS[@]}" -v ON_ERROR_STOP=1 <<'SQL' > /dev/null
+INSERT INTO categories (name) VALUES ('测试分类')
+ON CONFLICT (name) DO NOTHING;
+INSERT INTO tags (name, category_id)
+SELECT '测试标签', id FROM categories WHERE name = '测试分类'
+ON CONFLICT (name, category_id) DO NOTHING;
+INSERT INTO blogs (title, description, content, file_path, category_id)
+SELECT '测试博客', '', 'smoke content', 'smoke-test-blog', id
+FROM categories WHERE name = '测试分类'
+ON CONFLICT (file_path) DO NOTHING;
+INSERT INTO images (path, description) VALUES ('home/smoke.jpg', 'smoke')
+ON CONFLICT (path) DO NOTHING;
+SQL
+
 # ---- 启动临时服务端（终止端口上已有进程，保证测试用本脚本创建的进程） ----
 # 探测用 curl 必须带超时：未监听端口在某些环境会静默丢包而非快速拒绝
 SERVER_PID=""
@@ -185,6 +203,16 @@ for key in \
     fi
 done
 echo "[smoke] 六个公开接口的缓存键均已写入。"
+
+# ---- 空结果不缓存验证 ----
+curl -sf "$BASE_URL/api/blogs?q=__smoke_no_match__" > /dev/null
+if redis-cli "${REDIS_ARGS[@]}" exists 'api-cache:/api/blogs?q=__smoke_no_match__' \
+    | grep -qx 0; then
+    echo "[smoke] 空结果未写入缓存（符合预期）。"
+else
+    echo "[smoke] 空结果被写入了缓存" >&2
+    exit 1
+fi
 
 # ---- 验证写接口缓存失效 ----
 # 用专用测试账号 smoke_test 登录，保存 profile 后断言缓存键已被删除

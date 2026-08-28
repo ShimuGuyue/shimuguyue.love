@@ -106,6 +106,21 @@ namespace
         return out;
     }
 
+    /**
+     * @brief 缓存列表响应；空数组不缓存，避免空结果长期滞留导致页面空白。
+     * @param key  缓存键。
+     * @param body 响应体。
+     * @param ttl  过期秒数。
+     */
+    void cache_set_list(
+        const std::string& key,
+        const std::string& body,
+        long long          ttl)
+    {
+        if (body != "[]")
+            cache::set(key, body, ttl);
+    }
+
 } // namespace
 
 
@@ -1180,7 +1195,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
-                cache::set(key, res.body, config::cache_ttl().categories);
+                cache_set_list(key, res.body, config::cache_ttl().categories);
             }
         );
     }
@@ -1234,7 +1249,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
-                cache::set(key, res.body, config::cache_ttl().tags);
+                cache_set_list(key, res.body, config::cache_ttl().tags);
             }
         );
     }
@@ -1317,7 +1332,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
-                cache::set(key, res.body, config::cache_ttl().blogs);
+                cache_set_list(key, res.body, config::cache_ttl().blogs);
             }
         );
     }
@@ -1423,7 +1438,7 @@ namespace http
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
                 res.set_content(img::get_all_images(conn).dump(), "application/json");
-                cache::set(key, res.body, config::cache_ttl().images);
+                cache_set_list(key, res.body, config::cache_ttl().images);
             }
         );
     }
