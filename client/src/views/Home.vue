@@ -65,6 +65,9 @@ watch(previewImage, async (img) => {
 })
 
 onMounted(async () => {
+  // 照片墙是公开数据，不依赖登录态与权限，与个人介绍/权限检查并行加载
+  const imagesTask = loadImages()
+
   // 先加载个人介绍
   try {
     const r = await fetch('/api/profile')
@@ -83,7 +86,7 @@ onMounted(async () => {
     } catch { /* 静默 */ }
   }
 
-  await loadImages()
+  await imagesTask
 })
 
 onUnmounted(() => {
