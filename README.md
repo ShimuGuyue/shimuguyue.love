@@ -233,6 +233,14 @@ root 的密钥已停用（因固定盐需自行设定），仅支持密码登录
 
 #### GitHub Actions 自动集成
 
+后端冒烟测试脚本为 `test/smoke-test.sh`，CI 与本地共用：
+
+脚本默认使用 `server/build/server`，CI 或自定义路径时用 `SERVER_BIN` 覆盖，如 `SERVER_BIN=server-build/server bash test/smoke-test.sh`。
+
+需要 `psql`、`redis-cli`、`curl`、`python3` 以及可用的 PostgreSQL 与 Redis。
+
+脚本使用项目根目录的 `.env`（CI 会在调用前从环境变量生成，本地用现有文件）；数据库表已存在时跳过初始化，端口上已有旧服务端时会先终止、确保测试运行在脚本创建的临时服务端上（测试结束即清理，原服务不会自动恢复）。写接口缓存失效测试使用专用测试账号 `smoke_test`（密码 `root`，脚本会幂等创建并仅授予 `introduction:edit` 权限）登录；该测试会临时覆盖 profile，并在测试后自动恢复原值。
+
 仓库内置 GitHub Actions 工作流，push 或提交 PR 到 `main` 分支时自动执行：
 
 +   `ci.yml` — 持续集成

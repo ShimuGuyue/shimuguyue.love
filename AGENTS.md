@@ -209,7 +209,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `tools/rebuild.sh` | 一键重构脚本：前端构建 → 后端构建 → 重启服务（仅由用户在服务端调用，不在本地开发环境使用） |
 | `tools/server-run.sh` | 服务端启动脚本 |
 | `tools/server-run.log` | 服务端运行日志（运行产物） |
-| `test/` | 测试用文件（非代码） |
+| `test/` | 测试脚本：`smoke-test.sh` 后端冒烟测试（CI 与本地共用；使用根目录 `.env`、终止旧服务端并用临时进程；写接口测试用专用账号 `smoke_test` 幂等创建并授权 `introduction:edit`，测试前后备份/恢复 profile） |
 
 ## 注意事项
 
