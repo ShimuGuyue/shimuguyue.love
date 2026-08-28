@@ -18,7 +18,7 @@ npm run preview      # 预览生产构建
 
 ### 服务端（`server/`）
 
-依赖 vcpkg（`libpqxx`、`libsodium`、`httplib`、`nlohmann-json`、`yaml-cpp`、`spdlog`），需先设 `VCPKG_ROOT`。
+依赖 vcpkg（`libpqxx`、`libsodium`、`httplib`、`nlohmann-json`、`yaml-cpp`、`spdlog`、`redis-plus-plus`），需先设 `VCPKG_ROOT`。
 
 ```bash
 cd server/
@@ -41,14 +41,19 @@ cmake --build build
 服务端 (C++23, httplib, 端口由 SERVER_PORT 决定)
   │  连接池（libcpp-pg-pool / lklibs::PgPool，DB_POOL_SIZE 条常驻连接），
   │  db::with_db() 并发获取独占连接，无空闲时阻塞等待
+  │  公开 GET 接口 cache-aside 缓存（redis++，REDIS_POOL_SIZE 条连接），
+  │  未命中时直查数据库，200 成功响应写缓存；写接口成功后失效相关缓存
   ▼
 PostgreSQL
+
+Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据库）
 ```
 
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/doc/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/doc/blogs/` 的相对路径（不含 `.md` 后缀）。
 - **图片**：文件存于 `FILE_PATH/image/`，元数据存于数据库，文件名与对应 `id` 同名。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
-- **配置**：所有配置从环境变量读取，缺失则 `exit(1)`。无配置文件。
+- **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片 / 关于我 / 个人介绍）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片 / 个人介绍写接口成功后在事务提交后失效相关缓存，`/api/about` 由 `tools/pull-readme.sh` 尽力而为失效、TTL 兜底。
+- **配置**：`conf/.env`（环境变量）+ `conf/cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。
 
 ## 关键环境变量
 
@@ -62,6 +67,9 @@ PostgreSQL
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
 | `DB_POOL_SIZE` | 数据库连接池大小（正整数，必填） | server |
 | `SESSION_TTL_MINUTES` | 登录会话过期时间（分钟，正整数，必填） | server |
+| `REDIS_HOST` / `REDIS_PORT` | Redis 地址与端口（必填） | server |
+| `REDIS_PASSWORD` | Redis 密码（可选，空字符串表示无密码） | server, tools |
+| `REDIS_POOL_SIZE` | Redis 连接池大小（正整数，必填） | server |
 | `BUILD_DIR` | 前端构建输出目录（默认 `dist`） | client (vite) |
 
 ## 编码约定
@@ -102,6 +110,7 @@ PostgreSQL
 | `AGENTS.md` | 项目规范与协作说明（本文档） |
 | `README.md` | 项目说明文档 |
 | `TODO.md` | 待办清单 |
+| `conf/` | 配置文件目录：`.env`（环境变量，gitignore）、`cache.yml`（公开 GET 接口缓存有效期）、`.env.example`（模板）；由 `config::init_env()` / `config::init_cache()` 从项目目录向上查找并校验 |
 | `.github/workflows/ci.yml` | CI：前端 type-check + 构建、后端 vcpkg + CMake 构建、PostgreSQL 冒烟测试 |
 | `.github/workflows/deploy.yml` | CD：CI 通过后 SSH 到服务器执行 `tools/rebuild.sh` 自动部署 |
 
@@ -165,10 +174,13 @@ PostgreSQL
 | `server/src/http/routes.cpp` | API 路由注册（~180 行），统一调用 handlers 中的处理函数 |
 | `server/src/http/routes.h` | HTTP 服务配置声明（`FRONTEND_ORIGIN` / `SERVER_HOST` / `SERVER_PORT`、`setup_routes`） |
 | `server/src/http/handlers.cpp` / `.h` | 全部 API 路由处理函数（业务逻辑），由 routes.cpp 统一注册调用 |
+| `server/src/cache/cache.cpp` / `.h` | Redis 公开接口缓存（基于 redis++ / redis-plus-plus）：初始化（PING 校验）、get / set / del、按前缀 SCAN+DEL 失效、统一键构造 `api-cache:`，get 记录缓存命中/未命中日志、set 记录写缓存日志 |
 | `server/src/db/connection.cpp` / `.h` | 数据库连接池初始化 + 表检查 |
 | `server/src/db/connection_pool.cpp` / `.h` | 连接池实现：基于 `lklibs::PgPool` 的薄封装，`db::with_db()` 并发获取独占连接，无空闲时阻塞等待 |
-| `server/src/config/env.cpp` / `.h` | 环境变量读取（缺失则 `exit(1)`） |
+| `server/src/config/config.cpp` / `.h` | 配置统一初始化入口：依次调用 `init_env()` 与 `init_cache()`；共享 `config::find_config_file()` 向上查找 `conf/` 配置文件 |
+| `server/src/config/env.cpp` / `.h` | `conf/.env` 环境变量读取（`init_env()`，缺失则 `exit(1)`） |
 | `server/src/config/env_map.cpp` / `.h` | 环境变量存储封装类（内部 `unordered_map`，只读 `operator[]`） |
+| `server/src/config/cache.cpp` / `.h` | `conf/cache.yml` 缓存有效期配置加载：向上查找文件、yaml 解析校验（缺失或非法则 `exit(1)`），`config::cache_ttl()` 只读访问 |
 | `server/src/auth/login.cpp` / `.h` | 密钥/密码登录、权限查询 |
 | `server/src/auth/session.cpp` / `.h` | 会话 token 创建、验证、过期清理 |
 | `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |
@@ -193,11 +205,11 @@ PostgreSQL
 | `sql/create_profile.sql` | 个人介绍表（profile，单行） |
 | `sql/create_about.sql` | 关于我内容表（about，单行） |
 | `tools/auto-sync-blogs.sh` | 博客 `.md` 自动同步脚本 |
-| `tools/pull-readme.sh` | README 自动拉取脚本 |
+| `tools/pull-readme.sh` | README 自动拉取脚本（psql 同步成功后重建 `/api/about` 缓存：先失效旧键，再请求接口回源） |
 | `tools/rebuild.sh` | 一键重构脚本：前端构建 → 后端构建 → 重启服务（仅由用户在服务端调用，不在本地开发环境使用） |
 | `tools/server-run.sh` | 服务端启动脚本 |
 | `tools/server-run.log` | 服务端运行日志（运行产物） |
-| `test/` | 测试用文件（非代码） |
+| `test/` | 测试脚本：`smoke-test.sh` 后端冒烟测试（CI 与本地共用；使用 `conf/.env`、终止旧服务端并用临时进程；写接口测试用专用账号 `smoke_test` 幂等创建并授权 `introduction:edit`，测试前后备份/恢复 profile） |
 
 ## 注意事项
 

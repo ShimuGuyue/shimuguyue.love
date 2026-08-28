@@ -22,7 +22,7 @@ cd ${PROJECT_PATH}
 
 ### 环境变量
 
-复制项目根目录的 `.env.example` 为 `.env` 并填写。
+复制 `conf/.env.example` 为 `conf/.env` 并填写。
 文件类目录只配置一个根目录 `FILE_PATH`：博客文件位于 `$FILE_PATH/doc/blogs`、图片位于 `$FILE_PATH/image`、README 位于 `$FILE_PATH/doc/README`，服务端启动时会自动创建这些目录。
 
 ### 前端
@@ -112,6 +112,18 @@ cd ${PROJECT_PATH}
     statement_timeout = '20s'
     ```
 
+### Redis
+
+公开 GET 接口（分类、标签、博客列表/详情、图片、关于我、个人介绍）通过 Redis 做 cache-aside 缓存，降低 PostgreSQL 查询压力；博客 / 图片 / 个人介绍的写接口成功后自动失效相关缓存，`/api/about` 由外部脚本同步，靠 TTL 兜底。
+
+各项接口的缓存有效期配置在 `conf/cache.yml`（单位：秒）。
+
++   安装 `redis-server`
+
+    ```bash
+    apt install redis-server
+    systemctl enable --now redis-server
+
 ### 后端
 
 本条目下操作默认在 `${PROJECT_PATH}/server` 目录下执行。
@@ -150,6 +162,7 @@ cd ${PROJECT_PATH}
     vcpkg install nlohmann-json:x64-linux
     vcpkg install yaml-cpp:x64-linux
     vcpkg install spdlog
+    vcpkg install redis-plus-plus:x64-linux
     ```
 
 +  拉取 `libcpp-pg-pool`（连接池库，纯头文件，基于 `libpqxx`）
@@ -223,14 +236,24 @@ root 的密钥已停用（因固定盐需自行设定），仅支持密码登录
     0 4 * * * /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
     ```
 
+    > 同步成功后脚本会重建 `/api/about` 缓存：先通过 `redis-cli` 失效旧键，再请求接口触发服务端回源写缓存（需安装 `redis-tools` 与 `curl`）；服务端或 Redis 不可用时仅告警，内容会在 TTL 后自动过期。
+
 #### GitHub Actions 自动集成
+
+后端冒烟测试脚本为 `test/smoke-test.sh`，CI 与本地共用：
+
+脚本默认使用 `server/build/server`，CI 或自定义路径时用 `SERVER_BIN` 覆盖，如 `SERVER_BIN=server-build/server bash test/smoke-test.sh`。
+
+需要 `psql`、`redis-cli`、`curl`、`python3` 以及可用的 PostgreSQL 与 Redis。
+
+脚本使用 `conf/.env`（CI 会在调用前从环境变量生成，本地用现有文件）；数据库表已存在时跳过初始化，端口上已有旧服务端时会先终止、确保测试运行在脚本创建的临时服务端上（测试结束即清理，原服务不会自动恢复）。写接口缓存失效测试使用专用测试账号 `smoke_test`（密码 `root`，脚本会幂等创建并仅授予 `introduction:edit` 权限）登录；该测试会临时覆盖 profile，并在测试后自动恢复原值。
 
 仓库内置 GitHub Actions 工作流，push 或提交 PR 到 `main` 分支时自动执行：
 
 +   `ci.yml` — 持续集成
     - 前端：`npm ci` → `npm run type-check` → `npm run build`
     - 后端：安装 vcpkg 依赖（含缓存）→ 以 `release` 预设配置并构建 CMake
-    - 冒烟测试：启动 PostgreSQL 容器、创建数据表，运行服务端并验证公开 API
+    - 冒烟测试：启动 PostgreSQL 与 Redis 容器、创建数据表，运行服务端并验证公开 API 及缓存写入/失效
 
 +   `deploy.yml` — 持续部署】
     - `main` 分支 CI 通过后自动执行，也可在 Actions 页面手动触发（`workflow_dispatch`）

@@ -14,11 +14,13 @@ find_package(httplib           CONFIG REQUIRED)
 find_package(nlohmann_json     CONFIG REQUIRED)
 find_package(yaml-cpp          CONFIG REQUIRED)
 find_package(spdlog            CONFIG REQUIRED)
+find_package(redis++           CONFIG REQUIRED)
 
 # 源文件
 add_executable(${PROJECT_NAME}
     main.cpp
     src/about/about_queries.cpp
+    src/cache/cache.cpp
     src/db/connection.cpp
     src/db/connection_pool.cpp
     src/crypto/argon2id.cpp
@@ -34,6 +36,8 @@ add_executable(${PROJECT_NAME}
     src/auth/rate_limit.cpp
     src/md/markdown_parser.cpp
     src/profile/profile_queries.cpp
+    src/config/cache.cpp
+    src/config/config.cpp
     src/config/env.cpp
     src/config/env_map.cpp
 )
@@ -54,6 +58,7 @@ target_link_libraries(${PROJECT_NAME}
         nlohmann_json::nlohmann_json
         yaml-cpp::yaml-cpp
         spdlog::spdlog
+        redis++::redis++_static
 )
 
 # ---------- 安装规则 ----------

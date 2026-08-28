@@ -4,6 +4,7 @@
  */
 
 #include "config/env.h"
+#include "config/config.h"
 #include "config/env_map.h"
 
 #include <algorithm>
@@ -11,7 +12,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <system_error>
@@ -34,6 +34,9 @@ constexpr std::string_view REQUIRED_KEYS[] = {
     "PGPASSWORD",
     "DB_POOL_SIZE",
     "SESSION_TTL_MINUTES",
+    "REDIS_HOST",
+    "REDIS_PORT",
+    "REDIS_POOL_SIZE",
 };
 
     /**
@@ -48,26 +51,6 @@ constexpr std::string_view REQUIRED_KEYS[] = {
         while (!s.empty() && (s.back() == ' ' || s.back() == '\t' || s.back() == '\r'))
             s.remove_suffix(1);
         return s;
-    }
-
-    /**
-     * @brief 从当前目录向上查找项目的 .env 文件。
-     * @return .env 文件路径；未找到返回 std::nullopt。
-     */
-    auto find_env_file() -> std::optional<std::filesystem::path>
-    {
-        std::filesystem::path dir{ std::filesystem::current_path() };
-        for (;;)
-        {
-            const auto candidate = dir / ".env";
-            if (std::filesystem::is_regular_file(candidate))
-                return candidate;
-
-            const auto parent = dir.parent_path();
-            if (parent == dir)
-                return std::nullopt;
-            dir = parent;
-        }
     }
 
     /**
@@ -116,15 +99,19 @@ constexpr std::string_view REQUIRED_KEYS[] = {
 
 } // namespace
 
+
+
+
+
 namespace config
 {
-    void init()
+    void init_env()
     {
-        // 查找并加载项目的 .env 文件
-        const auto env_file = find_env_file();
+        // 查找并加载项目的 conf/.env 文件
+        const auto env_file = config::find_config_file(".env");
         if (!env_file)
         {
-            spdlog::error("未找到 .env 文件！请将 .env 放在项目根目录中。");
+            spdlog::error("未找到 conf/.env 文件！请将 .env 放在项目 conf/ 目录中。");
             std::exit(1);
         }
         load_env_file(*env_file, EnvMap::env_values);
@@ -203,6 +190,39 @@ namespace config
             if (ec != std::errc{} || ptr != ttl_minutes.data() + ttl_minutes.size() || parsed == 0)
             {
                 spdlog::error("环境变量 SESSION_TTL_MINUTES 必须是正整数！");
+                std::exit(1);
+            }
+        }
+
+        // REDIS_PORT 必须是 1~65535 的端口号
+        {
+            const auto& redis_port = EnvMap::env_values["REDIS_PORT"];
+            unsigned int parsed    = 0;
+            const auto [ptr, ec]   = std::from_chars(
+                redis_port.data(),
+                redis_port.data() + redis_port.size(),
+                parsed
+            );
+            if (ec != std::errc{} || ptr != redis_port.data() + redis_port.size()
+            ||  parsed == 0 || parsed > 65535)
+            {
+                spdlog::error("环境变量 REDIS_PORT 必须是有效的端口号！");
+                std::exit(1);
+            }
+        }
+
+        // REDIS_POOL_SIZE 必须是正整数
+        {
+            const auto& pool_size = EnvMap::env_values["REDIS_POOL_SIZE"];
+            std::size_t parsed   = 0;
+            const auto [ptr, ec] = std::from_chars(
+                pool_size.data(),
+                pool_size.data() + pool_size.size(),
+                parsed
+            );
+            if (ec != std::errc{} || ptr != pool_size.data() + pool_size.size() || parsed == 0)
+            {
+                spdlog::error("环境变量 REDIS_POOL_SIZE 必须是正整数！");
                 std::exit(1);
             }
         }

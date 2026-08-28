@@ -6,12 +6,14 @@
 #include "http/handlers.h"
 
 #include <algorithm>
+#include <charconv>
 #include <ctime>
 #include <expected>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -20,6 +22,8 @@
 #include "auth/login.h"
 #include "auth/rate_limit.h"
 #include "auth/session.h"
+#include "cache/cache.h"
+#include "config/cache.h"
 #include "config/env.h"
 #include "crypto/argon2id.h"
 #include "db/connection_pool.h"
@@ -29,12 +33,49 @@
 #include "md/markdown_parser.h"
 #include "profile/profile_queries.h"
 
-
-
-
-
 namespace
 {
+    /**
+     * @brief 将逗号分隔的 id 列表归一化为数字升序字符串（用于缓存键）。
+     * @param raw 原始参数值，例如 "3,1,2"。
+     * @return 归一化后的字符串，例如 "1,2,3"；含无效项或为空时返回原值。
+     */
+    auto normalize_id_list(std::string_view raw) -> std::string
+    {
+        std::vector<int> ids;
+        std::istringstream iss{ std::string{ raw } };
+        std::string token;
+        while (std::getline(iss, token, ','))
+        {
+            if (token.empty())
+                continue;
+
+            int value{ 0 };
+            const auto [ptr, ec] = std::from_chars(
+                token.data(),
+                token.data() + token.size(),
+                value
+            );
+            if (ec != std::errc{} || ptr != token.data() + token.size())
+                return std::string{ raw };
+
+            ids.push_back(value);
+        }
+
+        if (ids.empty())
+            return std::string{ raw };
+
+        std::sort(ids.begin(), ids.end());
+        std::ostringstream out;
+        for (std::size_t i{ 0 }; i < ids.size(); ++i)
+        {
+            if (i != 0)
+                out << ',';
+            out << ids[i];
+        }
+        return out.str();
+    }
+
     /**
      * @brief 按 RFC 5987 对 UTF-8 字符串做百分号编码（用于 Content-Disposition filename*）。
      * @param value 原始字符串。
@@ -63,6 +104,21 @@ namespace
             }
         }
         return out;
+    }
+
+    /**
+     * @brief 缓存列表响应；空数组不缓存，避免空结果长期滞留导致页面空白。
+     * @param key  缓存键。
+     * @param body 响应体。
+     * @param ttl  过期秒数。
+     */
+    void cache_set_list(
+        const std::string& key,
+        const std::string& body,
+        long long          ttl)
+    {
+        if (body != "[]")
+            cache::set(key, body, ttl);
     }
 
 } // namespace
@@ -1114,6 +1170,15 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        const auto key = cache::cache_key("/api/categories", {});
+        if (const auto cached = cache::get(key); cached.has_value())
+        {
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(*cached, "application/json");
+            return;
+        }
+
         db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -1130,6 +1195,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
+                cache_set_list(key, res.body, config::cache_ttl().categories);
             }
         );
     }
@@ -1139,6 +1205,20 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        const auto key = cache::cache_key(
+            "/api/tags",
+            req.has_param("category_ids")
+                ? std::unordered_map<std::string, std::string>{ { "category_ids", normalize_id_list(req.get_param_value("category_ids")) } }
+                : std::unordered_map<std::string, std::string>{}
+        );
+        if (const auto cached = cache::get(key); cached.has_value())
+        {
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(*cached, "application/json");
+            return;
+        }
+
         db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -1169,6 +1249,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
+                cache_set_list(key, res.body, config::cache_ttl().tags);
             }
         );
     }
@@ -1178,6 +1259,23 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        std::unordered_map<std::string, std::string> params;
+        if (req.has_param("category_ids"))
+            params["category_ids"] = normalize_id_list(req.get_param_value("category_ids"));
+        if (req.has_param("tag_ids"))
+            params["tag_ids"] = normalize_id_list(req.get_param_value("tag_ids"));
+        if (req.has_param("q"))
+            params["q"] = req.get_param_value("q");
+        const auto key = cache::cache_key("/api/blogs", params);
+
+        if (const auto cached = cache::get(key); cached.has_value())
+        {
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(*cached, "application/json");
+            return;
+        }
+
         db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -1234,6 +1332,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
+                cache_set_list(key, res.body, config::cache_ttl().blogs);
             }
         );
     }
@@ -1243,6 +1342,23 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        const auto key = cache::cache_key(
+            "/api/blog",
+            req.has_param("file_path")
+                ? std::unordered_map<std::string, std::string>{ { "file_path", req.get_param_value("file_path") } }
+                : std::unordered_map<std::string, std::string>{}
+        );
+        if (req.has_param("file_path"))
+        {
+            if (const auto cached = cache::get(key); cached.has_value())
+            {
+                res.set_header("Access-Control-Allow-Origin", allowed);
+                res.set_header("Content-Type", "application/json");
+                res.set_content(*cached, "application/json");
+                return;
+            }
+        }
+
         db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -1286,6 +1402,7 @@ namespace http
                                     : nlohmann::json(nullptr);
                 item["tags"]        = blog->tags;
                 res.set_content(item.dump(), "application/json");
+                cache::set(key, res.body, config::cache_ttl().blog);
             }
         );
     }
@@ -1306,12 +1423,22 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        const auto key = cache::cache_key("/api/images", {});
+        if (const auto cached = cache::get(key); cached.has_value())
+        {
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(*cached, "application/json");
+            return;
+        }
+
         db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
                 res.set_content(img::get_all_images(conn).dump(), "application/json");
+                cache_set_list(key, res.body, config::cache_ttl().images);
             }
         );
     }
@@ -1382,6 +1509,7 @@ namespace http
                 }
                 spdlog::info("图片元数据保存成功：{}", body.value("path", ""));
                 res.set_content(R"({"ok":true})", "application/json");
+                cache::invalidate_prefix("api-cache:/api/images");
             }
         );
     }
@@ -1444,6 +1572,7 @@ namespace http
                 }
                 spdlog::info("图片上传成功：{}。", file.filename);
                 res.set_content(result.dump(), "application/json");
+                cache::invalidate_prefix("api-cache:/api/images");
             }
         );
     }
@@ -1508,6 +1637,7 @@ namespace http
                 }
                 spdlog::info("图片删除成功：{}。", path);
                 res.set_content(R"({"ok":true})", "application/json");
+                cache::invalidate_prefix("api-cache:/api/images");
             }
         );
     }
@@ -1615,6 +1745,9 @@ namespace http
 
                 spdlog::info("博客保存成功：{}/{}。", pathCat, pathName);
                 res.set_content(R"({"ok":true})", "application/json");
+                cache::invalidate_prefix("api-cache:/api/blogs");
+                cache::invalidate_prefix("api-cache:/api/categories");
+                cache::invalidate_prefix("api-cache:/api/tags");
             }
         );
     }
@@ -1734,6 +1867,17 @@ namespace http
 
                 spdlog::info("博客更新成功：{}/{}。", pathCat, pathName);
                 res.set_content(R"({"ok":true})", "application/json");
+                cache::invalidate_prefix("api-cache:/api/blogs");
+                cache::invalidate_prefix("api-cache:/api/categories");
+                cache::invalidate_prefix("api-cache:/api/tags");
+                cache::del(cache::cache_key(
+                    "/api/blog",
+                    { { "file_path", old_file_path } }
+                ));
+                cache::del(cache::cache_key(
+                    "/api/blog",
+                    { { "file_path", pathCat + "/" + pathName } }
+                ));
             }
         );
     }
@@ -1809,6 +1953,13 @@ namespace http
 
                 spdlog::info("博客删除成功：{}。", file_path);
                 res.set_content(R"({"ok":true})", "application/json");
+                cache::invalidate_prefix("api-cache:/api/blogs");
+                cache::invalidate_prefix("api-cache:/api/categories");
+                cache::invalidate_prefix("api-cache:/api/tags");
+                cache::del(cache::cache_key(
+                    "/api/blog",
+                    { { "file_path", file_path } }
+                ));
             }
         );
     }
@@ -1922,12 +2073,22 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        const auto key = cache::cache_key("/api/about", {});
+        if (const auto cached = cache::get(key); cached.has_value())
+        {
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(*cached, "application/json");
+            return;
+        }
+
         db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
                 res.set_content(nlohmann::json{{"content", about::get_about(conn)}}.dump(), "application/json");
+                cache::set(key, res.body, config::cache_ttl().about);
             }
         );
     }
@@ -1937,12 +2098,22 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        const auto key = cache::cache_key("/api/profile", {});
+        if (const auto cached = cache::get(key); cached.has_value())
+        {
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(*cached, "application/json");
+            return;
+        }
+
         db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
                 res.set_content(profile::get_profile(conn).dump(), "application/json");
+                cache::set(key, res.body, config::cache_ttl().profile);
             }
         );
     }
@@ -2011,6 +2182,7 @@ namespace http
                 }
                 spdlog::info("个人简介更新成功。");
                 res.set_content(R"({"ok":true})", "application/json");
+                cache::invalidate_prefix("api-cache:/api/profile");
             }
         );
     }

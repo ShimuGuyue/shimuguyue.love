@@ -19,7 +19,7 @@ namespace config
 class EnvMap
 {
 private:
-    friend void init();
+    friend void init_env();
 
     EnvMap() = default;
     EnvMap(const EnvMap&) = delete;

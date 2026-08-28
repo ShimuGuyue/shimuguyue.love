@@ -6,6 +6,8 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 
+#include "cache/cache.h"
+#include "config/config.h"
 #include "config/env.h"
 #include "db/connection.h"
 #include "http/routes.h"
@@ -18,7 +20,8 @@ int main(int argc, char* argv[])
     // 忽略 SIGPIPE：数据库断连写入失败时防止进程被信号终止（libpqxx 文档建议）
     std::signal(SIGPIPE, SIG_IGN);
 
-    config::init(); // 环境变量初始化
+    config::init(); // 配置统一初始化
+    cache:: init(); // Redis 缓存初始化
     db::    init(); // 数据库连接池与表检查
 
     httplib::Server svr;

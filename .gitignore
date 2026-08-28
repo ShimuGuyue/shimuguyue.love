@@ -17,9 +17,8 @@
 
 ### Test File
 
-**/[Tt][Ee][Ss][Tt]/
-**/[Tt][Ee][Ss][Tt].*
-**/*.[Tt][Ee][Ss][Tt]
+temp/
+tmp/
 
 **/[Ll][Oo][Gg]/
 **/*.[Ll][Oo][Gg]

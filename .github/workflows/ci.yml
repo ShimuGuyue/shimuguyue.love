@@ -92,7 +92,8 @@ jobs:
               cpp-httplib:x64-linux \
               nlohmann-json:x64-linux \
               yaml-cpp:x64-linux \
-              spdlog:x64-linux
+              spdlog:x64-linux \
+              redis-plus-plus:x64-linux
 
       - name: 克隆 libcpp-pg-pool 第三方库
         run: git clone --depth 1 https://github.com/leventkaragol/libcpp-pg-pool server/third_party/libcpp-pg-pool
@@ -132,6 +133,16 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        # 健康检查，检测 Redis 是否可连接
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
 
     env:
       # 后端服务配置
@@ -148,6 +159,10 @@ jobs:
       PGPASSWORD: ci
       DB_POOL_SIZE: "2"
       SESSION_TTL_MINUTES: "60"
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ""
+      REDIS_POOL_SIZE: "4"
 
     steps:
       - name: 拉取代码
@@ -159,28 +174,16 @@ jobs:
           name: server-build
           path: server-build
 
-      - name: 安装 psql 命令行工具
+      - name: 安装 psql 和 redis 命令行工具
         run: |
           sudo apt-get update
-          sudo apt-get install -y postgresql-client
-
-      - name: 初始化数据库表
-        run: |
-          for f in \
-              sql/create_users.sql \
-              sql/create_blogs.sql \
-              sql/create_sessions.sql \
-              sql/create_images.sql \
-              sql/create_profile.sql \
-              sql/create_about.sql; do
-            psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -U ci -d ci -f "$f"
-          done
-        env:
-          PGPASSWORD: ci
+          sudo apt-get install -y postgresql-client \
+                                  redis-tools
 
       - name: 生成 .env 配置文件
         run: |
-          cat > .env <<EOF
+          mkdir -p conf
+          cat > conf/.env <<EOF
           SERVER_HOST=$SERVER_HOST
           SERVER_PORT=$SERVER_PORT
           FRONTEND_ORIGIN=$FRONTEND_ORIGIN
@@ -193,28 +196,11 @@ jobs:
           PGPASSWORD=$PGPASSWORD
           DB_POOL_SIZE=$DB_POOL_SIZE
           SESSION_TTL_MINUTES=$SESSION_TTL_MINUTES
+          REDIS_HOST=$REDIS_HOST
+          REDIS_PORT=$REDIS_PORT
+          REDIS_PASSWORD=$REDIS_PASSWORD
+          REDIS_POOL_SIZE=$REDIS_POOL_SIZE
           EOF
 
-      - name: 启动后端服务轮询 api 端点
-        run: |
-          chmod +x server-build/server
-          mkdir -p "$FILE_PATH"
-          ./server-build/server > server.log 2>&1 &
-          for i in $(seq 1 30); do
-            if curl -sf http://127.0.0.1:8080/api/profile > /dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "服务器启动超时，未就绪" >&2
-          cat server.log >&2
-          exit 1
-
-      - name: 对公开 GET 接口进行冒烟测试
-        run: |
-          curl -sf http://127.0.0.1:8080/api/profile
-          curl -sf http://127.0.0.1:8080/api/images
-          curl -sf http://127.0.0.1:8080/api/blogs
-          curl -sf http://127.0.0.1:8080/api/categories
-          curl -sf http://127.0.0.1:8080/api/tags
-          curl -sf http://127.0.0.1:8080/api/about
+      - name: 运行后端冒烟测试脚本
+        run: SERVER_BIN=server-build/server bash test/smoke-test.sh
