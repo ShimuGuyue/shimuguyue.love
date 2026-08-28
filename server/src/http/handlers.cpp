@@ -6,12 +6,14 @@
 #include "http/handlers.h"
 
 #include <algorithm>
+#include <charconv>
 #include <ctime>
 #include <expected>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string_view>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
@@ -29,12 +31,49 @@
 #include "md/markdown_parser.h"
 #include "profile/profile_queries.h"
 
-
-
-
-
 namespace
 {
+    /**
+     * @brief 将逗号分隔的 id 列表归一化为数字升序字符串（用于缓存键）。
+     * @param raw 原始参数值，例如 "3,1,2"。
+     * @return 归一化后的字符串，例如 "1,2,3"；含无效项或为空时返回原值。
+     */
+    auto normalize_id_list(std::string_view raw) -> std::string
+    {
+        std::vector<int> ids;
+        std::istringstream iss{ std::string{ raw } };
+        std::string token;
+        while (std::getline(iss, token, ','))
+        {
+            if (token.empty())
+                continue;
+
+            int value{ 0 };
+            const auto [ptr, ec] = std::from_chars(
+                token.data(),
+                token.data() + token.size(),
+                value
+            );
+            if (ec != std::errc{} || ptr != token.data() + token.size())
+                return std::string{ raw };
+
+            ids.push_back(value);
+        }
+
+        if (ids.empty())
+            return std::string{ raw };
+
+        std::sort(ids.begin(), ids.end());
+        std::ostringstream out;
+        for (std::size_t i{ 0 }; i < ids.size(); ++i)
+        {
+            if (i != 0)
+                out << ',';
+            out << ids[i];
+        }
+        return out.str();
+    }
+
     /**
      * @brief 按 RFC 5987 对 UTF-8 字符串做百分号编码（用于 Content-Disposition filename*）。
      * @param value 原始字符串。
