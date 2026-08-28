@@ -106,6 +106,8 @@ cd ${PROJECT_PATH}
 
 ### Redis
 
+各项接口的缓存有效期配置在项目根目录 `cache.yml`（单位：秒）。
+
 +   安装 `redis-server`
 
     ```bash

@@ -36,6 +36,8 @@ add_executable(${PROJECT_NAME}
     src/auth/rate_limit.cpp
     src/md/markdown_parser.cpp
     src/profile/profile_queries.cpp
+    src/config/cache.cpp
+    src/config/config.cpp
     src/config/env.cpp
     src/config/env_map.cpp
 )

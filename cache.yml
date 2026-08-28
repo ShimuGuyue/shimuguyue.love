@@ -1,0 +1,14 @@
+# 公开 GET 接口缓存有效期，由 server/src/config/cache.cpp 读取校验。
+
+# 博客相关：一天
+categories: 86400   # 分类列表
+tags: 86400         # 标签列表
+blogs: 86400        # 博客列表
+blog: 86400         # 博客详情
+
+# 首页相关：一周
+images: 604800      # 照片墙
+profile: 604800     # 个人介绍
+
+# about页面相关：一天
+about: 86400        # 页面信息

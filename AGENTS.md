@@ -48,7 +48,7 @@ PostgreSQL
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/doc/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/doc/blogs/` 的相对路径（不含 `.md` 后缀）。
 - **图片**：文件存于 `FILE_PATH/image/`，元数据存于数据库，文件名与对应 `id` 同名。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
-- **配置**：所有配置从环境变量读取，缺失则 `exit(1)`。无配置文件。
+- **配置**：环境变量 + 根目录 `cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。
 
 ## 关键环境变量
 
@@ -105,6 +105,7 @@ PostgreSQL
 | `AGENTS.md` | 项目规范与协作说明（本文档） |
 | `README.md` | 项目说明文档 |
 | `TODO.md` | 待办清单 |
+| `cache.yml` | 缓存配置文件：各项公开 GET 接口的缓存有效期（秒），由 `config::init_cache()` 从项目目录向上查找并校验 |
 | `.github/workflows/ci.yml` | CI：前端 type-check + 构建、后端 vcpkg + CMake 构建、PostgreSQL 冒烟测试 |
 | `.github/workflows/deploy.yml` | CD：CI 通过后 SSH 到服务器执行 `tools/rebuild.sh` 自动部署 |
 
@@ -171,8 +172,10 @@ PostgreSQL
 | `server/src/cache/cache.cpp` / `.h` | Redis 公开接口缓存（基于 redis++ / redis-plus-plus）：初始化（PING 校验）、get / set / del、按前缀 SCAN+DEL 失效、统一键构造 `api-cache:` |
 | `server/src/db/connection.cpp` / `.h` | 数据库连接池初始化 + 表检查 |
 | `server/src/db/connection_pool.cpp` / `.h` | 连接池实现：基于 `lklibs::PgPool` 的薄封装，`db::with_db()` 并发获取独占连接，无空闲时阻塞等待 |
-| `server/src/config/env.cpp` / `.h` | 环境变量读取（缺失则 `exit(1)`） |
+| `server/src/config/config.cpp` / `.h` | 配置统一初始化入口：依次调用 `init_env()` 与 `init_cache()` |
+| `server/src/config/env.cpp` / `.h` | 环境变量读取（`init_env()`，缺失则 `exit(1)`） |
 | `server/src/config/env_map.cpp` / `.h` | 环境变量存储封装类（内部 `unordered_map`，只读 `operator[]`） |
+| `server/src/config/cache.cpp` / `.h` | cache.yml 缓存有效期配置加载：向上查找文件、yaml 解析校验（缺失或非法则 `exit(1)`），`config::cache_ttl()` 只读访问 |
 | `server/src/auth/login.cpp` / `.h` | 密钥/密码登录、权限查询 |
 | `server/src/auth/session.cpp` / `.h` | 会话 token 创建、验证、过期清理 |
 | `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |

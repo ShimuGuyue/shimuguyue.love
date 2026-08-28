@@ -86,7 +86,7 @@ namespace cache
     void init()
     {
         // 为了安全使用 stoi / stoull。必须保证调用 cache::init() 前首先调用
-        // config::init() 校验 REDIS_PORT 为 1~65535、REDIS_POOL_SIZE 为正整数，
+        // config::init_env() 校验 REDIS_PORT 为 1~65535、REDIS_POOL_SIZE 为正整数，
         const auto host      =             config::env()["REDIS_HOST"];
         const auto password  =             config::env()["REDIS_PASSWORD"];
         const auto port      = std::stoi  (config::env()["REDIS_PORT"]);

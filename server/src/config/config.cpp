@@ -5,6 +5,7 @@
 
 #include "config/config.h"
 
+#include "config/cache.h"
 #include "config/env.h"
 
 namespace config
@@ -12,6 +13,7 @@ namespace config
     void init()
     {
         init_env();
+        init_cache();
     }
 
 } // namespace config
