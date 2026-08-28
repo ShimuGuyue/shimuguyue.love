@@ -52,6 +52,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/doc/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/doc/blogs/` 的相对路径（不含 `.md` 后缀）。
 - **图片**：文件存于 `FILE_PATH/image/`，元数据存于数据库，文件名与对应 `id` 同名。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
+- **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片 / 关于我 / 个人介绍）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片 / 个人介绍写接口成功后在事务提交后失效相关缓存，`/api/about` 由 `tools/pull-readme.sh` 尽力而为失效、TTL 兜底。
 - **配置**：环境变量 + 根目录 `cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。
 
 ## 关键环境变量
@@ -204,7 +205,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `sql/create_profile.sql` | 个人介绍表（profile，单行） |
 | `sql/create_about.sql` | 关于我内容表（about，单行） |
 | `tools/auto-sync-blogs.sh` | 博客 `.md` 自动同步脚本 |
-| `tools/pull-readme.sh` | README 自动拉取脚本 |
+| `tools/pull-readme.sh` | README 自动拉取脚本（psql 同步成功后重建 `/api/about` 缓存：先失效旧键，再请求接口回源） |
 | `tools/rebuild.sh` | 一键重构脚本：前端构建 → 后端构建 → 重启服务（仅由用户在服务端调用，不在本地开发环境使用） |
 | `tools/server-run.sh` | 服务端启动脚本 |
 | `tools/server-run.log` | 服务端运行日志（运行产物） |

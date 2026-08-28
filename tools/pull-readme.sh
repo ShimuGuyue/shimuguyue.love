@@ -11,6 +11,7 @@
 #   2. 本脚本对 $FILE_PATH/doc/README 目录有写权限。
 #   3. git 已安装。
 #   4. psql 已安装并配置好数据库连接环境变量（PGHOST 等）。
+#   5. curl 已安装；如需缓存失效回退，另需 redis-cli（redis-tools）。
 #
 # 环境变量：
 #   GITHUB_USER    — GitHub 用户名，仓库地址为 github.com/$GITHUB_USER/$GITHUB_USER
@@ -72,6 +73,35 @@ TMP_SQL=$(mktemp)
 
 if psql -f "$TMP_SQL" > /dev/null 2>&1; then
     echo "[pull-readme] 已同步 README 内容到数据库。"
+    # 重建 /api/about 缓存：先失效旧键，再请求接口触发服务端回源写缓存。
+    # 若仅请求接口，旧缓存命中时会直接返回旧内容，不会真正重建。
+    ABOUT_URL="http://127.0.0.1:${SERVER_PORT:-8080}/api/about"
+    CACHE_KEY="api-cache:/api/about"
+
+    invalidated=false
+    if command -v redis-cli > /dev/null 2>&1; then
+        REDIS_ARGS=()
+        if [[ -n "${REDIS_PASSWORD:-}" ]]; then
+            REDIS_ARGS+=(-a "$REDIS_PASSWORD")
+        fi
+        if redis-cli "${REDIS_ARGS[@]}" DEL "$CACHE_KEY" > /dev/null 2>&1; then
+            invalidated=true
+        fi
+    fi
+
+    if curl -sf "$ABOUT_URL" > /dev/null 2>&1; then
+        if [[ "$invalidated" == true ]]; then
+            echo "[pull-readme] 已重建 /api/about 缓存。"
+        else
+            echo "[pull-readme] 警告：旧缓存未失效，/api/about 可能仍返回旧缓存内容。" >&2
+        fi
+    else
+        if [[ "$invalidated" == true ]]; then
+            echo "[pull-readme] 警告：服务端不可达，已失效 /api/about 缓存，将在下次请求时重建。" >&2
+        else
+            echo "[pull-readme] 警告：缓存重建失败（服务端不可达且旧缓存未失效），内容将在 TTL 后自动过期。" >&2
+        fi
+    fi
 else
     echo "[pull-readme] 警告：同步到数据库失败！" >&2
 fi

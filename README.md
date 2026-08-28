@@ -106,6 +106,8 @@ cd ${PROJECT_PATH}
 
 ### Redis
 
+公开 GET 接口（分类、标签、博客列表/详情、图片、关于我、个人介绍）通过 Redis 做 cache-aside 缓存，降低 PostgreSQL 查询压力；博客 / 图片 / 个人介绍的写接口成功后自动失效相关缓存，`/api/about` 由外部脚本同步，靠 TTL 兜底。
+
 各项接口的缓存有效期配置在项目根目录 `cache.yml`（单位：秒）。
 
 +   安装 `redis-server`
@@ -226,6 +228,8 @@ root 的密钥已停用（因固定盐需自行设定），仅支持密码登录
     crontab -e
     0 4 * * * /bin/bash ${PROJECT_PATH}/tools/pull-readme.sh >> ${PROJECT_PATH}/tools/pull-readme.log 2>&1
     ```
+
+    > 同步成功后脚本会重建 `/api/about` 缓存：先通过 `redis-cli` 失效旧键，再请求接口触发服务端回源写缓存（需安装 `redis-tools` 与 `curl`）；服务端或 Redis 不可用时仅告警，内容会在 TTL 后自动过期。
 
 #### GitHub Actions 自动集成
 
