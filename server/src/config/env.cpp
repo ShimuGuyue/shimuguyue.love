@@ -125,7 +125,7 @@ constexpr std::string_view REQUIRED_KEYS[] = {
 
 namespace config
 {
-    void init()
+    void init_env()
     {
         // 查找并加载项目的 .env 文件
         const auto env_file = find_env_file();

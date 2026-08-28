@@ -11,10 +11,10 @@
 namespace config
 {
     /**
-     * @brief 读取并存储全部必需环境变量。
+     * @brief 从 .env 文件读取并存储全部必需环境变量。
      *        未设置或无效则打印错误并调用 std::exit(1)。
      */
-    void init();
+    void init_env();
 
     /**
      * @brief 获取环境变量单例存储。
