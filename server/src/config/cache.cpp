@@ -4,42 +4,17 @@
  */
 
 #include "config/cache.h"
+#include "config/config.h"
 
 #include <cstdlib>
-#include <filesystem>
-#include <optional>
-#include <string_view>
 
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
 namespace
 {
-    /// 配置文件名称。
-    constexpr std::string_view CACHE_CONFIG_FILE{ "cache.yml" };
-
     /// 加载后的缓存有效期配置。
     config::CacheTtl g_ttl;
-
-    /**
-     * @brief 从当前目录向上查找 conf/cache.yml。
-     * @return 配置文件路径；未找到返回 std::nullopt。
-     */
-    auto find_cache_config() -> std::optional<std::filesystem::path>
-    {
-        std::filesystem::path dir{ std::filesystem::current_path() };
-        for (;;)
-        {
-            const auto candidate = dir / "conf" / CACHE_CONFIG_FILE;
-            if (std::filesystem::is_regular_file(candidate))
-                return candidate;
-
-            const auto parent = dir.parent_path();
-            if (parent == dir)
-                return std::nullopt;
-            dir = parent;
-        }
-    }
 } // namespace
 
 
@@ -51,7 +26,7 @@ namespace config
 {
     void init_cache()
     {
-        const auto path = find_cache_config();
+        const auto path = config::find_config_file("cache.yml");
         if (!path)
         {
             spdlog::error("未找到 conf/cache.yml 配置文件！请将 cache.yml 放在项目 conf/ 目录中。");

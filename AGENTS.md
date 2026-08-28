@@ -177,7 +177,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/cache/cache.cpp` / `.h` | Redis 公开接口缓存（基于 redis++ / redis-plus-plus）：初始化（PING 校验）、get / set / del、按前缀 SCAN+DEL 失效、统一键构造 `api-cache:` |
 | `server/src/db/connection.cpp` / `.h` | 数据库连接池初始化 + 表检查 |
 | `server/src/db/connection_pool.cpp` / `.h` | 连接池实现：基于 `lklibs::PgPool` 的薄封装，`db::with_db()` 并发获取独占连接，无空闲时阻塞等待 |
-| `server/src/config/config.cpp` / `.h` | 配置统一初始化入口：依次调用 `init_env()` 与 `init_cache()` |
+| `server/src/config/config.cpp` / `.h` | 配置统一初始化入口：依次调用 `init_env()` 与 `init_cache()`；共享 `config::find_config_file()` 向上查找 `conf/` 配置文件 |
 | `server/src/config/env.cpp` / `.h` | `conf/.env` 环境变量读取（`init_env()`，缺失则 `exit(1)`） |
 | `server/src/config/env_map.cpp` / `.h` | 环境变量存储封装类（内部 `unordered_map`，只读 `operator[]`） |
 | `server/src/config/cache.cpp` / `.h` | `conf/cache.yml` 缓存有效期配置加载：向上查找文件、yaml 解析校验（缺失或非法则 `exit(1)`），`config::cache_ttl()` 只读访问 |
