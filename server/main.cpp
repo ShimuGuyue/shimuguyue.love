@@ -6,6 +6,7 @@
 #include <iostream>
 #include <spdlog/spdlog.h>
 
+#include "cache/cache.h"
 #include "config/env.h"
 #include "db/connection.h"
 #include "http/routes.h"
@@ -19,6 +20,7 @@ int main(int argc, char* argv[])
     std::signal(SIGPIPE, SIG_IGN);
 
     config::init(); // 环境变量初始化
+    cache:: init(); // Redis 缓存初始化
     db::    init(); // 数据库连接池与表检查
 
     httplib::Server svr;

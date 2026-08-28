@@ -20,6 +20,7 @@ find_package(redis++           CONFIG REQUIRED)
 add_executable(${PROJECT_NAME}
     main.cpp
     src/about/about_queries.cpp
+    src/cache/cache.cpp
     src/db/connection.cpp
     src/db/connection_pool.cpp
     src/crypto/argon2id.cpp
