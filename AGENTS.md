@@ -41,8 +41,12 @@ cmake --build build
 服务端 (C++23, httplib, 端口由 SERVER_PORT 决定)
   │  连接池（libcpp-pg-pool / lklibs::PgPool，DB_POOL_SIZE 条常驻连接），
   │  db::with_db() 并发获取独占连接，无空闲时阻塞等待
+  │  公开 GET 接口 cache-aside 缓存（redis++，REDIS_POOL_SIZE 条连接），
+  │  未命中时直查数据库，200 成功响应写缓存；写接口成功后失效相关缓存
   ▼
 PostgreSQL
+
+Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据库）
 ```
 
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/doc/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/doc/blogs/` 的相对路径（不含 `.md` 后缀）。
