@@ -238,7 +238,7 @@ root 的密钥已停用（因固定盐需自行设定），仅支持密码登录
 +   `ci.yml` — 持续集成
     - 前端：`npm ci` → `npm run type-check` → `npm run build`
     - 后端：安装 vcpkg 依赖（含缓存）→ 以 `release` 预设配置并构建 CMake
-    - 冒烟测试：启动 PostgreSQL 容器、创建数据表，运行服务端并验证公开 API
+    - 冒烟测试：启动 PostgreSQL 与 Redis 容器、创建数据表，运行服务端并验证公开 API 及缓存写入/失效
 
 +   `deploy.yml` — 持续部署】
     - `main` 分支 CI 通过后自动执行，也可在 Actions 页面手动触发（`workflow_dispatch`）

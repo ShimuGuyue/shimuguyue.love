@@ -238,3 +238,30 @@ jobs:
           curl -sf http://127.0.0.1:8080/api/categories
           curl -sf http://127.0.0.1:8080/api/tags
           curl -sf http://127.0.0.1:8080/api/about
+
+      - name: 验证公开 GET 接口缓存写入
+        run: |
+          redis-cli --scan --pattern 'api-cache:*' > /tmp/cache-keys.txt
+          cat /tmp/cache-keys.txt
+          grep -qx 'api-cache:/api/profile' /tmp/cache-keys.txt
+          grep -qx 'api-cache:/api/images' /tmp/cache-keys.txt
+          grep -qx 'api-cache:/api/blogs' /tmp/cache-keys.txt
+          grep -qx 'api-cache:/api/categories' /tmp/cache-keys.txt
+          grep -qx 'api-cache:/api/tags' /tmp/cache-keys.txt
+          grep -qx 'api-cache:/api/about' /tmp/cache-keys.txt
+
+      - name: 验证写接口缓存失效
+        run: |
+          TOKEN=$(curl -sf -X POST http://127.0.0.1:8080/api/login/password \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"root","password":"root"}' | python3 -c 'import sys,json; print(json.load(sys.stdin)["token"])')
+          curl -sf -X POST http://127.0.0.1:8080/api/profile/save \
+            -H "Authorization: Bearer $TOKEN" \
+            -H 'Content-Type: application/json' \
+            -d '{"title":"t","subtitle":"s","bio":"b"}'
+          if redis-cli exists api-cache:/api/profile | grep -qx 0; then
+            echo "缓存键 api-cache:/api/profile 已按预期删除"
+          else
+            echo "缓存键 api-cache:/api/profile 未被删除" >&2
+            exit 1
+          fi
