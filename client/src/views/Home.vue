@@ -132,12 +132,13 @@ async function loadImages() {
 /** 当前图片显示到 1/3 时推入下一张图片 */
 /** 逐张预加载尺寸后推入，避免定位跳动 */
 async function revealImages(all: ImageItem[]) {
-  // 预加载所有图片获取原始尺寸
-  const sized: (ImageItem & { w: number; h: number })[] = []
-  for (const img of all) {
-    const size = await loadImageSize(img.path)
-    sized.push({ ...img, w: size.w, h: size.h })
-  }
+  // 并行预加载所有图片获取原始尺寸，避免逐张等待拖慢照片墙
+  const sized: (ImageItem & { w: number; h: number })[] = await Promise.all(
+    all.map(async (img) => {
+      const size = await loadImageSize(img.path)
+      return { ...img, w: size.w, h: size.h }
+    })
+  )
 
   return new Promise<void>((resolve) => {
     let i = 0
