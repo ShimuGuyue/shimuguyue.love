@@ -27,18 +27,18 @@
 
 set -euo pipefail
 
-# ---- 加载项目 .env（项目根目录） ----
+# ---- 加载项目 conf/.env ----
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [[ -f "$PROJECT_ROOT/.env" ]]; then
+if [[ -f "$PROJECT_ROOT/conf/.env" ]]; then
     set -a
     # shellcheck disable=SC1091
-    source "$PROJECT_ROOT/.env"
+    source "$PROJECT_ROOT/conf/.env"
     set +a
 fi
 
 # ---- 配置 ----
-GITHUB_USER="${GITHUB_USER:?GITHUB_USER 未设置，请检查项目根目录的 .env 文件}"
-FILE_PATH="${FILE_PATH:?FILE_PATH 未设置，请检查项目根目录的 .env 文件}"
+GITHUB_USER="${GITHUB_USER:?GITHUB_USER 未设置，请检查项目 conf/ 目录的 .env 文件}"
+FILE_PATH="${FILE_PATH:?FILE_PATH 未设置，请检查项目 conf/ 目录的 .env 文件}"
 REPO_URL="https://github.com/${GITHUB_USER}/${GITHUB_USER}.git"
 BRANCH="${BRANCH:-main}"
 

@@ -22,7 +22,7 @@ cd ${PROJECT_PATH}
 
 ### 环境变量
 
-复制项目根目录的 `.env.example` 为 `.env` 并填写。
+复制 `conf/.env.example` 为 `conf/.env` 并填写。
 文件类目录只配置一个根目录 `FILE_PATH`：博客文件位于 `$FILE_PATH/doc/blogs`、图片位于 `$FILE_PATH/image`、README 位于 `$FILE_PATH/doc/README`，服务端启动时会自动创建这些目录。
 
 ### 前端
@@ -108,7 +108,7 @@ cd ${PROJECT_PATH}
 
 公开 GET 接口（分类、标签、博客列表/详情、图片、关于我、个人介绍）通过 Redis 做 cache-aside 缓存，降低 PostgreSQL 查询压力；博客 / 图片 / 个人介绍的写接口成功后自动失效相关缓存，`/api/about` 由外部脚本同步，靠 TTL 兜底。
 
-各项接口的缓存有效期配置在项目根目录 `cache.yml`（单位：秒）。
+各项接口的缓存有效期配置在 `conf/cache.yml`（单位：秒）。
 
 +   安装 `redis-server`
 
@@ -239,7 +239,7 @@ root 的密钥已停用（因固定盐需自行设定），仅支持密码登录
 
 需要 `psql`、`redis-cli`、`curl`、`python3` 以及可用的 PostgreSQL 与 Redis。
 
-脚本使用项目根目录的 `.env`（CI 会在调用前从环境变量生成，本地用现有文件）；数据库表已存在时跳过初始化，端口上已有旧服务端时会先终止、确保测试运行在脚本创建的临时服务端上（测试结束即清理，原服务不会自动恢复）。写接口缓存失效测试使用专用测试账号 `smoke_test`（密码 `root`，脚本会幂等创建并仅授予 `introduction:edit` 权限）登录；该测试会临时覆盖 profile，并在测试后自动恢复原值。
+脚本使用 `conf/.env`（CI 会在调用前从环境变量生成，本地用现有文件）；数据库表已存在时跳过初始化，端口上已有旧服务端时会先终止、确保测试运行在脚本创建的临时服务端上（测试结束即清理，原服务不会自动恢复）。写接口缓存失效测试使用专用测试账号 `smoke_test`（密码 `root`，脚本会幂等创建并仅授予 `introduction:edit` 权限）登录；该测试会临时覆盖 profile，并在测试后自动恢复原值。
 
 仓库内置 GitHub Actions 工作流，push 或提交 PR 到 `main` 分支时自动执行：
 

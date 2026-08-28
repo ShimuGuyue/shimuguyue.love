@@ -7,7 +7,7 @@
 #       如 SERVER_BIN=server-build/server bash test/smoke-test.sh
 # 依赖工具：psql、redis-cli、curl、python3
 #
-# 约定：使用根目录 .env（本地已有，或由 CI 在调用前生成）；
+# 约定：使用 conf/.env（本地已有，或由 CI 在调用前生成）；
 #       表已存在跳过建表；端口已有旧服务端则先终止，保证使用临时进程；
 #       写接口测试使用专用测试账号 smoke_test（密码 root，脚本幂等创建并授权），
 #       测试前后自动备份/恢复 profile。
@@ -26,9 +26,9 @@ LOG_FILE="${SMOKE_LOG_FILE:-$REPO_ROOT/test/smoke-server.log}"
 
 cd "$REPO_ROOT"
 
-# ---- 加载 .env ----
-# 服务端只读 .env 文件（不读进程环境变量），根目录必须存在 .env
-ENV_FILE="$REPO_ROOT/.env"
+# ---- 加载 conf/.env ----
+# 服务端只读 conf/.env 文件（不读进程环境变量），项目必须存在该文件
+ENV_FILE="$REPO_ROOT/conf/.env"
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "[smoke] 未找到 ${ENV_FILE}，请先创建（CI 会在调用脚本前自动生成）" >&2
     exit 1
@@ -37,10 +37,10 @@ set -a
 # shellcheck disable=SC1091
 source "$ENV_FILE"
 set +a
-echo "[smoke] 使用项目根目录 .env。"
+echo "[smoke] 使用 conf/.env。"
 
 BASE_URL="http://${SERVER_HOST}:${SERVER_PORT}"
-# psql 连接参数与 Redis 参数均取自 .env
+# psql 连接参数与 Redis 参数均取自 conf/.env
 DB_ARGS=(-h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE")
 export PGPASSWORD
 

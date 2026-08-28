@@ -1,6 +1,6 @@
 /**
  * @file config/cache.cpp
- * @brief 各项公开接口缓存有效期（cache.yml）配置加载实现
+ * @brief 各项公开接口缓存有效期（conf/cache.yml）配置加载实现
  */
 
 #include "config/cache.h"
@@ -22,7 +22,7 @@ namespace
     config::CacheTtl g_ttl;
 
     /**
-     * @brief 从当前目录向上查找 cache.yml。
+     * @brief 从当前目录向上查找 conf/cache.yml。
      * @return 配置文件路径；未找到返回 std::nullopt。
      */
     auto find_cache_config() -> std::optional<std::filesystem::path>
@@ -30,7 +30,7 @@ namespace
         std::filesystem::path dir{ std::filesystem::current_path() };
         for (;;)
         {
-            const auto candidate = dir / CACHE_CONFIG_FILE;
+            const auto candidate = dir / "conf" / CACHE_CONFIG_FILE;
             if (std::filesystem::is_regular_file(candidate))
                 return candidate;
 
@@ -54,7 +54,7 @@ namespace config
         const auto path = find_cache_config();
         if (!path)
         {
-            spdlog::error("未找到 cache.yml 配置文件！请将 cache.yml 放在项目根目录。");
+            spdlog::error("未找到 conf/cache.yml 配置文件！请将 cache.yml 放在项目 conf/ 目录中。");
             std::exit(1);
         }
 
@@ -74,7 +74,7 @@ namespace config
             const YAML::Node node = root[field];
             if (!node || !node.IsScalar())
             {
-                spdlog::error("cache.yml 缺少字段 {}！", field);
+                spdlog::error("conf/cache.yml 缺少字段 {}！", field);
                 std::exit(1);
             }
             try
@@ -82,14 +82,14 @@ namespace config
                 const long long ttl = node.as<long long>();
                 if (ttl <= 0)
                 {
-                    spdlog::error("cache.yml 字段 {} 必须是正整数！", field);
+                    spdlog::error("conf/cache.yml 字段 {} 必须是正整数！", field);
                     std::exit(1);
                 }
                 return ttl;
             }
             catch (const YAML::Exception& e)
             {
-                spdlog::error("cache.yml 字段 {} 必须是正整数！", field);
+                    spdlog::error("conf/cache.yml 字段 {} 必须是正整数！", field);
                 std::exit(1);
             }
         };
@@ -102,7 +102,7 @@ namespace config
         g_ttl.about      = read_ttl(root, "about");
         g_ttl.profile    = read_ttl(root, "profile");
 
-        spdlog::info("cache.yml 缓存有效期配置加载完成。");
+        spdlog::info("conf/cache.yml 缓存有效期配置加载完成。");
     }
 
     auto cache_ttl() -> const CacheTtl&

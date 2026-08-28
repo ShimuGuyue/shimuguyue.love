@@ -1,6 +1,6 @@
 /**
  * @file config/cache.h
- * @brief 各项公开接口缓存有效期（cache.yml）配置
+ * @brief 各项公开接口缓存有效期（conf/cache.yml）配置
  */
 #pragma once
 #include <cstdint>
@@ -22,9 +22,9 @@ namespace config
     };
 
     /**
-     * @brief 加载并校验 cache.yml。
+     * @brief 加载并校验 conf/cache.yml。
      *
-     * 从当前目录向上查找 cache.yml；
+     * 从当前目录向上查找 conf/cache.yml；
      * 文件缺失、字段缺失或数值非法时打印错误并 exit(1)。
      */
     void init_cache();

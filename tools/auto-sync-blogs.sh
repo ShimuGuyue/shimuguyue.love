@@ -24,12 +24,12 @@
 
 set -euo pipefail
 
-# ---- 加载项目 .env（项目根目录） ----
+# ---- 加载项目 conf/.env ----
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [[ -f "$PROJECT_ROOT/.env" ]]; then
+if [[ -f "$PROJECT_ROOT/conf/.env" ]]; then
     set -a
     # shellcheck disable=SC1091
-    source "$PROJECT_ROOT/.env"
+    source "$PROJECT_ROOT/conf/.env"
     set +a
 fi
 

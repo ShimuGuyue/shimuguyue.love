@@ -54,15 +54,15 @@ constexpr std::string_view REQUIRED_KEYS[] = {
     }
 
     /**
-     * @brief 从当前目录向上查找项目的 .env 文件。
-     * @return .env 文件路径；未找到返回 std::nullopt。
+     * @brief 从当前目录向上查找项目的 conf/.env 文件。
+     * @return conf/.env 文件路径；未找到返回 std::nullopt。
      */
     auto find_env_file() -> std::optional<std::filesystem::path>
     {
         std::filesystem::path dir{ std::filesystem::current_path() };
         for (;;)
         {
-            const auto candidate = dir / ".env";
+            const auto candidate = dir / "conf" / ".env";
             if (std::filesystem::is_regular_file(candidate))
                 return candidate;
 
@@ -131,7 +131,7 @@ namespace config
         const auto env_file = find_env_file();
         if (!env_file)
         {
-            spdlog::error("未找到 .env 文件！请将 .env 放在项目根目录中。");
+            spdlog::error("未找到 conf/.env 文件！请将 .env 放在项目 conf/ 目录中。");
             std::exit(1);
         }
         load_env_file(*env_file, EnvMap::env_values);

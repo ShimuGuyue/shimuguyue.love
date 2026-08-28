@@ -5,8 +5,8 @@ import vue from '@vitejs/plugin-vue'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
 export default defineConfig(({ mode }) => {
-  // 从项目根目录加载 .env（BUILD_DIR 等非 VITE_ 前缀变量）
-  const env = loadEnv(mode, fileURLToPath(new URL('..', import.meta.url)), '')
+  // 从项目 conf/ 目录加载 .env（BUILD_DIR 等非 VITE_ 前缀变量）
+  const env = loadEnv(mode, fileURLToPath(new URL('../conf', import.meta.url)), '')
 
   return {
     plugins: [

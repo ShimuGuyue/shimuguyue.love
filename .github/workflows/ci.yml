@@ -182,7 +182,8 @@ jobs:
 
       - name: 生成 .env 配置文件
         run: |
-          cat > .env <<EOF
+          mkdir -p conf
+          cat > conf/.env <<EOF
           SERVER_HOST=$SERVER_HOST
           SERVER_PORT=$SERVER_PORT
           FRONTEND_ORIGIN=$FRONTEND_ORIGIN
