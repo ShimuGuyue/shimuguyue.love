@@ -123,7 +123,11 @@ namespace cache
         {
             auto value = g_redis->get(key);
             if (value)
+            {
+                spdlog::info("缓存命中，直接返回：{}", key);
                 return value.value();
+            }
+            spdlog::info("缓存未命中，转直查数据库：{}", key);
             return std::nullopt;
         }
         catch (const sw::redis::Error& e)
@@ -141,6 +145,7 @@ namespace cache
         try
         {
             g_redis->set(key, value, std::chrono::seconds(ttl_seconds));
+            spdlog::debug("已从数据库取数并写入缓存：{}（TTL {} 秒）", key, ttl_seconds);
             return true;
         }
         catch (const sw::redis::Error& e)
