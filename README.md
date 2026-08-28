@@ -104,6 +104,14 @@ cd ${PROJECT_PATH}
     psql -f ./create_about.sql       # README页面内容表
     ```
 
++   配置 PostgreSQL 全局超时时间
+
+    ```bash
+    nano /etc/postgresql/*/main/postgresql.conf
+
+    statement_timeout = '20s'
+    ```
+
 ### 后端
 
 本条目下操作默认在 `${PROJECT_PATH}/server` 目录下执行。
