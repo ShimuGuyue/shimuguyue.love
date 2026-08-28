@@ -25,6 +25,11 @@ int main(int argc, char* argv[])
     db::    init(); // 数据库连接池与表检查
 
     httplib::Server svr;
+
+    svr.set_keep_alive_timeout(std::chrono::seconds(30));
+    svr.set_read_timeout(std::chrono::seconds(30));
+    svr.set_write_timeout(std::chrono::seconds(30));
+
     http::setup_routes(svr);
 
     spdlog::info("项目初始化完成。\n");

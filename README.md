@@ -115,6 +115,12 @@ cd ${PROJECT_PATH}
     ```bash
     apt install redis-server
     systemctl enable --now redis-server
++   配置 PostgreSQL 全局超时时间
+
+    ```bash
+    nano /etc/postgresql/*/main/postgresql.conf
+
+    statement_timeout = '20s'
     ```
 
 ### 后端
