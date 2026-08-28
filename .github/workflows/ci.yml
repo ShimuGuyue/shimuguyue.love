@@ -203,4 +203,4 @@ jobs:
           EOF
 
       - name: 运行后端冒烟测试脚本
-        run: SERVER_BIN=server-build/server ./test/smoke-test.sh
+        run: SERVER_BIN=server-build/server bash test/smoke-test.sh

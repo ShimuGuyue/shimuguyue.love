@@ -104,6 +104,14 @@ cd ${PROJECT_PATH}
     psql -f ./create_about.sql       # README页面内容表
     ```
 
++   配置 PostgreSQL 全局超时时间
+
+    ```bash
+    nano /etc/postgresql/*/main/postgresql.conf
+
+    statement_timeout = '20s'
+    ```
+
 ### Redis
 
 公开 GET 接口（分类、标签、博客列表/详情、图片、关于我、个人介绍）通过 Redis 做 cache-aside 缓存，降低 PostgreSQL 查询压力；博客 / 图片 / 个人介绍的写接口成功后自动失效相关缓存，`/api/about` 由外部脚本同步，靠 TTL 兜底。
@@ -115,13 +123,6 @@ cd ${PROJECT_PATH}
     ```bash
     apt install redis-server
     systemctl enable --now redis-server
-+   配置 PostgreSQL 全局超时时间
-
-    ```bash
-    nano /etc/postgresql/*/main/postgresql.conf
-
-    statement_timeout = '20s'
-    ```
 
 ### 后端
 
