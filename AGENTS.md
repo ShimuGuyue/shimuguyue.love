@@ -168,6 +168,7 @@ PostgreSQL
 | `server/src/http/routes.cpp` | API 路由注册（~180 行），统一调用 handlers 中的处理函数 |
 | `server/src/http/routes.h` | HTTP 服务配置声明（`FRONTEND_ORIGIN` / `SERVER_HOST` / `SERVER_PORT`、`setup_routes`） |
 | `server/src/http/handlers.cpp` / `.h` | 全部 API 路由处理函数（业务逻辑），由 routes.cpp 统一注册调用 |
+| `server/src/cache/cache.cpp` / `.h` | Redis 公开接口缓存（基于 redis++ / redis-plus-plus）：初始化（PING 校验）、get / set / del、按前缀 SCAN+DEL 失效、统一键构造 `api-cache:` |
 | `server/src/db/connection.cpp` / `.h` | 数据库连接池初始化 + 表检查 |
 | `server/src/db/connection_pool.cpp` / `.h` | 连接池实现：基于 `lklibs::PgPool` 的薄封装，`db::with_db()` 并发获取独占连接，无空闲时阻塞等待 |
 | `server/src/config/env.cpp` / `.h` | 环境变量读取（缺失则 `exit(1)`） |
