@@ -8,6 +8,7 @@ import { useMdProps } from '@/lib/md-editor-setup'
 import '@/assets/blog-layout.css'
 import '@/assets/normal/color.css'
 import '@/assets/background/block.css'
+import '@/assets/button/function.css'
 const auth = useAuthStore()
 const mdProps = useMdProps()
 const route = useRoute()
@@ -313,8 +314,8 @@ async function saveBlog() {
           </div>
         </div>
         <div class="blog-edit__actions">
-          <button class="blog-edit__btn blog-edit__btn--import" @click="importFile">导入文件</button>
-          <button class="blog-edit__btn blog-edit__btn--primary" @click="saveBlog">保存博客</button>
+          <button class="func-btn blog-edit__btn blog-edit__btn--import" @click="importFile">导入文件</button>
+          <button class="func-btn blog-edit__btn blog-edit__btn--primary" @click="saveBlog">保存博客</button>
         </div>
       </aside>
       <section class="blog-edit__main">
@@ -423,22 +424,11 @@ async function saveBlog() {
 .blog-edit__btn {
   padding: 8px 0;
   font-size: 0.85rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: opacity var(--transition-speed);
+  width: 100%;
 }
 .blog-edit__btn--primary {
-  color: #fff;
-  background-color: var(--pink-hot);
-}
-.blog-edit__btn--import {
-  color: #fff;
-  background: var(--pink-soft);
-  border: 1px solid var(--color-border);
-}
-.blog-edit__btn:hover {
-  opacity: 0.85;
+  color: var(--pink-hot);
+  border-color: var(--pink-hot);
 }
 
 /* ── 中间 ── */
