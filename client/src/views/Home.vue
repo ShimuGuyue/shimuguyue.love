@@ -463,13 +463,38 @@ function openPreview(id: number, event: MouseEvent) {
 
 /// 编辑中的描述文本
 const editDesc = ref('')
+/** 仅关闭预览：不写回便签文本（供取消编辑 / 非编辑模式关闭使用）。 */
 function closePreview() {
-  if (editMode.value && previewId.value !== null) {
-    const img = images.value.find(i => i.id === previewId.value)
-    if (img) img.description = editDesc.value
-  }
   previewId.value = null
   previewSrcRect.value = null
+}
+
+/** 取消编辑：丢弃本次便签修改，直接关闭预览。 */
+function cancelPreviewEdit() {
+  closePreview()
+}
+
+/** 保存编辑：需 photo_wall:edit 权限；将便签写回并落库后关闭预览。 */
+async function savePreviewEdit() {
+  if (!permissions.value.includes('photo_wall:edit')) {
+    alert('操作失败：该操作需要 photo_wall:edit 权限')
+    return
+  }
+  const img = images.value.find(i => i.id === previewId.value)
+  if (img) {
+    img.description = editDesc.value
+    await saveMeta(img)
+  }
+  closePreview()
+}
+
+/** 预览遮罩点击：编辑模式下视为取消编辑，否则仅关闭预览。 */
+function onPreviewOverlayClick() {
+  if (editMode.value) {
+    cancelPreviewEdit()
+  } else {
+    closePreview()
+  }
 }
 
 // ── 个人介绍编辑 ──
@@ -607,7 +632,7 @@ function imgStyle(img: ImageItem) {
         v-if="previewImage"
         class="home__preview"
         :style="{ background: theme.isDark ? 'rgba(0,0,0,0.01)' : 'rgba(255,255,255,0.01)' }"
-        @click="closePreview"
+        @click="onPreviewOverlayClick"
       >
         <img
           :src="`/image/${previewImage.path}`"
@@ -621,8 +646,12 @@ function imgStyle(img: ImageItem) {
         class="home__preview-desc"
         :style="{ backgroundImage: 'url(/assets/note-background.png)' }"
       >
+        <div v-if="editMode" class="home__preview-desc-toolbar">
+          <button class="home__preview-desc-btn home__preview-desc-btn--save" @click.stop="savePreviewEdit">保存编辑</button>
+          <button class="home__preview-desc-btn home__preview-desc-btn--cancel" @click.stop="cancelPreviewEdit">取消编辑</button>
+        </div>
         <textarea
-          v-if="editMode && permissions.includes('photo_wall:edit')"
+          v-if="editMode"
           v-model="editDesc"
           class="home__preview-textarea"
           @click.stop
@@ -971,6 +1000,43 @@ function imgStyle(img: ImageItem) {
   display: flex;
   justify-content: center; /* 水平居中 */
   align-items: center;     /* 垂直居中 */
+}
+
+/* 编辑模式便签上方的操作按钮行：绝对定位到便签卡片顶部，不参与居中布局 */
+.home__preview-desc-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  z-index: 2;
+}
+
+.home__preview-desc-btn {
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity var(--transition-speed);
+}
+
+.home__preview-desc-btn--save {
+  color: #fff;
+  background-color: var(--pink-hot);
+}
+
+.home__preview-desc-btn--cancel {
+  color: var(--color-text);
+  background-color: transparent;
+}
+
+.home__preview-desc-btn:hover {
+  opacity: 0.85;
 }
 
 .home__preview-textarea {
