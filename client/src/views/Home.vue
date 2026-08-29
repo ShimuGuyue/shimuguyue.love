@@ -501,6 +501,8 @@ function onPreviewOverlayClick() {
 // ── 个人介绍编辑 ──
 
 function enterProfileEdit() {
+  // 照片墙与个人简介编辑互斥：照片墙编辑中则无法进入个人简介编辑
+  if (editMode.value) return
   profileDraft.value = { ...profile.value }
   profileEditMode.value = true
 }
