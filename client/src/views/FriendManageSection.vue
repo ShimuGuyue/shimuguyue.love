@@ -147,7 +147,6 @@ onMounted(loadFriends)
   height: auto;
 }
 
-.friends-table th,
 .friends-table td {
   height: 76px;
 }
