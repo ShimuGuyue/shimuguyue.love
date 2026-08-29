@@ -679,6 +679,8 @@ function imgStyle(img: ImageItem) {
 
 /* 右侧信息栏 */
 .home__info {
+  position: relative;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
