@@ -27,6 +27,7 @@ add_executable(${PROJECT_NAME}
     src/export/export_data.cpp
     src/export/export_queries.cpp
     src/export/zip_writer.cpp
+    src/friend/friend_queries.cpp
     src/auth/login.cpp
     src/auth/session.cpp
     src/doc/blog_queries.cpp
