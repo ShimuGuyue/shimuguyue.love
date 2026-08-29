@@ -3,8 +3,8 @@ import { ref, onMounted } from 'vue'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
 
 import '@/assets/blog-layout.css'
-import '@/assets/glass.css'
 import '@/assets/normal/color.css'
+import '@/assets/background/block.css'
 
 const content = ref('')
 const loading = ref(true)
@@ -24,7 +24,7 @@ onMounted(async () => {
 <template>
   <main class="about-page">
     <p v-if="loading" class="about-page__status">加载中...</p>
-    <article v-else-if="content" class="blog-detail__content glass">
+    <article v-else-if="content" class="blog-detail__content">
       <MarkdownPreview :model-value="content" />
     </article>
     <p v-else class="about-page__status">暂无内容</p>
@@ -39,6 +39,11 @@ onMounted(async () => {
   max-width: 900px;
   margin: 0 auto;
   min-height: calc(100vh - 177px);
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--blog-surface-radius);
+  padding: var(--blog-surface-padding);
+  box-shadow: var(--blog-surface-shadow);
 }
 .about-page__status {
   text-align: center;
