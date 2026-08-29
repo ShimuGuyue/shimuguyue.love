@@ -550,18 +550,11 @@ function imgStyle(img: ImageItem) {
         @mouseleave="onWallMouseUp"
         @wheel="onWallWheel"
       >
-        <button
-          v-if="editMode" class="func-btn home__edit-done"
-          @click.stop="exitEdit"
-        >完成编辑</button>
-        <button
-          v-if="editMode" class="func-btn home__edit-upload"
-          @click.stop="uploadImage"
-        >上传图片</button>
-        <button
-          v-if="editMode" class="func-btn home__edit-cancel"
-          @click.stop="cancelEdit"
-        >取消编辑</button>
+        <div v-if="editMode" class="home__edit-actions">
+          <button class="func-btn" @click.stop="uploadImage">上传图片</button>
+          <button class="func-btn" @click.stop="exitEdit">完成编辑</button>
+          <button class="func-btn" @click.stop="cancelEdit">取消编辑</button>
+        </div>
         <div
           v-if="editMode" class="home__hint"
         >
@@ -860,24 +853,15 @@ function imgStyle(img: ImageItem) {
   border-color: #666;
 }
 
-/* 编辑模式顶部操作按钮定位（视觉外观由 button/function.css 的 .func-btn 提供） */
-.home__edit-done {
+/* 编辑模式顶部操作按钮：flex 容器统一间距，整体贴右上角 */
+.home__edit-actions {
   position: absolute;
   top: 12px;
   right: 12px;
   z-index: 9999;
-}
-.home__edit-upload {
-  position: absolute;
-  top: 12px;
-  right: 200px;
-  z-index: 9999;
-}
-.home__edit-cancel {
-  position: absolute;
-  top: 12px;
-  right: 100px;
-  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 /* 编辑提示框（非按钮，复用功能按钮背景变量） */
@@ -966,10 +950,10 @@ function imgStyle(img: ImageItem) {
   align-items: center;     /* 垂直居中 */
 }
 
-/* 编辑模式便签上方的操作按钮行：绝对定位到便签卡片顶部，不参与居中布局 */
+/* 编辑模式便签下方的操作按钮行：绝对定位到便签卡片底部并居中，不参与居中布局 */
 .home__preview-desc-toolbar {
   position: absolute;
-  top: 8px;
+  bottom: -16px;
   left: 0;
   right: 0;
   display: flex;
@@ -981,7 +965,7 @@ function imgStyle(img: ImageItem) {
 .home__preview-textarea {
   width: 80%;
   height: 80%;
-  transform: translateY(20px);
+  transform: translateY(12px);
   background: transparent;
   border: none;
   color: #000000;
@@ -1000,7 +984,7 @@ function imgStyle(img: ImageItem) {
   display: block;
   width: 80%;
   height: 80%;
-  transform: translateY(20px);
+  transform: translateY(12px);
   font-family: "仿宋", FangSong, serif;
   font-weight: bold;
   font-size: 1rem;

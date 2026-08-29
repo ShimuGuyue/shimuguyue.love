@@ -27,6 +27,7 @@ html.dark {
   border: 1px solid var(--func-btn-border);
   border-radius: var(--func-btn-radius);
   font-size: var(--func-btn-size);
+  font-weight: normal;
   line-height: 1.4;
   font-family: inherit;
   color: var(--func-btn-text);
