@@ -53,6 +53,7 @@ const userLabel = computed(() => {
       <RouterLink to="/projects" class="header__nav-link">项目</RouterLink>
       <RouterLink to="/favorites" class="header__nav-link">收藏夹</RouterLink>
       <RouterLink to="/about" class="header__nav-link">关于我</RouterLink>
+      <RouterLink to="/friends" class="header__nav-link">友链推广</RouterLink>
     </div>
     <!-- 分割线 -->
     <div class="header__divider"></div>

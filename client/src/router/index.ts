@@ -4,6 +4,7 @@ import Home from '@/views/Home.vue'
 import Blogs from '@/views/Blogs.vue'
 import Projects from '@/views/Projects.vue'
 import Favorites from '@/views/Favorites.vue'
+import Friends from '@/views/Friends.vue'
 import LoginKey from '@/views/LoginKey.vue'
 import LoginPassword from '@/views/LoginPassword.vue'
 import Manage from '@/views/Manage.vue'
@@ -19,6 +20,7 @@ const router = createRouter({
     { path: '/blogs', name: 'blogs', component: Blogs },
     { path: '/projects', name: 'projects', component: Projects },
     { path: '/favorites', name: 'favorites', component: Favorites },
+    { path: '/friends', name: 'friends', component: Friends },
     { path: '/about', name: 'about', component: () => import('@/views/About.vue') },
     { path: '/thanks', name: 'acknowledgments', component: Acknowledgments },
     { path: '/login/key', name: 'login-key', component: LoginKey },

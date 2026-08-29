@@ -150,6 +150,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/views/Projects.vue` | 项目页 |
 | `client/src/views/Acknowledgments.vue` | 致谢页 |
 | `client/src/views/Favorites.vue` | 收藏页 |
+| `client/src/views/Friends.vue` | 友情链接页 |
 | `client/src/assets/background.css` | 全局背景主题（粉色 × 紫色系） |
 | `client/src/assets/background/block.css` | 块级组件共用背景与外观 |
 | `client/src/assets/blog-layout.css` | 博客页布局共用样式 |
