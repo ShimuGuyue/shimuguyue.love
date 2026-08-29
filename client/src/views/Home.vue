@@ -3,7 +3,6 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
-import '@/assets/glass.css'
 import '@/assets/normal/color.css'
 
 const auth = useAuthStore()
