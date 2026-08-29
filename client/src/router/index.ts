@@ -11,6 +11,7 @@ import Manage from '@/views/Manage.vue'
 import ProfileSection from '@/views/ProfileSection.vue'
 import UserManageSection from '@/views/UserManageSection.vue'
 import BlogManageSection from '@/views/BlogManageSection.vue'
+import FriendManageSection from '@/views/FriendManageSection.vue'
 import Acknowledgments from '@/views/Acknowledgments.vue'
 
 const router = createRouter({
@@ -46,6 +47,12 @@ const router = createRouter({
           path: 'blogs',
           name: 'manage-blogs',
           component: BlogManageSection,
+          meta: { requiresPermission: 'manage:view' },
+        },
+        {
+          path: 'friends',
+          name: 'manage-friends',
+          component: FriendManageSection,
           meta: { requiresPermission: 'manage:view' },
         },
       ],

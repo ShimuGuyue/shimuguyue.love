@@ -17,6 +17,7 @@ const sections: AdminSection[] = [
   { key: 'profile', label: '个人信息', path: '/manage/profile' },
   { key: 'users', label: '用户管理', path: '/manage/users' },
   { key: 'blogs', label: '博客管理', path: '/manage/blogs' },
+  { key: 'friends', label: '友链管理', path: '/manage/friends' },
 ]
 
 function handleLogout() {
