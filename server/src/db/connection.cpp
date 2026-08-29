@@ -28,7 +28,8 @@ namespace
             "sessions",
             "blogs", "categories", "tags", "blog_tags",
             "images",
-            "profile", "about"
+            "profile", "about",
+            "friends"
         };
 
         pqxx::nontransaction txn{ conn };

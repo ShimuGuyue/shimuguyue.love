@@ -74,6 +74,7 @@ namespace config
         g_ttl.blogs      = read_ttl(root, "blogs");
         g_ttl.blog       = read_ttl(root, "blog");
         g_ttl.images     = read_ttl(root, "images");
+        g_ttl.friends    = read_ttl(root, "friends");
         g_ttl.about      = read_ttl(root, "about");
         g_ttl.profile    = read_ttl(root, "profile");
 
