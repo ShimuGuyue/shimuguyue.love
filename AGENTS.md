@@ -157,6 +157,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/assets/blog/card.css` | 博客卡片样式 |
 | `client/src/assets/button/login.css` | 登录页按钮样式（`.form-submit`） |
 | `client/src/assets/button/manage.css` | 后台管理页按钮样式（`.manage-btn`） |
+| `client/src/assets/button/function.css` | 通用功能按钮样式（`.func-btn` 单一样式，`--func-btn-*` 变量统管颜色/透明度/圆角/尺寸），照片墙编辑、个人介绍编辑、便签编辑等复用 |
 | `client/src/assets/markdown/` | Markdown 渲染样式（PinkFairy 主题），按类型拆分：`font.css`、`headings.css`、`divider.css`、`text.css`、`blockquote.css`、`lists.css`、`code.css`、`tables.css`、`images.css`、`tasks.css`、`alerts.css` |
 | `client/src/assets/manage/font.css` | 后台管理页文本样式 |
 | `client/src/assets/manage/table.css` | 后台管理页表格样式 |

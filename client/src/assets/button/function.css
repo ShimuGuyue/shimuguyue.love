@@ -1,0 +1,46 @@
+/* ═══════════════════════════════════════════════════════════
+   功能按钮统一样式（function）
+   ─────────────────────────────────────────────────────────
+   通用功能操作按钮，供站点各页面复用）。
+   共同外观统一为 .func-btn 单一样式，颜色 / 透明度 / 圆角 / 尺寸等
+   以 --func-btn-* 变量集中管理，亮暗主题自动适配。
+   ═══════════════════════════════════════════════════════════ */
+
+/* 亮暗主题下的共用配置 */
+:root {
+  --func-btn-radius: 4px;
+  --func-btn-size: 0.8rem;
+  --func-btn-padding-x: 16px;
+  --func-btn-padding-y: 6px;
+  --func-btn-bg: rgba(255, 255, 255, 0.2);
+  --func-btn-border: var(--color-border);
+  --func-btn-text: var(--color-text);
+}
+
+html.dark {
+  --func-btn-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* 功能按钮：统一的描边半透明底 + 主题文字 */
+.func-btn {
+  padding: var(--func-btn-padding-y) var(--func-btn-padding-x);
+  border: 1px solid var(--func-btn-border);
+  border-radius: var(--func-btn-radius);
+  font-size: var(--func-btn-size);
+  line-height: 1.4;
+  font-family: inherit;
+  color: var(--func-btn-text);
+  background: var(--func-btn-bg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity var(--transition-speed);
+}
+
+.func-btn:hover {
+  opacity: 0.85;
+}
+
+.func-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

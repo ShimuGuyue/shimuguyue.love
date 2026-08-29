@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
 import '@/assets/normal/color.css'
+import '@/assets/button/function.css'
 
 const auth = useAuthStore()
 const theme = useThemeStore()
@@ -550,23 +551,19 @@ function imgStyle(img: ImageItem) {
         @wheel="onWallWheel"
       >
         <button
-          v-if="editMode" class="home__edit-done"
-          :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }"
+          v-if="editMode" class="func-btn home__edit-done"
           @click.stop="exitEdit"
         >完成编辑</button>
         <button
-          v-if="editMode" class="home__edit-upload"
-          :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }"
+          v-if="editMode" class="func-btn home__edit-upload"
           @click.stop="uploadImage"
         >上传图片</button>
         <button
-          v-if="editMode" class="home__edit-cancel"
-          :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }"
+          v-if="editMode" class="func-btn home__edit-cancel"
           @click.stop="cancelEdit"
         >取消编辑</button>
         <div
           v-if="editMode" class="home__hint"
-          :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }"
         >
           <p>拖拽：按住图片拖动</p>
           <p>缩放：滚轮</p>
@@ -608,8 +605,8 @@ function imgStyle(img: ImageItem) {
         <div class="home__profile-edit-box" :class="{ 'home__profile-edit-box--active': profileEditMode }">
           <div class="home__profile-field home__profile-field--title-row">
             <div class="home__profile-actions" :class="{ 'home__profile-actions--hidden': !profileEditMode }">
-              <button class="home__profile-btn home__profile-btn--save" :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }" @click="saveProfile">完成编辑</button>
-              <button class="home__profile-btn home__profile-btn--cancel" :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }" @click="cancelProfileEdit">取消编辑</button>
+              <button class="func-btn" @click="saveProfile">完成编辑</button>
+              <button class="func-btn" @click="cancelProfileEdit">取消编辑</button>
             </div>
             <div class="home__profile-field" :class="{ 'home__profile-field--dashed': profileEditMode }" style="flex:1; margin-right: 4rem">
               <input :value="profileEditMode ? profileDraft.title : profile.title" @input="profileEditMode && (profileDraft.title = ($event.target as HTMLInputElement).value)" :readonly="!profileEditMode" class="home__profile-input home__profile-input--title" @click="!profileEditMode && enterProfileEdit()" />
@@ -647,8 +644,8 @@ function imgStyle(img: ImageItem) {
         :style="{ backgroundImage: 'url(/assets/note-background.png)' }"
       >
         <div v-if="editMode" class="home__preview-desc-toolbar">
-          <button class="home__preview-desc-btn home__preview-desc-btn--save" @click.stop="savePreviewEdit">保存编辑</button>
-          <button class="home__preview-desc-btn home__preview-desc-btn--cancel" @click.stop="cancelPreviewEdit">取消编辑</button>
+          <button class="func-btn" @click.stop="savePreviewEdit">保存编辑</button>
+          <button class="func-btn" @click.stop="cancelPreviewEdit">取消编辑</button>
         </div>
         <textarea
           v-if="editMode"
@@ -724,25 +721,6 @@ function imgStyle(img: ImageItem) {
 
 .home__profile-actions--hidden {
   visibility: hidden;
-}
-
-.home__profile-btn {
-  padding: 4px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  background: none;
-  color: var(--btn-text-color, #333);
-}
-
-.home__profile-btn--cancel {
-  color: var(--btn-text-color, #666);
-}
-
-.home__profile-btn--save:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .home__profile-field--dashed {
@@ -873,6 +851,53 @@ function imgStyle(img: ImageItem) {
   cursor: grab;
 }
 
+.home__img-wrap--pending {
+  opacity: 0;
+  pointer-events: none;
+}
+.home__img-wrap--pending .home__img-del {
+  background-color: #666;
+  border-color: #666;
+}
+
+/* 编辑模式顶部操作按钮定位（视觉外观由 button/function.css 的 .func-btn 提供） */
+.home__edit-done {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+}
+.home__edit-upload {
+  position: absolute;
+  top: 12px;
+  right: 200px;
+  z-index: 9999;
+}
+.home__edit-cancel {
+  position: absolute;
+  top: 12px;
+  right: 100px;
+  z-index: 9999;
+}
+
+/* 编辑提示框（非按钮，复用功能按钮背景变量） */
+.home__hint {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 9999;
+  padding: 8px 14px;
+  border-radius: var(--func-btn-radius);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  background: var(--func-btn-bg);
+}
+.home__hint p {
+  margin: 0;
+}
+
+/* 图片删除小圆钮：独立于功能按钮的 16px 圆形危险操作钮 */
 .home__img-del {
   position: absolute;
   top: -8px;
@@ -880,77 +905,16 @@ function imgStyle(img: ImageItem) {
   z-index: 10;
   width: 16px;
   height: 16px;
+  padding: 0;
   border: none;
   border-radius: 50%;
-  background: #d44;
+  background-color: #d44;
   color: #fff;
   font-size: 0.7rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.home__img-wrap--pending {
-  opacity: 0;
-  pointer-events: none;
-}
-.home__img-wrap--pending .home__img-del {
-  background: #666;
-}
-
-.home__edit-done {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 9999;
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--btn-text-color, #333);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.home__edit-upload {
-  position: absolute;
-  top: 12px;
-  right: 200px;
-  z-index: 9999;
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--btn-text-color, #333);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.home__edit-cancel {
-  position: absolute;
-  top: 12px;
-  right: 100px;
-  z-index: 9999;
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--btn-text-color, #666);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.home__hint {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  z-index: 9999;
-  padding: 8px 14px;
-  border-radius: 4px;
-  color: var(--btn-text-color, #666);
-  font-size: 0.75rem;
-  line-height: 1.7;
-}
-.home__hint p {
-  margin: 0;
 }
 
 .home__preview {
@@ -1012,31 +976,6 @@ function imgStyle(img: ImageItem) {
   justify-content: center;
   gap: 8px;
   z-index: 2;
-}
-
-.home__preview-desc-btn {
-  padding: 4px 12px;
-  font-size: 0.78rem;
-  line-height: 1.4;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: opacity var(--transition-speed);
-}
-
-.home__preview-desc-btn--save {
-  color: #fff;
-  background-color: var(--pink-hot);
-}
-
-.home__preview-desc-btn--cancel {
-  color: var(--color-text);
-  background-color: transparent;
-}
-
-.home__preview-desc-btn:hover {
-  opacity: 0.85;
 }
 
 .home__preview-textarea {
