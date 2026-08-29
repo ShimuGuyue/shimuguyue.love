@@ -140,6 +140,14 @@ void handle_get_images(
     const std::string&      allowed);
 
 /**
+ * @brief 处理 GET /api/friends 请求。
+ */
+void handle_get_friends(
+    const httplib::Request& req,
+    httplib::Response&      res,
+    const std::string&      allowed);
+
+/**
  * @brief 处理 POST /api/image/save 请求（需 photo_wall:edit 权限）。
  */
 void handle_save_image(

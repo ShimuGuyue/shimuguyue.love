@@ -141,6 +141,14 @@ namespace http
             }
         );
 
+        // GET /api/friends — 获取友情链接列表
+        svr.Get("/api/friends",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_get_friends(req, res, allowed);
+            }
+        );
+
         // POST /api/image/save — 保存/更新图片元数据（需要 photo_wall:edit 权限）
         svr.Post("/api/image/save",
             [allowed](const auto& req, auto& res)

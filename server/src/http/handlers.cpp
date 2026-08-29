@@ -29,6 +29,7 @@
 #include "db/connection_pool.h"
 #include "doc/blog_queries.h"
 #include "export/export_data.h"
+#include "friend/friend_queries.h"
 #include "img/image_queries.h"
 #include "md/markdown_parser.h"
 #include "profile/profile_queries.h"
@@ -1439,6 +1440,31 @@ namespace http
                 res.set_header("Content-Type", "application/json");
                 res.set_content(img::get_all_images(conn).dump(), "application/json");
                 cache_set_list(key, res.body, config::cache_ttl().images);
+            }
+        );
+    }
+
+    void handle_get_friends(
+        const httplib::Request& req,
+        httplib::Response&      res,
+        const std::string&      allowed)
+    {
+        const auto key = cache::cache_key("/api/friends", {});
+        if (const auto cached = cache::get(key); cached.has_value())
+        {
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(*cached, "application/json");
+            return;
+        }
+
+        db::with_db(
+            [&](pqxx::connection& conn)
+            {
+                res.set_header("Access-Control-Allow-Origin", allowed);
+                res.set_header("Content-Type", "application/json");
+                res.set_content(friends::get_all_friends(conn).dump(), "application/json");
+                cache_set_list(key, res.body, config::cache_ttl().friends);
             }
         );
     }
