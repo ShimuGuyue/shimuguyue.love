@@ -24,6 +24,15 @@
   font-family: "仿宋", FangSong, serif;
 }
 
+/* 代码块标题栏：覆盖 GitHub 主题预设的 position: sticky + z-index: 10000，
+ * 否则它吸顶时会压在站点的 sticky 导航栏（z-index: 100）之上，
+ * 显示为代码块顶部一条盖住导航栏。改为普通文档流内元素，跟随所在代码块。 */
+.md-editor .md-editor-preview .md-editor-code .md-editor-code-head {
+  position: relative;
+  top: auto;
+  z-index: auto;
+}
+
 /* 代码高亮暗色模式（Github-dark 同款） */
 
 html.dark .md-editor .md-editor-preview .hljs-keyword,
