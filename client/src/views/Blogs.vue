@@ -4,6 +4,7 @@ import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router'
 
 import '@/assets/blog/selector.css'
 import '@/assets/blog/card.css'
+import '@/assets/button/function.css'
 
 const router = useRouter()
 const route = useRoute()
@@ -236,7 +237,7 @@ onMounted(async () => {
 <template>
   <main class="blogs-page">
     <div class="blogs-top">
-      <button class="new-blog-btn" @click="router.push('/blog-edit/new')">新建博客</button>
+      <button class="func-btn" @click="router.push('/blog-edit/new')">新建博客</button>
     </div>
     <!-- ── 筛选器 ── -->
     <section class="filter-bar">
@@ -328,20 +329,11 @@ onMounted(async () => {
   margin-bottom: 12px;
 }
 
-.new-blog-btn {
+.blogs-top .func-btn {
   padding: 10px 20px;
   font-size: 0.9rem;
-  color: #fff;
-  background-color: #FF77CC;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: opacity var(--transition-speed);
-}
-
-.new-blog-btn:hover {
-  opacity: 0.85;
+  color: var(--pink-hot);
+  border-color: var(--pink-hot);
 }
 
 /* ── 状态提示 ── */

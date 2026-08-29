@@ -9,6 +9,7 @@ import { headingSlug } from '@/lib/md-editor-setup'
 import '@/assets/blog-layout.css'
 import '@/assets/blog/selector.css'
 import '@/assets/normal/color.css'
+import '@/assets/button/function.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -285,9 +286,9 @@ async function downloadBlog() {
           <time class="blog-detail__time">{{ blog.update_time }}</time>
         </aside>
         <div class="blog-detail__actions">
-          <button class="blog-detail__download-btn" @click="downloadBlog">下载博客</button>
-          <button class="blog-detail__edit-btn" @click="editBlog">编辑博客</button>
-          <button class="blog-detail__delete-btn" @click="deleteBlog">删除博客</button>
+          <button class="func-btn blog-detail__download-btn" @click="downloadBlog">下载博客</button>
+          <button class="func-btn blog-detail__edit-btn" @click="editBlog">编辑博客</button>
+          <button class="func-btn blog-detail__delete-btn" @click="deleteBlog">删除博客</button>
         </div>
       </div>
 
@@ -418,29 +419,16 @@ async function downloadBlog() {
 .blog-detail__delete-btn,
 .blog-detail__download-btn {
   padding: 8px 0;
-  width: 100%;
-  border: none;
-  border-radius: 4px;
   font-size: 0.85rem;
-  cursor: pointer;
-  transition: opacity 0.15s;
+  width: 100%;
 }
 .blog-detail__edit-btn {
-  background: var(--pink-soft);
-  color: #fff;
+  color: var(--pink-hot);
+  border-color: var(--pink-hot);
 }
 .blog-detail__delete-btn {
-  background: #d44;
-  color: #fff;
-}
-.blog-detail__download-btn {
-  background: var(--purple-herrscher);
-  color: #fff;
-}
-.blog-detail__edit-btn:hover,
-.blog-detail__delete-btn:hover,
-.blog-detail__download-btn:hover {
-  opacity: 0.85;
+  color: #d44;
+  border-color: #d44;
 }
 
 /* ── 中间正文 ── */

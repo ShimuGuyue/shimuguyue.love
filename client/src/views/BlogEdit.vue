@@ -7,7 +7,8 @@ import { useMdProps } from '@/lib/md-editor-setup'
 
 import '@/assets/blog-layout.css'
 import '@/assets/normal/color.css'
-import '@/assets/glass.css'
+import '@/assets/background/block.css'
+import '@/assets/button/function.css'
 const auth = useAuthStore()
 const mdProps = useMdProps()
 const route = useRoute()
@@ -280,7 +281,7 @@ async function saveBlog() {
   <main class="blog-edit">
     <div class="blog-edit__layout">
       <aside class="blog-edit__left">
-        <div class="blog-edit__meta glass">
+        <div class="blog-edit__meta">
           <div class="blog-edit__field">
             <label class="blog-edit__label">标题</label>
             <input v-model="title" class="blog-edit__input" placeholder="博客标题" />
@@ -313,11 +314,11 @@ async function saveBlog() {
           </div>
         </div>
         <div class="blog-edit__actions">
-          <button class="blog-edit__btn blog-edit__btn--import" @click="importFile">导入文件</button>
-          <button class="blog-edit__btn blog-edit__btn--primary" @click="saveBlog">保存博客</button>
+          <button class="func-btn blog-edit__btn blog-edit__btn--import" @click="importFile">导入文件</button>
+          <button class="func-btn blog-edit__btn blog-edit__btn--primary" @click="saveBlog">保存博客</button>
         </div>
       </aside>
-      <section class="blog-edit__main glass">
+      <section class="blog-edit__main">
         <MdEditor
           v-model="content"
           v-bind="mdProps"
@@ -356,6 +357,17 @@ async function saveBlog() {
   top: 118px;
   align-self: start;
 }
+
+/* 块级背景：复用 background/block.css 的统一半透明卡片样式 */
+.blog-edit__meta,
+.blog-edit__main {
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--blog-surface-radius);
+  padding: var(--blog-surface-padding);
+  box-shadow: var(--blog-surface-shadow);
+}
+
 .blog-edit__field {
   margin-bottom: 16px;
 }
@@ -412,22 +424,11 @@ async function saveBlog() {
 .blog-edit__btn {
   padding: 8px 0;
   font-size: 0.85rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: opacity var(--transition-speed);
+  width: 100%;
 }
 .blog-edit__btn--primary {
-  color: #fff;
-  background-color: var(--pink-hot);
-}
-.blog-edit__btn--import {
-  color: #fff;
-  background: var(--pink-soft);
-  border: 1px solid var(--color-border);
-}
-.blog-edit__btn:hover {
-  opacity: 0.85;
+  color: var(--pink-hot);
+  border-color: var(--pink-hot);
 }
 
 /* ── 中间 ── */

@@ -2,7 +2,8 @@
 </script>
 
 <template>
-  <div class="page">
+  <div class="page", style="text-align: center;">
     <h1>项目</h1>
+    <p>该页面尚未开发完成，过段时间再来看看吧。</p>
   </div>
 </template>

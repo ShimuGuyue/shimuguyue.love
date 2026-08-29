@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import '@/assets/manage/button.css'
+import '@/assets/button/manage.css'
 import '@/assets/manage/font.css'
 import '@/assets/manage/table.css'
 

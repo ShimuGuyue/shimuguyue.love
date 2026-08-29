@@ -3,8 +3,8 @@ import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 
-import '@/assets/glass.css'
 import '@/assets/normal/color.css'
+import '@/assets/button/function.css'
 
 const auth = useAuthStore()
 const theme = useThemeStore()
@@ -34,6 +34,13 @@ const previewImage = computed(() =>
     ? images.value.find(i => i.id === previewId.value) ?? null
     : null
 )
+
+/** 是否显示便签：编辑模式时始终显示（便于编辑，无需鉴权）；否则仅当便签文本非空时显示。 */
+const showPreviewNote = computed(() => {
+  if (!previewImage.value) return false
+  if (editMode.value) return true
+  return (previewImage.value.description ?? '').trim().length > 0
+})
 
 const previewSrcRect = ref<DOMRect | null>(null)
 
@@ -457,18 +464,45 @@ function openPreview(id: number, event: MouseEvent) {
 
 /// 编辑中的描述文本
 const editDesc = ref('')
+/** 仅关闭预览：不写回便签文本（供取消编辑 / 非编辑模式关闭使用）。 */
 function closePreview() {
-  if (editMode.value && previewId.value !== null) {
-    const img = images.value.find(i => i.id === previewId.value)
-    if (img) img.description = editDesc.value
-  }
   previewId.value = null
   previewSrcRect.value = null
+}
+
+/** 取消编辑：丢弃本次便签修改，直接关闭预览。 */
+function cancelPreviewEdit() {
+  closePreview()
+}
+
+/** 保存编辑：需 photo_wall:edit 权限；将便签写回并落库后关闭预览。 */
+async function savePreviewEdit() {
+  if (!permissions.value.includes('photo_wall:edit')) {
+    alert('操作失败：该操作需要 photo_wall:edit 权限')
+    return
+  }
+  const img = images.value.find(i => i.id === previewId.value)
+  if (img) {
+    img.description = editDesc.value
+    await saveMeta(img)
+  }
+  closePreview()
+}
+
+/** 预览遮罩点击：编辑模式下视为取消编辑，否则仅关闭预览。 */
+function onPreviewOverlayClick() {
+  if (editMode.value) {
+    cancelPreviewEdit()
+  } else {
+    closePreview()
+  }
 }
 
 // ── 个人介绍编辑 ──
 
 function enterProfileEdit() {
+  // 照片墙与个人简介编辑互斥：照片墙编辑中则无法进入个人简介编辑
+  if (editMode.value) return
   profileDraft.value = { ...profile.value }
   profileEditMode.value = true
 }
@@ -518,24 +552,13 @@ function imgStyle(img: ImageItem) {
         @mouseleave="onWallMouseUp"
         @wheel="onWallWheel"
       >
-        <button
-          v-if="editMode" class="home__edit-done"
-          :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }"
-          @click.stop="exitEdit"
-        >完成编辑</button>
-        <button
-          v-if="editMode" class="home__edit-upload"
-          :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }"
-          @click.stop="uploadImage"
-        >上传图片</button>
-        <button
-          v-if="editMode" class="home__edit-cancel"
-          :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }"
-          @click.stop="cancelEdit"
-        >取消编辑</button>
+        <div v-if="editMode && previewId === null" class="home__edit-actions">
+          <button class="func-btn" @click.stop="uploadImage">上传图片</button>
+          <button class="func-btn" @click.stop="exitEdit">完成编辑</button>
+          <button class="func-btn" @click.stop="cancelEdit">取消编辑</button>
+        </div>
         <div
           v-if="editMode" class="home__hint"
-          :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }"
         >
           <p>拖拽：按住图片拖动</p>
           <p>缩放：滚轮</p>
@@ -577,8 +600,8 @@ function imgStyle(img: ImageItem) {
         <div class="home__profile-edit-box" :class="{ 'home__profile-edit-box--active': profileEditMode }">
           <div class="home__profile-field home__profile-field--title-row">
             <div class="home__profile-actions" :class="{ 'home__profile-actions--hidden': !profileEditMode }">
-              <button class="home__profile-btn home__profile-btn--save" :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }" @click="saveProfile">完成编辑</button>
-              <button class="home__profile-btn home__profile-btn--cancel" :style="{ background: theme.isDark ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)' }" @click="cancelProfileEdit">取消编辑</button>
+              <button class="func-btn" @click="saveProfile">完成编辑</button>
+              <button class="func-btn" @click="cancelProfileEdit">取消编辑</button>
             </div>
             <div class="home__profile-field" :class="{ 'home__profile-field--dashed': profileEditMode }" style="flex:1; margin-right: 4rem">
               <input :value="profileEditMode ? profileDraft.title : profile.title" @input="profileEditMode && (profileDraft.title = ($event.target as HTMLInputElement).value)" :readonly="!profileEditMode" class="home__profile-input home__profile-input--title" @click="!profileEditMode && enterProfileEdit()" />
@@ -601,7 +624,7 @@ function imgStyle(img: ImageItem) {
         v-if="previewImage"
         class="home__preview"
         :style="{ background: theme.isDark ? 'rgba(0,0,0,0.01)' : 'rgba(255,255,255,0.01)' }"
-        @click="closePreview"
+        @click="onPreviewOverlayClick"
       >
         <img
           :src="`/image/${previewImage.path}`"
@@ -611,17 +634,21 @@ function imgStyle(img: ImageItem) {
     </Transition>
     <Transition name="preview">
       <div
-        v-if="previewImage"
+        v-if="showPreviewNote"
         class="home__preview-desc"
         :style="{ backgroundImage: 'url(/assets/note-background.png)' }"
       >
+        <div v-if="editMode" class="home__preview-desc-toolbar">
+          <button class="func-btn" @click.stop="savePreviewEdit">保存编辑</button>
+          <button class="func-btn" @click.stop="cancelPreviewEdit">取消编辑</button>
+        </div>
         <textarea
-          v-if="editMode && permissions.includes('photo_wall:edit')"
+          v-if="editMode"
           v-model="editDesc"
           class="home__preview-textarea"
           @click.stop
         />
-        <span v-else>{{ previewImage.description }}</span>
+        <span v-else>{{ previewImage?.description }}</span>
       </div>
     </Transition>
   </main>
@@ -654,6 +681,8 @@ function imgStyle(img: ImageItem) {
 
 /* 右侧信息栏 */
 .home__info {
+  position: relative;
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -689,25 +718,6 @@ function imgStyle(img: ImageItem) {
 
 .home__profile-actions--hidden {
   visibility: hidden;
-}
-
-.home__profile-btn {
-  padding: 4px 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  font-size: 0.8rem;
-  cursor: pointer;
-  background: none;
-  color: var(--btn-text-color, #333);
-}
-
-.home__profile-btn--cancel {
-  color: var(--btn-text-color, #666);
-}
-
-.home__profile-btn--save:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 .home__profile-field--dashed {
@@ -838,6 +848,44 @@ function imgStyle(img: ImageItem) {
   cursor: grab;
 }
 
+.home__img-wrap--pending {
+  opacity: 0;
+  pointer-events: none;
+}
+.home__img-wrap--pending .home__img-del {
+  background-color: #666;
+  border-color: #666;
+}
+
+/* 编辑模式顶部操作按钮：flex 容器统一间距，整体贴右上角 */
+.home__edit-actions {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* 编辑提示框（非按钮，复用功能按钮背景变量） */
+.home__hint {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 9999;
+  padding: 8px 14px;
+  border-radius: var(--func-btn-radius);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  background: var(--func-btn-bg);
+}
+.home__hint p {
+  margin: 0;
+}
+
+/* 图片删除小圆钮：独立于功能按钮的 16px 圆形危险操作钮 */
 .home__img-del {
   position: absolute;
   top: -8px;
@@ -845,77 +893,16 @@ function imgStyle(img: ImageItem) {
   z-index: 10;
   width: 16px;
   height: 16px;
+  padding: 0;
   border: none;
   border-radius: 50%;
-  background: #d44;
+  background-color: #d44;
   color: #fff;
   font-size: 0.7rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.home__img-wrap--pending {
-  opacity: 0;
-  pointer-events: none;
-}
-.home__img-wrap--pending .home__img-del {
-  background: #666;
-}
-
-.home__edit-done {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 9999;
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--btn-text-color, #333);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.home__edit-upload {
-  position: absolute;
-  top: 12px;
-  right: 200px;
-  z-index: 9999;
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--btn-text-color, #333);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.home__edit-cancel {
-  position: absolute;
-  top: 12px;
-  right: 100px;
-  z-index: 9999;
-  padding: 6px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  color: var(--btn-text-color, #666);
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.home__hint {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  z-index: 9999;
-  padding: 8px 14px;
-  border-radius: 4px;
-  color: var(--btn-text-color, #666);
-  font-size: 0.75rem;
-  line-height: 1.7;
-}
-.home__hint p {
-  margin: 0;
 }
 
 .home__preview {
@@ -967,10 +954,22 @@ function imgStyle(img: ImageItem) {
   align-items: center;     /* 垂直居中 */
 }
 
+/* 编辑模式便签下方的操作按钮行：绝对定位到便签卡片底部并居中，不参与居中布局 */
+.home__preview-desc-toolbar {
+  position: absolute;
+  bottom: -16px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  z-index: 2;
+}
+
 .home__preview-textarea {
   width: 80%;
   height: 80%;
-  transform: translateY(20px);
+  transform: translateY(12px);
   background: transparent;
   border: none;
   color: #000000;
@@ -989,7 +988,7 @@ function imgStyle(img: ImageItem) {
   display: block;
   width: 80%;
   height: 80%;
-  transform: translateY(20px);
+  transform: translateY(12px);
   font-family: "仿宋", FangSong, serif;
   font-weight: bold;
   font-size: 1rem;
