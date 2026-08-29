@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import '@/assets/common/button.css'
+import '@/assets/button/login.css'
 
 const router = useRouter()
 const auth = useAuthStore()

@@ -155,9 +155,9 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/assets/blog-layout.css` | 博客页布局共用样式 |
 | `client/src/assets/blog/selector.css` | 博客筛选页样式（筛选栏 / 标签 / 搜索框） |
 | `client/src/assets/blog/card.css` | 博客卡片样式 |
-| `client/src/assets/common/button.css` | 公共按钮样式 |
+| `client/src/assets/button/login.css` | 登录页按钮样式（`.form-submit`） |
+| `client/src/assets/button/manage.css` | 后台管理页按钮样式（`.manage-btn`） |
 | `client/src/assets/markdown/` | Markdown 渲染样式（PinkFairy 主题），按类型拆分：`font.css`、`headings.css`、`divider.css`、`text.css`、`blockquote.css`、`lists.css`、`code.css`、`tables.css`、`images.css`、`tasks.css`、`alerts.css` |
-| `client/src/assets/manage/button.css` | 后台管理页按钮样式 |
 | `client/src/assets/manage/font.css` | 后台管理页文本样式 |
 | `client/src/assets/manage/table.css` | 后台管理页表格样式 |
 | `client/src/assets/normal/color.css` | 颜色变量集中定义（基础色板 + `--pink-hot-rgb` + 半透明粉色 `--pink-<alpha>`） |
