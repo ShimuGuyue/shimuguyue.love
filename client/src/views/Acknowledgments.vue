@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import '@/assets/glass.css'
 import '@/assets/normal/color.css'
+import '@/assets/background/block.css'
 </script>
 
 <template>
   <main class="thanks">
-    <div class="thanks__card glass">
+    <div class="thanks__card">
       <h1>致谢</h1>
       <h2>资源提供</h2>
       <p>
@@ -106,11 +106,14 @@ import '@/assets/normal/color.css'
 }
 
 .thanks__card {
-  padding: 48px;
   max-width: 1000px;
   width: 100%;
   text-align: center;
-  border-radius: 8px;
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--blog-surface-radius);
+  padding: var(--blog-surface-padding);
+  box-shadow: var(--blog-surface-shadow);
 }
 
 .thanks__card h1 {
