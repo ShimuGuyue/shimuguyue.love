@@ -25,7 +25,7 @@ import '@/assets/background/block.css'
         </a>
       </p>
       <p>
-        标签页网站图标使用
+        照片墙便签图标使用
         <a href="https://www.flaticon.com" 
            title="study icons" 
            target="_blank" 
