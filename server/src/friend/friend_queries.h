@@ -4,6 +4,10 @@
  */
 #pragma once
 
+#include <optional>
+#include <string>
+#include <string_view>
+
 #include <nlohmann/json.hpp>
 #include <pqxx/pqxx>
 
@@ -19,5 +23,25 @@ namespace friends
      * @return JSON 数组。
      */
     [[nodiscard]] auto get_all_friends(pqxx::connection& conn) -> nlohmann::json;
+
+    /**
+     * @brief 更新一个友情链接记录（按 old_name 定位，可同时修改 name/url/description）。
+     *
+     * 若修改了站点名，会检查新站点名是否与其他记录重复；不存在的原始记录返回错误。
+     *
+     * @param conn        数据库连接。
+     * @param old_name    待更新记录的原始站点名。
+     * @param name        新的站点名。
+     * @param url         新的站点链接。
+     * @param description 新的站点描述。
+     * @return std::nullopt 表示成功；否则返回错误消息。
+     */
+    [[nodiscard]] auto update_friend(
+        pqxx::connection& conn,
+        std::string_view  old_name,
+        std::string_view  name,
+        std::string_view  url,
+        std::string_view  description)
+    -> std::optional<std::string>;
 
 } // namespace friends

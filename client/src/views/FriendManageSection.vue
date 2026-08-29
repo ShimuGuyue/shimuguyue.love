@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
+import '@/assets/button/manage.css'
 import '@/assets/manage/font.css'
 import '@/assets/manage/table.css'
 
@@ -13,11 +14,29 @@ interface FriendLink {
   image: string
 }
 
+/** 编辑模式下的行草稿：可编辑站点名、站点链接、站点描述，图片暂不开放修改。 */
+interface FriendEdit {
+  old_name: string
+  name: string
+  url: string
+  description: string
+}
+
 const auth = useAuthStore()
 
 const friends = ref<FriendLink[]>([])
 const loading = ref(false)
 const error = ref('')
+
+const editing = ref(false)
+const saving = ref(false)
+const canEdit = ref(false)
+const drafts = ref<FriendEdit[]>([])
+
+/** 行数据：编辑态绑定对应草稿（按索引对齐）。 */
+const editRows = computed(() =>
+  friends.value.map((friend, i) => ({ friend, draft: drafts.value[i] ?? null }))
+)
 
 async function loadFriends() {
   loading.value = true
@@ -39,13 +58,154 @@ async function loadFriends() {
   }
 }
 
-onMounted(loadFriends)
+async function loadPermissions() {
+  if (!auth.isLoggedIn || !auth.token) return
+  try {
+    const resp = await fetch('/api/user/permissions', {
+      headers: { 'Authorization': 'Bearer ' + auth.token }
+    })
+    if (resp.ok) {
+      const data = await resp.json()
+      const permissions = data.permissions || []
+      canEdit.value = permissions.includes('manage:edit')
+    }
+  } catch { /* 权限获取失败静默 */ }
+}
+
+onMounted(async () => {
+  await loadFriends()
+  await loadPermissions()
+})
+
+/** 进入编辑模式：为所有友链生成草稿。 */
+function startEdit() {
+  if (!canEdit.value) {
+    window.alert('操作失败：该操作需要 manage:edit 权限')
+    return
+  }
+  drafts.value = friends.value.map((friend) => ({
+    old_name: friend.name,
+    name: friend.name,
+    url: friend.url,
+    description: friend.description,
+  }))
+  editing.value = true
+}
+
+/** 取消编辑：丢弃草稿。 */
+function cancelEdit() {
+  editing.value = false
+  drafts.value = []
+}
+
+/** 保存编辑：仅提交有改动的行，站点名与站点链接必填，且站点名不允许重复。 */
+async function saveChanges() {
+  if (!canEdit.value) {
+    window.alert('操作失败：该操作需要 manage:edit 权限')
+    return
+  }
+
+  for (const draft of drafts.value) {
+    if (!draft.name.trim()) {
+      window.alert('站点名 不能为空')
+      return
+    }
+    if (!draft.url.trim()) {
+      window.alert('站点链接 不能为空')
+      return
+    }
+  }
+
+  const nameSeen = new Set<string>()
+  for (const draft of drafts.value) {
+    const name = draft.name.trim()
+    if (nameSeen.has(name)) {
+      window.alert(`存在重复的站点名：${name}`)
+      return
+    }
+    nameSeen.add(name)
+  }
+
+  saving.value = true
+  try {
+    for (const draft of drafts.value) {
+      const original = friends.value.find((friend) => friend.name === draft.old_name)
+      if (!original) continue
+
+      const name = draft.name.trim()
+      const url = draft.url.trim()
+      const description = draft.description.trim()
+      const changed =
+        name !== original.name ||
+        url !== original.url ||
+        description !== original.description
+      if (!changed) continue
+
+      const resp = await fetch('/api/friends/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + auth.token,
+        },
+        body: JSON.stringify({
+          old_name: draft.old_name,
+          name,
+          url,
+          description,
+        }),
+      })
+      const data = await resp.json().catch(() => ({}))
+      if (!resp.ok) {
+        window.alert(data.error ?? '保存失败')
+        return
+      }
+    }
+
+    editing.value = false
+    drafts.value = []
+    await loadFriends()
+    window.alert('保存成功')
+  } catch {
+    window.alert('保存失败')
+  } finally {
+    saving.value = false
+  }
+}
 </script>
 
 <template>
   <div class="friends-section">
     <div class="friends-header">
       <h1 class="admin-content__title">友链管理</h1>
+      <template v-if="editing">
+        <div class="friends-toolbar">
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            :disabled="saving"
+            @click="saveChanges"
+          >
+            {{ saving ? '保存中...' : '保存编辑' }}
+          </button>
+          <button
+            type="button"
+            class="manage-btn"
+            :disabled="saving"
+            @click="cancelEdit"
+          >
+            取消编辑
+          </button>
+        </div>
+      </template>
+      <button
+        v-else
+        type="button"
+        class="manage-btn manage-btn--primary"
+        :disabled="saving"
+        @click="startEdit"
+      >
+        编辑友链
+      </button>
     </div>
 
     <div v-if="loading" class="page-loading">加载中...</div>
@@ -63,7 +223,7 @@ onMounted(loadFriends)
             </tr>
           </thead>
           <tbody>
-            <tr v-for="friend in friends" :key="friend.name">
+            <tr v-for="{ friend, draft } in editRows" :key="friend.name">
               <td class="friends-table__image">
                 <img
                   v-if="friend.image"
@@ -80,10 +240,23 @@ onMounted(loadFriends)
                 </div>
               </td>
               <td class="friends-table__name">
-                <span :title="friend.name">{{ friend.name }}</span>
+                <input
+                  v-if="editing && draft"
+                  v-model="draft.name"
+                  class="blogs-table__input"
+                  placeholder="站点名"
+                />
+                <span v-else :title="friend.name">{{ friend.name }}</span>
               </td>
               <td class="friends-table__url">
+                <input
+                  v-if="editing && draft"
+                  v-model="draft.url"
+                  class="blogs-table__input"
+                  placeholder="https://..."
+                />
                 <a
+                  v-else
                   :href="friend.url"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -94,7 +267,13 @@ onMounted(loadFriends)
                 </a>
               </td>
               <td class="friends-table__desc">
-                <span :title="friend.description">{{ friend.description }}</span>
+                <input
+                  v-if="editing && draft"
+                  v-model="draft.description"
+                  class="blogs-table__input"
+                  placeholder="站点描述"
+                />
+                <span v-else :title="friend.description">{{ friend.description }}</span>
               </td>
             </tr>
           </tbody>
@@ -118,6 +297,11 @@ onMounted(loadFriends)
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+}
+
+.friends-toolbar {
+  display: flex;
+  gap: 8px;
 }
 
 .admin-content__title {
@@ -155,17 +339,16 @@ onMounted(loadFriends)
 
 /* 头像图片列：收紧左右内边距，宽度刚好包住缩略图 */
 .friends-table__image {
-  width: 6%;
-  padding: 0 4px;
+  width: 10%;
   text-align: center;
 }
 
 .friends-table__name {
-  width: 14%;
+  width: 15%;
 }
 
 .friends-table__url {
-  width: 25%;
+  width: 20%;
 }
 
 .friends-table__desc {
@@ -196,7 +379,8 @@ onMounted(loadFriends)
 }
 
 .friends-table__avatar--fallback {
-  display: flex;
+  /* inline-flex 使其参与行内排版，能被单元格 text-align:center 居中 */
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   color: #fff;

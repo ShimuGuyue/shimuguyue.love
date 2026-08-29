@@ -192,7 +192,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/export/export_queries.cpp` / `.h` | 数据导出查询：各数据表读取为 JSON 数组 |
 | `server/src/export/zip_writer.cpp` / `.h` | zip 打包工具（store 方式，无压缩） |
 | `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
-| `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（按站点名匹配 friend_avatars 图片） |
+| `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（按站点名匹配 friend_avatars 图片；`update_friend` 更新站点名/链接/描述，并同步重命名对应的头像文件） |
 | `server/src/profile/profile_queries.cpp` / `.h` | 个人介绍查询、更新 |
 | `server/src/about/about_queries.cpp` / `.h` | 关于我 README 内容数据库查询 |
 | `server/src/md/markdown_parser.cpp` / `.h` | Markdown YAML frontmatter 解析（用 yaml-cpp） |
