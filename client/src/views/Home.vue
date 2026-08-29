@@ -34,6 +34,13 @@ const previewImage = computed(() =>
     : null
 )
 
+/** 是否显示便签：编辑模式时始终显示（便于编辑，无需鉴权）；否则仅当便签文本非空时显示。 */
+const showPreviewNote = computed(() => {
+  if (!previewImage.value) return false
+  if (editMode.value) return true
+  return (previewImage.value.description ?? '').trim().length > 0
+})
+
 const previewSrcRect = ref<DOMRect | null>(null)
 
 watch(previewImage, async (img) => {
@@ -610,7 +617,7 @@ function imgStyle(img: ImageItem) {
     </Transition>
     <Transition name="preview">
       <div
-        v-if="previewImage"
+        v-if="showPreviewNote"
         class="home__preview-desc"
         :style="{ backgroundImage: 'url(/assets/note-background.png)' }"
       >
@@ -620,7 +627,7 @@ function imgStyle(img: ImageItem) {
           class="home__preview-textarea"
           @click.stop
         />
-        <span v-else>{{ previewImage.description }}</span>
+        <span v-else>{{ previewImage?.description }}</span>
       </div>
     </Transition>
   </main>
