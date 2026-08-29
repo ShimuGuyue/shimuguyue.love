@@ -205,6 +205,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `sql/create_images.sql` | 照片墙图片表（images） |
 | `sql/create_profile.sql` | 个人介绍表（profile，单行） |
 | `sql/create_about.sql` | 关于我内容表（about，单行） |
+| `sql/create_friends.sql` | 友情链接表（friends：name / url / description） |
 | `tools/auto-sync-blogs.sh` | 博客 `.md` 自动同步脚本 |
 | `tools/pull-readme.sh` | README 自动拉取脚本（psql 同步成功后重建 `/api/about` 缓存：先失效旧键，再请求接口回源） |
 | `tools/rebuild.sh` | 一键重构脚本：前端构建 → 后端构建 → 重启服务（仅由用户在服务端调用，不在本地开发环境使用） |
