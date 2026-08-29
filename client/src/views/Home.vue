@@ -550,7 +550,7 @@ function imgStyle(img: ImageItem) {
         @mouseleave="onWallMouseUp"
         @wheel="onWallWheel"
       >
-        <div v-if="editMode" class="home__edit-actions">
+        <div v-if="editMode && previewId === null" class="home__edit-actions">
           <button class="func-btn" @click.stop="uploadImage">上传图片</button>
           <button class="func-btn" @click.stop="exitEdit">完成编辑</button>
           <button class="func-btn" @click.stop="cancelEdit">取消编辑</button>
