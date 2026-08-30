@@ -145,7 +145,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
 | `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage:view 权限，保存编辑/创建用户需 manage:edit 权限） |
 | `client/src/views/BlogManageSection.vue` | 博客管理栏目页（路由 /manage/blogs，需 manage:view 权限，表格展示全部博客的 file_path / title / category / tags） |
-| `client/src/views/FriendManageSection.vue` | 友链管理栏目页（路由 /manage/friends，需 manage:view 权限，只读表格展示友链的 name / url / description / image） |
+| `client/src/views/FriendManageSection.vue` | 友链管理栏目页（路由 /manage/friends，需 manage:view 权限；支持新建/编辑友链、按行上传 512×512 头像，友链条目以站点链接 url 区分） |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |
@@ -192,7 +192,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/export/export_queries.cpp` / `.h` | 数据导出查询：各数据表读取为 JSON 数组 |
 | `server/src/export/zip_writer.cpp` / `.h` | zip 打包工具（store 方式，无压缩） |
 | `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
-| `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（按站点名匹配 friend_avatars 图片；`update_friend` 更新站点名/链接/描述并同步重命名头像；`upload_avatar` 上传/替换 512×512 头像） |
+| `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（友链条目以站点链接 url 区分；按友链 id 匹配 `friend_avatars/<id>.<ext>` 图片；`update_friend` 按 old_url 定位并更新名称/链接/描述；`upload_avatar` 上传/替换 512×512 头像） |
 | `server/src/profile/profile_queries.cpp` / `.h` | 个人介绍查询、更新 |
 | `server/src/about/about_queries.cpp` / `.h` | 关于我 README 内容数据库查询 |
 | `server/src/md/markdown_parser.cpp` / `.h` | Markdown YAML frontmatter 解析（用 yaml-cpp） |
@@ -206,9 +206,11 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `sql/create_images.sql` | 照片墙图片表（images） |
 | `sql/create_profile.sql` | 个人介绍表（profile，单行） |
 | `sql/create_about.sql` | 关于我内容表（about，单行） |
-| `sql/create_friends.sql` | 友情链接表（friends：name / url / description） |
+| `sql/create_friends.sql` | 友情链接表（friends：name / url / description，url 唯一） |
+| `sql/migrate_friends_url_unique.sql` | 友链表迁移：移除 name 唯一约束、为 url 加唯一约束（友链条目改按站点链接区分） |
 | `tools/auto-sync-blogs.sh` | 博客 `.md` 自动同步脚本 |
 | `tools/pull-readme.sh` | README 自动拉取脚本（psql 同步成功后重建 `/api/about` 缓存：先失效旧键，再请求接口回源） |
+| `tools/migrate-friend-avatars.sh` | 友链头像迁移脚本：将 `friend_avatars` 下按站点名命名的头像文件重命名为 `<友链id>.<扩展名>`（配合 `sql/migrate_friends_url_unique.sql` 使用） |
 | `tools/rebuild.sh` | 一键重构脚本：前端构建 → 后端构建 → 重启服务（仅由用户在服务端调用，不在本地开发环境使用） |
 | `tools/server-run.sh` | 服务端启动脚本 |
 | `tools/server-run.log` | 服务端运行日志（运行产物） |

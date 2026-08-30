@@ -14,9 +14,9 @@ interface FriendLink {
   image: string
 }
 
-/** 编辑模式下的行草稿：可编辑站点名、站点链接、站点描述；头像在独立的头像编辑模式中修改。 */
+/** 编辑模式下的行草稿：可编辑站点名、站点链接、站点描述；以原站点链接 old_url 定位记录；头像在独立的头像编辑模式中修改。 */
 interface FriendEdit {
-  old_name: string
+  old_url: string
   name: string
   url: string
   description: string
@@ -93,7 +93,7 @@ function startEdit() {
   showCreateDialog.value = false
   avatarEditing.value = false
   drafts.value = friends.value.map((friend) => ({
-    old_name: friend.name,
+    old_url: friend.url,
     name: friend.name,
     url: friend.url,
     description: friend.description,
@@ -131,7 +131,7 @@ function openCreateDialog() {
   showCreateDialog.value = true
 }
 
-/** 提交新建友链：站点名与站点链接必填，且站点名不允许重复。 */
+/** 提交新建友链：站点名与站点链接必填，且站点链接不允许重复。 */
 async function submitCreate() {
   if (!canEdit.value) {
     window.alert('操作失败：该操作需要 manage:edit 权限')
@@ -149,8 +149,8 @@ async function submitCreate() {
     window.alert('站点链接 不能为空')
     return
   }
-  if (friends.value.some((friend) => friend.name === name)) {
-    window.alert(`站点名已存在：${name}`)
+  if (friends.value.some((friend) => friend.url === url)) {
+    window.alert(`站点链接已存在：${url}`)
     return
   }
 
@@ -185,7 +185,7 @@ function cancelEdit() {
   drafts.value = []
 }
 
-/** 保存编辑：仅提交有改动的行，站点名与站点链接必填，且站点名不允许重复。 */
+/** 保存编辑：仅提交有改动的行，站点名与站点链接必填，且站点链接不允许重复。 */
 async function saveChanges() {
   if (!canEdit.value) {
     window.alert('操作失败：该操作需要 manage:edit 权限')
@@ -203,20 +203,20 @@ async function saveChanges() {
     }
   }
 
-  const nameSeen = new Set<string>()
+  const urlSeen = new Set<string>()
   for (const draft of drafts.value) {
-    const name = draft.name.trim()
-    if (nameSeen.has(name)) {
-      window.alert(`存在重复的站点名：${name}`)
+    const url = draft.url.trim()
+    if (urlSeen.has(url)) {
+      window.alert(`存在重复的站点链接：${url}`)
       return
     }
-    nameSeen.add(name)
+    urlSeen.add(url)
   }
 
   saving.value = true
   try {
     for (const draft of drafts.value) {
-      const original = friends.value.find((friend) => friend.name === draft.old_name)
+      const original = friends.value.find((friend) => friend.url === draft.old_url)
       if (!original) continue
 
       const name = draft.name.trim()
@@ -235,7 +235,7 @@ async function saveChanges() {
           'Authorization': 'Bearer ' + auth.token,
         },
         body: JSON.stringify({
-          old_name: draft.old_name,
+          old_url: draft.old_url,
           name,
           url,
           description,
@@ -261,7 +261,7 @@ async function saveChanges() {
 
 /** 点击头像上的上传按钮：记录目标友链并触发文件选择。 */
 function openUpload(friend: FriendLink) {
-  uploadName.value = friend.name
+  uploadName.value = friend.url
   fileInput.value?.click()
 }
 
@@ -283,11 +283,11 @@ function isSquare512(file: File): Promise<boolean> {
 }
 
 /** 上传选中文件到目标友链；成功后即时替换该行头像。 */
-async function uploadAvatar(name: string, file: File) {
-  uploadingName.value = name
+async function uploadAvatar(url: string, file: File) {
+  uploadingName.value = url
   try {
     const form = new FormData()
-    form.append('name', name)
+    form.append('url', url)
     form.append('file', file)
     const resp = await fetch('/api/friend/avatar/upload', {
       method: 'POST',
@@ -301,7 +301,7 @@ async function uploadAvatar(name: string, file: File) {
     }
 
     const image = data.image as string | undefined
-    const friend = friends.value.find((f) => f.name === name)
+    const friend = friends.value.find((f) => f.url === url)
     if (friend && image) {
       friend.image = image
     }
@@ -320,15 +320,15 @@ async function onFileChange(event: Event) {
   input.value = ''
   if (!file) return
 
-  const name = uploadName.value
-  if (!name) return
+  const url = uploadName.value
+  if (!url) return
 
   const ok = await isSquare512(file)
   if (!ok) {
     window.alert('图片尺寸必须为 512×512')
     return
   }
-  await uploadAvatar(name, file)
+  await uploadAvatar(url, file)
 }
 </script>
 
@@ -410,7 +410,7 @@ async function onFileChange(event: Event) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="{ friend, draft } in editRows" :key="friend.name">
+            <tr v-for="{ friend, draft } in editRows" :key="friend.url">
               <td class="friends-table__image">
                 <div class="friends-table__avatar-wrap">
                   <img
@@ -430,10 +430,10 @@ async function onFileChange(event: Event) {
                     v-if="avatarEditing"
                     type="button"
                     class="friends-table__upload"
-                    :disabled="uploadingName === friend.name"
+                    :disabled="uploadingName === friend.url"
                     @click="openUpload(friend)"
                   >
-                    {{ uploadingName === friend.name ? '上传中' : '上传' }}
+                    {{ uploadingName === friend.url ? '上传中' : '上传' }}
                   </button>
                 </div>
               </td>

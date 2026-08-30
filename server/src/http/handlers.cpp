@@ -1593,12 +1593,12 @@ namespace http
                     return;
                 }
 
-                const auto old_name    = body.value("old_name", "");
+                const auto old_url     = body.value("old_url", "");
                 const auto name        = body.value("name", "");
                 const auto url         = body.value("url", "");
                 const auto description = body.value("description", "");
 
-                if (old_name.empty() || name.empty() || url.empty())
+                if (old_url.empty() || name.empty() || url.empty())
                 {
                     spdlog::info("更新友链失败：缺少必填字段。");
                     res.status = 400;
@@ -1606,11 +1606,11 @@ namespace http
                     return;
                 }
 
-                const auto err = friends::update_friend(conn, old_name, name, url, description);
+                const auto err = friends::update_friend(conn, old_url, name, url, description);
                 if (err)
                 {
                     spdlog::error("更新友链失败：{}", *err);
-                    res.status = 500;
+                    res.status = 400;
                     res.set_content(nlohmann::json{{"error", *err}}.dump(), "application/json");
                     return;
                 }
@@ -1633,15 +1633,15 @@ namespace http
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
 
-                if (!req.form.has_file("file") || !req.form.has_field("name"))
+                if (!req.form.has_file("file") || !req.form.has_field("url"))
                 {
-                    spdlog::info("上传友链头像失败：缺少文件或站点名。");
+                    spdlog::info("上传友链头像失败：缺少文件或站点链接。");
                     res.status = 400;
-                    res.set_content(R"({"error":"缺少文件或站点名"})", "application/json");
+                    res.set_content(R"({"error":"缺少文件或站点链接"})", "application/json");
                     return;
                 }
                 const auto file = req.form.get_file("file");
-                const auto name = req.form.get_field("name");
+                const auto url = req.form.get_field("url");
 
                 // Session 验证
                 std::string token;  // 提取 Bearer token
@@ -1671,7 +1671,7 @@ namespace http
                     return;
                 }
 
-                if (name.empty() || file.filename.empty())
+                if (url.empty() || file.filename.empty())
                 {
                     spdlog::info("上传友链头像失败：缺少必填字段。");
                     res.status = 400;
@@ -1679,7 +1679,7 @@ namespace http
                     return;
                 }
 
-                auto [err, result] = friends::upload_avatar(conn, name, file.filename, file.content);
+                auto [err, result] = friends::upload_avatar(conn, url, file.filename, file.content);
                 if (err)
                 {
                     spdlog::error("上传友链头像失败：{}", *err);
@@ -1688,7 +1688,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("友链头像上传成功：{}.", name);
+                spdlog::info("友链头像上传成功：{}.", url);
                 res.set_content(result.dump(), "application/json");
                 cache::del(cache::cache_key("/api/friends", {}));
             }
