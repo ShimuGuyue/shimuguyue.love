@@ -7,7 +7,7 @@ body:
     id: name
     attributes:
       label: 站点名称
-      placeholder: 石木古月的小窝
+      placeholder: 如：石木古月的小窝
     validations:
       required: true
 
@@ -15,7 +15,7 @@ body:
     id: url
     attributes:
       label: 站点链接
-      placeholder: https://shimuguyue.love
+      placeholder: 个人网站、Github主页、Bilibili主页等任何可进行展示的网站皆可
     validations:
       required: true
 
@@ -23,7 +23,7 @@ body:
     id: desc
     attributes:
       label: 个人介绍
-      placeholder: 来点自述
+      placeholder: 来点自述，给大家留下最好的第一印象
     validations:
       required: true
 
