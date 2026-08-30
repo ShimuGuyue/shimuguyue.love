@@ -14,7 +14,7 @@ interface FriendLink {
   image: string
 }
 
-/** 编辑模式下的行草稿：可编辑站点名、站点链接、站点描述，图片暂不开放修改。 */
+/** 编辑模式下的行草稿：可编辑站点名、站点链接、站点描述；头像在独立的头像编辑模式中修改。 */
 interface FriendEdit {
   old_name: string
   name: string
@@ -29,6 +29,7 @@ const loading = ref(false)
 const error = ref('')
 
 const editing = ref(false)
+const avatarEditing = ref(false)
 const saving = ref(false)
 const canEdit = ref(false)
 const drafts = ref<FriendEdit[]>([])
@@ -86,6 +87,7 @@ function startEdit() {
     window.alert('操作失败：该操作需要 manage:edit 权限')
     return
   }
+  avatarEditing.value = false
   drafts.value = friends.value.map((friend) => ({
     old_name: friend.name,
     name: friend.name,
@@ -93,6 +95,22 @@ function startEdit() {
     description: friend.description,
   }))
   editing.value = true
+}
+
+/** 进入头像编辑模式：可点击各行头像上传 512×512 图片替换。 */
+function startAvatarEdit() {
+  if (!canEdit.value) {
+    window.alert('操作失败：该操作需要 manage:edit 权限')
+    return
+  }
+  editing.value = false
+  drafts.value = []
+  avatarEditing.value = true
+}
+
+/** 退出头像编辑模式。 */
+function exitAvatarEdit() {
+  avatarEditing.value = false
 }
 
 /** 取消编辑：丢弃草稿。 */
@@ -272,15 +290,35 @@ async function onFileChange(event: Event) {
           </button>
         </div>
       </template>
-      <button
-        v-else
-        type="button"
-        class="manage-btn manage-btn--primary"
-        :disabled="saving"
-        @click="startEdit"
-      >
-        编辑友链
-      </button>
+      <template v-else-if="avatarEditing">
+        <div class="friends-toolbar">
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            @click="exitAvatarEdit"
+          >
+            结束修改
+          </button>
+        </div>
+      </template>
+      <div v-else class="friends-toolbar">
+        <button
+          type="button"
+          class="manage-btn manage-btn--primary"
+          :disabled="saving"
+          @click="startAvatarEdit"
+        >
+          编辑头像
+        </button>
+        <button
+          type="button"
+          class="manage-btn"
+          :disabled="saving"
+          @click="startEdit"
+        >
+          编辑友链
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="page-loading">加载中...</div>
@@ -315,7 +353,7 @@ async function onFileChange(event: Event) {
                     {{ friend.name.charAt(0) }}
                   </div>
                   <button
-                    v-if="editing"
+                    v-if="avatarEditing"
                     type="button"
                     class="friends-table__upload"
                     :disabled="uploadingName === friend.name"
@@ -420,6 +458,10 @@ async function onFileChange(event: Event) {
   color: var(--color-text-secondary);
 }
 
+.friends-avatar-hint {
+  margin-bottom: 12px;
+}
+
 /* 复用博客管理表格外观；友链数量较少，行高自适应并容纳头像。 */
 .blogs-table.friends-table {
   height: auto;
@@ -490,7 +532,7 @@ async function onFileChange(event: Event) {
   background-color: var(--pink-hot);
 }
 
-/* 编辑模式下头像上的上传覆盖按钮 */
+/* 头像编辑模式下头像上的上传覆盖按钮 */
 .friends-table__upload {
   position: absolute;
   inset: 0;
