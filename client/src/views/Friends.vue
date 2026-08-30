@@ -8,6 +8,7 @@ interface FriendLink {
   url: string
   description: string
   image: string
+  status?: 'online' | 'offline'
 }
 
 const friends = ref<FriendLink[]>([])
@@ -20,6 +21,7 @@ async function fetchFriends() {
       throw new Error(`HTTP ${resp.status}`)
     }
     friends.value = await resp.json()
+    friends.value.forEach(checkFriendStatus)
   } catch (e) {
     console.error('获取友链失败:', e)
     friends.value = []
@@ -30,14 +32,19 @@ async function fetchFriends() {
 
 onMounted(fetchFriends)
 
-/** 从链接中提取主机名，用于卡片右侧第二行。 */
-function hostOf(url: string): string {
+/** 探测友链站点是否可访问：no-cors 请求能建立连接即视为 ONLINE，超时或失败为 OFFLINE。 */
+async function checkFriendStatus(friend: FriendLink) {
   try {
-    return new URL(url).host
+    await fetch(friend.url, {
+      mode: 'no-cors',
+      signal: AbortSignal.timeout(8000),
+    })
+    friend.status = 'online'
   } catch {
-    return url
+    friend.status = 'offline'
   }
 }
+
 </script>
 
 <template>
@@ -56,13 +63,10 @@ function hostOf(url: string): string {
     <p v-if="loading" class="friends-status">加载中...</p>
     <p v-else-if="!friends.length" class="friends-status">暂无友链，期待与有趣的人互链。</p>
     <section v-else class="blog-grid">
-      <a
+      <article
         v-for="friend in friends"
         :key="friend.url"
         class="friend-card"
-        :href="friend.url"
-        target="_blank"
-        rel="noopener noreferrer"
       >
         <div class="friend-card__head">
           <!-- 左侧圆形头像：非 1:1 时取中间部分 -->
@@ -79,12 +83,26 @@ function hostOf(url: string): string {
           <!-- 右侧两行：站点名称 + 站点链接 -->
           <div class="friend-card__info">
             <div class="friend-card__name">{{ friend.name }}</div>
-            <div class="friend-card__url">{{ hostOf(friend.url) }}</div>
+            <a
+              class="friend-card__url"
+              :href="friend.url"
+              :title="friend.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ friend.url }}
+            </a>
+            <p
+              class="friend-card__status"
+              :class="`friend-card__status--${friend.status === 'offline' ? 'offline' : 'online'}`"
+            >
+              {{ friend.status === 'offline' ? 'OFFLINE' : 'ONLINE' }}
+            </p>
           </div>
         </div>
         <!-- 描述：固定两行位置 -->
         <p class="friend-card__desc">{{ friend.description }}</p>
-      </a>
+      </article>
     </section>
   </main>
 </template>
@@ -132,19 +150,10 @@ function hostOf(url: string): string {
   display: flex;
   flex-direction: column;
   padding: var(--blog-surface-padding);
-  color: inherit;
-  text-decoration: none;
   background-color: var(--blog-surface-bg);
   border: 1px solid var(--color-border);
   border-radius: 30px;
   box-shadow: var(--blog-surface-shadow);
-  cursor: pointer;
-  transition: box-shadow var(--transition-speed), border-color var(--transition-speed);
-}
-
-.friend-card:hover {
-  border-color: var(--color-text-secondary);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
 .friend-card__head {
@@ -193,11 +202,24 @@ function hostOf(url: string): string {
 
 .friend-card__url {
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
   line-height: 1.6;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+/* 网站状态：可访问绿色 ONLINE，不可访问红色 OFFLINE */
+.friend-card__status {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.friend-card__status--online {
+  color: #22c55e;
+}
+
+.friend-card__status--offline {
+  color: #ef4444;
 }
 
 /* 描述：固定两行，超出裁剪，不足时仍占两行位置 */

@@ -149,6 +149,14 @@ namespace http
             }
         );
 
+        // POST /api/friends — 新建友情链接（需要 manage:edit 权限）
+        svr.Post("/api/friends",
+            [allowed](const auto& req, auto& res)
+            {
+                handle_create_friend(req, res, allowed);
+            }
+        );
+
         // PUT /api/friends/update — 更新友情链接文本（需要 manage:edit 权限）
         svr.Put("/api/friends/update",
             [allowed](const auto& req, auto& res)

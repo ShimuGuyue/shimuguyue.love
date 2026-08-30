@@ -129,18 +129,11 @@ import '@/assets/background/block.css'
 }
 
 .thanks__card a {
-  color: var(--purple-herrscher);
+  color: var(--pink-hot);
   text-decoration: underline solid;
   margin: 2px;
 }
 .thanks__card a:hover {
-  color: var(--pink-hot);
-}
-
-html.dark .thanks__card a {
-  color: var(--pink-hot);
-}
-html.dark .thanks__card a:hover {
   color: var(--purple-herrscher);
 }
 </style>

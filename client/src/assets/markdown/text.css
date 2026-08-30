@@ -27,15 +27,10 @@ html.dark .md-editor .md-editor-preview {
   color: var(--pink-hot);
 }
 
-/* 链接 */
+/* 链接：颜色、下划线、悬停颜色统一走全局样式（normal/link.css），
+ * 这里仅保留 Markdown 渲染特有的细节（行内间距）。 */
 .md-editor .md-editor-preview a {
-  color: var(--pink-hot);
-  word-wrap: break-word;
-  text-decoration: underline solid;
   margin: 2px;
-}
-.md-editor .md-editor-preview a:hover {
-  color: var(--purple-herrscher);
 }
 
 /* 图片外链（如徽章）不显示 md-editor 默认的外链箭头图标 */

@@ -31,6 +31,6 @@ body:
     id: avatar
     attributes:
       label: 展示头像
-      placeholder: 在此处上传图片（要求长宽比为 1:1；建议大小为 512px，过小无法上传使用，过大将被压缩至该像素；格式支持 JPEG、PNG、GIF、BMP、WebP）
+      placeholder: 在此处上传图片（要求长宽比为 1:1；格式支持 JPEG、PNG、GIF、BMP、WebP）
     validations:
       required: true

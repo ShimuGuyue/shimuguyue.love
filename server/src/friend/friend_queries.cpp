@@ -19,64 +19,6 @@
 namespace
 {
     /**
-     * @brief 站点名被修改后，将 friend_avatars 下以旧站点名为文件名的头像同步重命名为新站点名。
-     *
-     * 头像文件名约定为「站点名 + 扩展名」。若存在旧头像文件且目标文件不存在，则重命名；
-     * 找不到旧头像或目标文件已存在时跳过，避免覆盖其它头像。重命名失败仅记录告警，不阻断文本编辑。
-     *
-     * @param old_name 旧站点名。
-     * @param name     新站点名。
-     */
-    void rename_friend_avatar(std::string_view old_name, std::string_view name)
-    {
-        if (old_name == name)
-            return;
-
-        const auto avatars_dir = std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / "friend_avatars";
-        std::error_code ec;
-        if (!std::filesystem::exists(avatars_dir, ec) || ec)
-            return;
-
-        // 找到以旧站点名为文件名的头像文件。
-        std::optional<std::filesystem::path> old_avatar;
-        for (const auto& entry : std::filesystem::directory_iterator(avatars_dir, ec))
-        {
-            if (ec)
-                break;
-            if (!entry.is_regular_file(ec))
-                continue;
-            if (ec)
-                break;
-            if (entry.path().stem().string() == old_name)
-            {
-                old_avatar = entry.path();
-                break;
-            }
-        }
-        if (!old_avatar)
-            return; // 无旧头像，无需重命名。
-
-        const auto filename = old_avatar->filename().string();
-        const auto new_name = std::string{ name } + old_avatar->extension().string();
-
-        // 目标文件已存在则跳过，避免覆盖其它头像。
-        const auto target = avatars_dir / new_name;
-        if (std::filesystem::exists(target, ec) && !ec)
-        {
-            spdlog::warn("更新友链头像：目标文件 {} 已存在，跳过重命名。", new_name);
-            return;
-        }
-
-        std::filesystem::rename(*old_avatar, target, ec);
-        if (ec)
-        {
-            spdlog::warn("更新友链头像：重命名 {} 失败：{}。", filename, ec.message());
-            return;
-        }
-        spdlog::info("更新友链头像：{} -> {}.", filename, new_name);
-    }
-
-    /**
      * @brief 从位图文件头部解析图片尺寸（宽、高），支持 PNG/JPEG/GIF/WebP/BMP。
      *
      * @param data 文件内容。
@@ -224,7 +166,7 @@ namespace friends
         txn.commit();
 
         // 扫描 friend_avatars 目录，建立“文件名 stem → 带版本号的访问 URL”映射，
-        // 便于按站点名（图片名等于站点名）匹配实际图片；带 ?v= 修改时间可避免浏览器缓存旧图。
+        // 便于按友链 id（图片名等于友链 id）匹配实际图片；带 ?v= 修改时间可避免浏览器缓存旧图。
         std::unordered_map<std::string, std::string> avatar_url_by_stem;
         const auto avatars_dir = std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / "friend_avatars";
         std::error_code ec;
@@ -256,7 +198,8 @@ namespace friends
             item["url"]         = row["url"].as<std::string>();
             item["description"] = row["description"].as<std::string>();
 
-            if (const auto it = avatar_url_by_stem.find(name); it != avatar_url_by_stem.end())
+            const auto id = row["id"].as<int>();
+            if (const auto it = avatar_url_by_stem.find(std::to_string(id)); it != avatar_url_by_stem.end())
                 item["image"] = it->second;
             else
                 item["image"] = "";
@@ -268,9 +211,44 @@ namespace friends
         return arr;
     }
 
+    auto create_friend(
+        pqxx::connection& conn,
+        std::string_view  name,
+        std::string_view  url,
+        std::string_view  description)
+    -> std::optional<std::string>
+    {
+        spdlog::debug("正在创建友情链接 ...");
+        pqxx::work txn{ conn };
+
+        // 站点链接唯一（友链条目以站点链接区分），先检查是否与其他记录重复。
+        const auto dup = txn.exec(
+            "SELECT id FROM friends WHERE url = $1",
+            pqxx::params{ std::string{ url } }
+        );
+        if (!dup.empty())
+        {
+            txn.commit();
+            spdlog::warn("创建友情链接失败：站点链接 {} 已存在。", std::string{ url });
+            return "站点链接已存在";
+        }
+
+        txn.exec(
+            "INSERT INTO friends (name, url, description) VALUES ($1, $2, $3)",
+            pqxx::params{
+                std::string{ name },
+                std::string{ url },
+                std::string{ description }
+            }
+        );
+        txn.commit();
+        spdlog::info("创建友情链接成功：{}.", std::string{ name });
+        return std::nullopt;
+    }
+
     auto update_friend(
         pqxx::connection& conn,
-        std::string_view  old_name,
+        std::string_view  old_url,
         std::string_view  name,
         std::string_view  url,
         std::string_view  description)
@@ -281,50 +259,48 @@ namespace friends
 
         // 定位原始记录，确保存在。
         const auto rows = txn.exec(
-            "SELECT id FROM friends WHERE name = $1",
-            pqxx::params{ std::string{ old_name } }
+            "SELECT id FROM friends WHERE url = $1",
+            pqxx::params{ std::string{ old_url } }
         );
         if (rows.empty())
         {
             txn.commit();
-            spdlog::warn("更新友情链接失败：站点 {} 不存在。", std::string{ old_name });
+            spdlog::warn("更新友情链接失败：站点链接 {} 不存在。", std::string{ old_url });
             return "站点不存在";
         }
 
-        // 若修改了站点名，检查新站点名是否与其他记录重复。
-        if (old_name != name)
+        // 若修改了站点链接，检查新站点链接是否与其他记录重复。
+        if (old_url != url)
         {
             const auto dup = txn.exec(
-                "SELECT id FROM friends WHERE name = $1",
-                pqxx::params{ std::string{ name } }
+                "SELECT id FROM friends WHERE url = $1",
+                pqxx::params{ std::string{ url } }
             );
             if (!dup.empty())
             {
                 txn.commit();
-                spdlog::warn("更新友情链接失败：站点名 {} 已存在。", std::string{ name });
-                return "站点名已存在";
+                spdlog::warn("更新友情链接失败：站点链接 {} 已存在。", std::string{ url });
+                return "站点链接已存在";
             }
         }
 
         txn.exec(
-            "UPDATE friends SET name = $1, url = $2, description = $3 WHERE name = $4",
+            "UPDATE friends SET name = $1, url = $2, description = $3 WHERE url = $4",
             pqxx::params{
                 std::string{ name },
                 std::string{ url },
                 std::string{ description },
-                std::string{ old_name }
+                std::string{ old_url }
             }
         );
         txn.commit();
-        // 站点名被修改时，同步重命名 friend_avatars 目录下对应的头像文件。
-        rename_friend_avatar(old_name, name);
-        spdlog::info("更新友情链接成功：{} -> {}.", std::string{ old_name }, std::string{ name });
+        spdlog::info("更新友情链接成功：{} -> {}.", std::string{ old_url }, std::string{ url });
         return std::nullopt;
     }
 
     auto upload_avatar(
         pqxx::connection& conn,
-        std::string_view  name,
+        std::string_view  url,
         std::string_view  filename,
         std::string_view  data)
     -> std::pair<std::optional<std::string>, nlohmann::json>
@@ -338,32 +314,35 @@ namespace friends
         const auto ext = filename.substr(ext_pos);
         if (ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".webp")
             return { std::string{ "不支持的文件格式" }, {} };
-        if (name.empty())
-            return { std::string{ "站点名不能为空" }, {} };
+        if (url.empty())
+            return { std::string{ "站点链接不能为空" }, {} };
 
-        // 校验图片尺寸必须为 512×512。
+        // 校验图片宽高比例必须为 1:1（正方形）。
         const auto dims = parse_image_dimensions(data);
         if (!dims)
             return { std::string{ "无法识别图片尺寸" }, {} };
-        if (dims->first != 512 || dims->second != 512)
-            return { std::string{ "图片尺寸必须为 512×512" }, {} };
+        if (dims->first != dims->second)
+            return { std::string{ "图片宽高比例必须为 1:1" }, {} };
 
-        // 校验站点存在。
+        // 校验站点存在，并取友链 id 作为头像文件名主体。
+        int friend_id{ 0 };
         {
             pqxx::work txn{ conn };
             const auto rows = txn.exec(
-                "SELECT id FROM friends WHERE name = $1",
-                pqxx::params{ std::string{ name } }
+                "SELECT id FROM friends WHERE url = $1",
+                pqxx::params{ std::string{ url } }
             );
             if (rows.empty())
                 return { std::string{ "站点不存在" }, {} };
+            friend_id = rows[0]["id"].as<int>();
         }
 
         // 确保目录存在。
         const auto avatars_dir = std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / "friend_avatars";
         std::error_code ec;
 
-        // 删除同站点名的旧头像（任意扩展名），实现替换。
+        // 删除该友链的旧头像（任意扩展名），实现替换。
+        const auto stem = std::to_string(friend_id);
         for (const auto& entry : std::filesystem::directory_iterator(avatars_dir, ec))
         {
             if (ec)
@@ -372,7 +351,7 @@ namespace friends
                 continue;
             if (ec)
                 break;
-            if (entry.path().stem().string() == name)
+            if (entry.path().stem().string() == stem)
             {
                 std::error_code rm_ec;
                 std::filesystem::remove(entry.path(), rm_ec);
@@ -380,7 +359,7 @@ namespace friends
         }
 
         // 写入新头像文件。
-        const auto new_filename = std::string{ name } + std::string{ ext };
+        const auto new_filename = stem + std::string{ ext };
         const auto full = (avatars_dir / new_filename).string();
         std::ofstream ofs{ full, std::ios::binary };
         if (!ofs)

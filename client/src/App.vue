@@ -4,6 +4,7 @@ import { onMounted, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import NavBar from '@/components/NavBar.vue'
 import '@/assets/background.css'
+import '@/assets/normal/link.css'
 
 const auth = useAuthStore()
 
@@ -89,4 +90,3 @@ html::-webkit-scrollbar {
 }
 
 </style>
-
