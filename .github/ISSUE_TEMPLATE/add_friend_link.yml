@@ -1,0 +1,36 @@
+name: 申请友链
+description: 填写希望链接的站点名和链接，添加一段自述，并上传头像
+title: 友链申请
+labels: 友链
+body:
+  - type: input
+    id: name
+    attributes:
+      label: 站点名称
+      placeholder: 石木古月的小窝
+    validations:
+      required: true
+
+  - type: input
+    id: url
+    attributes:
+      label: 站点链接
+      placeholder: https://shimuguyue.love
+    validations:
+      required: true
+
+  - type: input
+    id: desc
+    attributes:
+      label: 个人介绍
+      placeholder: 来点自述
+    validations:
+      required: true
+
+  - type: textarea
+    id: avatar
+    attributes:
+      label: 展示头像
+      placeholder: 在此处上传图片（要求长宽比为 1:1；建议大小为 512px，过小无法上传使用，过大将被压缩至该像素；格式支持 JPEG、PNG、GIF、BMP、WebP）
+    validations:
+      required: true
