@@ -45,7 +45,11 @@ function hostOf(url: string): string {
     <!-- 页面标题 -->
     <header class="friends-header">
       <h1 class="friends-header__title">友情链接</h1>
-      <p class="friends-header__subtitle">分享更多朋友们的优秀链接</p>
+      <p class="friends-header__subtitle">
+        分享更多朋友们的优秀链接，欢迎在
+        <a href="https://github.com/ShimuGuyue/shimuguyue.love/issues/new?template=add_friend_link.yml" target="_blank" rel="noopener noreferrer">此处</a>
+        创建友链添加申请。
+      </p>
     </header>
 
     <!-- 友链卡片网格 -->
