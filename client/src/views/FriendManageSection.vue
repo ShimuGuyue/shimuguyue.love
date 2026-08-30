@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 
 import '@/assets/button/manage.css'
@@ -40,10 +40,31 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const uploadName = ref<string | null>(null)
 const uploadingName = ref<string | null>(null)
 
-/** 行数据：编辑态绑定对应草稿（按索引对齐）。 */
-const editRows = computed(() =>
-  friends.value.map((friend, i) => ({ friend, draft: drafts.value[i] ?? null }))
+/** 分页：每页固定 9 条 */
+const PAGE_SIZE = 9
+const page = ref(1)
+
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(friends.value.length / PAGE_SIZE))
 )
+
+const pageNumbers = computed(() =>
+  Array.from({ length: pageCount.value }, (_, i) => i + 1)
+)
+
+/** 当前页行数据：按索引与完整草稿列表对齐。 */
+const pageRows = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE
+  return friends.value
+    .slice(start, start + PAGE_SIZE)
+    .map((friend, i) => ({ friend, draft: drafts.value[start + i] ?? null }))
+})
+
+watch([friends, pageCount], () => {
+  if (page.value > pageCount.value) {
+    page.value = pageCount.value
+  }
+})
 
 async function loadFriends() {
   loading.value = true
@@ -171,6 +192,7 @@ async function submitCreate() {
     }
     showCreateDialog.value = false
     await loadFriends()
+    page.value = pageCount.value
     window.alert('创建成功')
   } catch {
     window.alert('创建失败')
@@ -410,7 +432,7 @@ async function onFileChange(event: Event) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="{ friend, draft } in editRows" :key="friend.url">
+            <tr v-for="{ friend, draft } in pageRows" :key="friend.url">
               <td class="friends-table__image">
                 <div class="friends-table__avatar-wrap">
                   <img
@@ -476,6 +498,37 @@ async function onFileChange(event: Event) {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="users-pager">
+        <div class="users-pager__pages">
+          <button
+            type="button"
+            class="users-pager__btn"
+            :disabled="page <= 1"
+            @click="page -= 1"
+          >
+            上一页
+          </button>
+          <button
+            v-for="num in pageNumbers"
+            :key="num"
+            type="button"
+            class="users-pager__btn"
+            :class="{ 'users-pager__btn--active': num === page }"
+            @click="page = num"
+          >
+            {{ num }}
+          </button>
+          <button
+            type="button"
+            class="users-pager__btn"
+            :disabled="page >= pageCount"
+            @click="page += 1"
+          >
+            下一页
+          </button>
+        </div>
       </div>
     </template>
 
