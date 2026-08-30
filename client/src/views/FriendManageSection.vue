@@ -30,9 +30,12 @@ const error = ref('')
 
 const editing = ref(false)
 const avatarEditing = ref(false)
+const showCreateDialog = ref(false)
 const saving = ref(false)
+const creating = ref(false)
 const canEdit = ref(false)
 const drafts = ref<FriendEdit[]>([])
+const createForm = ref({ name: '', url: '', description: '' })
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploadName = ref<string | null>(null)
 const uploadingName = ref<string | null>(null)
@@ -87,6 +90,7 @@ function startEdit() {
     window.alert('操作失败：该操作需要 manage:edit 权限')
     return
   }
+  showCreateDialog.value = false
   avatarEditing.value = false
   drafts.value = friends.value.map((friend) => ({
     old_name: friend.name,
@@ -103,6 +107,7 @@ function startAvatarEdit() {
     window.alert('操作失败：该操作需要 manage:edit 权限')
     return
   }
+  showCreateDialog.value = false
   editing.value = false
   drafts.value = []
   avatarEditing.value = true
@@ -111,6 +116,67 @@ function startAvatarEdit() {
 /** 退出头像编辑模式。 */
 function exitAvatarEdit() {
   avatarEditing.value = false
+}
+
+/** 打开新建友链弹窗。 */
+function openCreateDialog() {
+  if (!canEdit.value) {
+    window.alert('操作失败：该操作需要 manage:edit 权限')
+    return
+  }
+  editing.value = false
+  avatarEditing.value = false
+  drafts.value = []
+  createForm.value = { name: '', url: '', description: '' }
+  showCreateDialog.value = true
+}
+
+/** 提交新建友链：站点名与站点链接必填，且站点名不允许重复。 */
+async function submitCreate() {
+  if (!canEdit.value) {
+    window.alert('操作失败：该操作需要 manage:edit 权限')
+    return
+  }
+
+  const name = createForm.value.name.trim()
+  const url = createForm.value.url.trim()
+  const description = createForm.value.description.trim()
+  if (!name) {
+    window.alert('站点名 不能为空')
+    return
+  }
+  if (!url) {
+    window.alert('站点链接 不能为空')
+    return
+  }
+  if (friends.value.some((friend) => friend.name === name)) {
+    window.alert(`站点名已存在：${name}`)
+    return
+  }
+
+  creating.value = true
+  try {
+    const resp = await fetch('/api/friends', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + auth.token,
+      },
+      body: JSON.stringify({ name, url, description }),
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      window.alert(data.error ?? '创建失败')
+      return
+    }
+    showCreateDialog.value = false
+    await loadFriends()
+    window.alert('创建成功')
+  } catch {
+    window.alert('创建失败')
+  } finally {
+    creating.value = false
+  }
 }
 
 /** 取消编辑：丢弃草稿。 */
@@ -306,6 +372,14 @@ async function onFileChange(event: Event) {
           type="button"
           class="manage-btn manage-btn--primary"
           :disabled="saving"
+          @click="openCreateDialog"
+        >
+          新建友链
+        </button>
+        <button
+          type="button"
+          class="manage-btn"
+          :disabled="saving"
           @click="startAvatarEdit"
         >
           编辑头像
@@ -414,6 +488,61 @@ async function onFileChange(event: Event) {
       accept="image/png,image/jpeg,image/webp"
       @change="onFileChange"
     />
+
+    <div
+      v-if="showCreateDialog"
+      class="create-mask"
+    >
+      <div class="create-box" role="dialog" aria-modal="true">
+        <h2 class="create-box__title">新建友链</h2>
+
+        <label class="create-box__field">
+          <span>站点名</span>
+          <input
+            v-model="createForm.name"
+            class="create-box__input"
+            placeholder="必填"
+          />
+        </label>
+
+        <label class="create-box__field">
+          <span>站点链接</span>
+          <input
+            v-model="createForm.url"
+            class="create-box__input"
+            placeholder="https://... 必填"
+          />
+        </label>
+
+        <label class="create-box__field">
+          <span>站点描述</span>
+          <input
+            v-model="createForm.description"
+            class="create-box__input"
+            placeholder="可选"
+          />
+        </label>
+
+        <div class="create-box__actions">
+          <button
+            type="button"
+            class="manage-btn manage-btn--primary"
+            :disabled="creating"
+            @click="submitCreate"
+          >
+            {{ creating ? '创建中...' : '创建友链' }}
+          </button>
+          <button
+            type="button"
+            class="manage-btn"
+            :disabled="creating"
+            @click="showCreateDialog = false"
+          >
+            取消创建
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -458,8 +587,67 @@ async function onFileChange(event: Event) {
   color: var(--color-text-secondary);
 }
 
-.friends-avatar-hint {
-  margin-bottom: 12px;
+/* ── 新建友链弹窗（与用户管理页弹窗同款） ── */
+.create-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.35);
+}
+
+.create-box {
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  padding: 24px;
+  background-color: var(--color-nav-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.create-box__title {
+  margin: 0 0 20px;
+  font-size: 1.2rem;
+  color: var(--color-text);
+}
+
+.create-box__field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.create-box__field > span {
+  flex-shrink: 0;
+  width: 64px;
+  color: var(--manage-label-color);
+}
+
+.create-box__input {
+  flex: 1;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg);
+  font-size: 0.9rem;
+  color: var(--color-text);
+}
+
+.create-box__input:focus {
+  outline: none;
+  border-color: var(--color-text-secondary);
+}
+
+.create-box__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
 }
 
 /* 复用博客管理表格外观；友链数量较少，行高自适应并容纳头像。 */

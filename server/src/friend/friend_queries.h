@@ -26,6 +26,24 @@ namespace friends
     [[nodiscard]] auto get_all_friends(pqxx::connection& conn) -> nlohmann::json;
 
     /**
+     * @brief 新建一个友情链接记录。
+     *
+     * 站点名不允许与其他记录重复；成功时返回 std::nullopt。
+     *
+     * @param conn        数据库连接。
+     * @param name        站点名。
+     * @param url         站点链接。
+     * @param description 站点描述。
+     * @return std::nullopt 表示成功；否则返回错误消息。
+     */
+    [[nodiscard]] auto create_friend(
+        pqxx::connection& conn,
+        std::string_view  name,
+        std::string_view  url,
+        std::string_view  description)
+    -> std::optional<std::string>;
+
+    /**
      * @brief 更新一个友情链接记录（按 old_name 定位，可同时修改 name/url/description）。
      *
      * 若修改了站点名，会检查新站点名是否与其他记录重复；不存在的原始记录返回错误。

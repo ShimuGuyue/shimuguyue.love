@@ -268,6 +268,41 @@ namespace friends
         return arr;
     }
 
+    auto create_friend(
+        pqxx::connection& conn,
+        std::string_view  name,
+        std::string_view  url,
+        std::string_view  description)
+    -> std::optional<std::string>
+    {
+        spdlog::debug("正在创建友情链接 ...");
+        pqxx::work txn{ conn };
+
+        // 站点名唯一，先检查是否与其他记录重复。
+        const auto dup = txn.exec(
+            "SELECT id FROM friends WHERE name = $1",
+            pqxx::params{ std::string{ name } }
+        );
+        if (!dup.empty())
+        {
+            txn.commit();
+            spdlog::warn("创建友情链接失败：站点名 {} 已存在。", std::string{ name });
+            return "站点名已存在";
+        }
+
+        txn.exec(
+            "INSERT INTO friends (name, url, description) VALUES ($1, $2, $3)",
+            pqxx::params{
+                std::string{ name },
+                std::string{ url },
+                std::string{ description }
+            }
+        );
+        txn.commit();
+        spdlog::info("创建友情链接成功：{}.", std::string{ name });
+        return std::nullopt;
+    }
+
     auto update_friend(
         pqxx::connection& conn,
         std::string_view  old_name,

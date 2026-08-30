@@ -1469,6 +1469,82 @@ namespace http
         );
     }
 
+    void handle_create_friend(
+        const httplib::Request& req,
+        httplib::Response&      res,
+        const std::string&      allowed)
+    {
+        db::with_db(
+            [&](pqxx::connection& conn)
+            {
+                res.set_header("Access-Control-Allow-Origin", allowed);
+                res.set_header("Content-Type", "application/json");
+
+                // Session 验证
+                std::string token;  // 提取 Bearer token
+                if (req.has_header("Authorization"))
+                {
+                    const auto& auth_hdr = req.get_header_value("Authorization");
+                    constexpr std::string_view PREFIX = "Bearer ";
+                    if (auth_hdr.size() > PREFIX.size()
+                    &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
+                        token = auth_hdr.substr(PREFIX.size());
+                }
+                const auto session = auth::validate_session(conn, token);
+                if (!session)
+                {
+                    spdlog::info("创建友链失败：未登录或会话已过期。");
+                    res.status = 401;
+                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+                    return;
+                }
+
+                const auto& perms = session->permissions;
+                if (std::find(perms.begin(), perms.end(), "manage:edit") == perms.end())
+                {
+                    spdlog::info("创建友链失败：用户 {} 缺少 manage:edit 权限。", session->user_id);
+                    res.status = 403;
+                    res.set_content(R"({"error":"当前用户无 manage:edit 权限"})", "application/json");
+                    return;
+                }
+
+                const auto body = nlohmann::json::parse(req.body, nullptr, false);
+                if (body.is_discarded())
+                {
+                    spdlog::info("创建友链失败：无效的 JSON。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"无效的 JSON"})", "application/json");
+                    return;
+                }
+
+                const auto name        = body.value("name", "");
+                const auto url         = body.value("url", "");
+                const auto description = body.value("description", "");
+
+                if (name.empty() || url.empty())
+                {
+                    spdlog::info("创建友链失败：缺少必填字段。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"站点名与站点链接均为必填"})", "application/json");
+                    return;
+                }
+
+                const auto err = friends::create_friend(conn, name, url, description);
+                if (err)
+                {
+                    spdlog::error("创建友链失败：{}", *err);
+                    res.status = 400;
+                    res.set_content(nlohmann::json{{"error", *err}}.dump(), "application/json");
+                    return;
+                }
+
+                spdlog::info("友链创建成功：{}。", name);
+                res.set_content(R"({"ok":true})", "application/json");
+                cache::del(cache::cache_key("/api/friends", {}));
+            }
+        );
+    }
+
     void handle_update_friend(
         const httplib::Request& req,
         httplib::Response&      res,
