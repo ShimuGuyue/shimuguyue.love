@@ -64,13 +64,7 @@ if psql "${DB_ARGS[@]}" -tAc \
     echo "[smoke] 数据库 ${PGHOST}:${PGPORT}/${PGDATABASE} 表已存在，跳过初始化。"
 else
     echo "[smoke] 初始化数据库表（${PGHOST}:${PGPORT}/${PGDATABASE}）..."
-    for f in \
-        sql/create_users.sql \
-        sql/create_blogs.sql \
-        sql/create_sessions.sql \
-        sql/create_images.sql \
-        sql/create_profile.sql \
-        sql/create_about.sql; do
+    for f in sql/create_*.sql; do
         echo "[smoke] 初始化 ${f}"
         psql "${DB_ARGS[@]}" -v ON_ERROR_STOP=1 -f "$REPO_ROOT/$f"
     done

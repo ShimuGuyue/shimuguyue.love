@@ -201,8 +201,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 
 | 路径 | 说明 |
 |---|---|
-| `sql/create_users.sql` | 用户表（users、permissions、user_permissions） |
-| `sql/create_sessions.sql` | 会话表（sessions） |
+| `sql/create_users.sql` | 用户表（users、permissions、user_permissions）+ 会话表（sessions） |
 | `sql/create_blogs.sql` | 博客表（categories、tags、blogs、blog_tags） |
 | `sql/create_images.sql` | 照片墙图片表（images） |
 | `sql/create_profile.sql` | 个人介绍表（profile，单行） |
