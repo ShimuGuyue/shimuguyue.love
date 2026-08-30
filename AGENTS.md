@@ -164,6 +164,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/assets/manage/font.css` | 后台管理页文本样式 |
 | `client/src/assets/manage/table.css` | 后台管理页表格样式 |
 | `client/src/assets/normal/color.css` | 颜色变量集中定义（基础色板 + `--pink-hot-rgb` + 半透明粉色 `--pink-<alpha>`） |
+| `client/src/assets/normal/link.css` | 全局超链接统一样式（粉色 + 实线下划线，悬停侵蚀紫，与 Markdown 渲染一致；单一来源，`markdown/text.css` 不再重复定义） |
 
 **server/**
 

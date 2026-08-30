@@ -202,16 +202,8 @@ async function checkFriendStatus(friend: FriendLink) {
 
 .friend-card__url {
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
   line-height: 1.6;
   overflow-wrap: anywhere;
-  text-decoration: none;
-  text-underline-offset: 2px;
-}
-
-.friend-card__url:hover {
-  color: var(--pink-hot);
-  text-decoration: underline;
 }
 
 /* 网站状态：可访问绿色 ONLINE，不可访问红色 OFFLINE */

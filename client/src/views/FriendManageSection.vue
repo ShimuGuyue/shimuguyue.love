@@ -732,17 +732,6 @@ async function onFileChange(event: Event) {
   width: 55%;
 }
 
-/* 站点链接：下划线可点击 */
-.friends-table__link {
-  color: var(--color-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.friends-table__link:hover {
-  color: var(--color-text-secondary);
-}
-
 /* 头像缩略图：圆形，居中裁切；无图时显示站点名首字符占位 */
 .friends-table__avatar-wrap {
   position: relative;

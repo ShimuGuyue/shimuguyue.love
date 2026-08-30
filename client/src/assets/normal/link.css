@@ -1,0 +1,19 @@
+/* ============================================================
+   全局超链接统一样式（单一来源）
+   ------------------------------------------------------------
+   所有页面正文超链接与 Markdown 渲染后的链接外观保持一致：
+   粉色 + 实线下划线，悬停变为侵蚀紫。
+   Markdown 渲染样式（assets/markdown/text.css）不再重复定义
+   链接颜色与下划线，仅保留渲染特有的间距等细节。
+   依赖 normal/color.css 中的 --pink-hot / --purple-herrscher。
+   ============================================================ */
+
+a {
+  color: var(--pink-hot);
+  word-wrap: break-word;
+  text-decoration: underline solid;
+}
+
+a:hover {
+  color: var(--purple-herrscher);
+}
