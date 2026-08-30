@@ -32,6 +32,9 @@ const editing = ref(false)
 const saving = ref(false)
 const canEdit = ref(false)
 const drafts = ref<FriendEdit[]>([])
+const fileInput = ref<HTMLInputElement | null>(null)
+const uploadName = ref<string | null>(null)
+const uploadingName = ref<string | null>(null)
 
 /** 行数据：编辑态绑定对应草稿（按索引对齐）。 */
 const editRows = computed(() =>
@@ -171,6 +174,78 @@ async function saveChanges() {
     saving.value = false
   }
 }
+
+/** 点击头像上的上传按钮：记录目标友链并触发文件选择。 */
+function openUpload(friend: FriendLink) {
+  uploadName.value = friend.name
+  fileInput.value?.click()
+}
+
+/** 校验图片尺寸：宽、高均为 512。 */
+function isSquare512(file: File): Promise<boolean> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      resolve(img.naturalWidth === 512 && img.naturalHeight === 512)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(false)
+    }
+    img.src = url
+  })
+}
+
+/** 上传选中文件到目标友链；成功后即时替换该行头像。 */
+async function uploadAvatar(name: string, file: File) {
+  uploadingName.value = name
+  try {
+    const form = new FormData()
+    form.append('name', name)
+    form.append('file', file)
+    const resp = await fetch('/api/friend/avatar/upload', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + auth.token },
+      body: form,
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      window.alert(data.error ?? '上传失败')
+      return
+    }
+
+    const image = data.image as string | undefined
+    const friend = friends.value.find((f) => f.name === name)
+    if (friend && image) {
+      friend.image = image
+    }
+    window.alert('上传成功')
+  } catch {
+    window.alert('上传失败')
+  } finally {
+    uploadingName.value = null
+  }
+}
+
+/** 文件选择变化：先校验 512×512，再上传。 */
+async function onFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  const name = uploadName.value
+  if (!name) return
+
+  const ok = await isSquare512(file)
+  if (!ok) {
+    window.alert('图片尺寸必须为 512×512')
+    return
+  }
+  await uploadAvatar(name, file)
+}
 </script>
 
 <template>
@@ -225,18 +300,29 @@ async function saveChanges() {
           <tbody>
             <tr v-for="{ friend, draft } in editRows" :key="friend.name">
               <td class="friends-table__image">
-                <img
-                  v-if="friend.image"
-                  class="friends-table__avatar"
-                  :src="friend.image"
-                  :alt="friend.name"
-                  loading="lazy"
-                />
-                <div
-                  v-else
-                  class="friends-table__avatar friends-table__avatar--fallback"
-                >
-                  {{ friend.name.charAt(0) }}
+                <div class="friends-table__avatar-wrap">
+                  <img
+                    v-if="friend.image"
+                    class="friends-table__avatar"
+                    :src="friend.image"
+                    :alt="friend.name"
+                    loading="lazy"
+                  />
+                  <div
+                    v-else
+                    class="friends-table__avatar friends-table__avatar--fallback"
+                  >
+                    {{ friend.name.charAt(0) }}
+                  </div>
+                  <button
+                    v-if="editing"
+                    type="button"
+                    class="friends-table__upload"
+                    :disabled="uploadingName === friend.name"
+                    @click="openUpload(friend)"
+                  >
+                    {{ uploadingName === friend.name ? '上传中' : '上传' }}
+                  </button>
                 </div>
               </td>
               <td class="friends-table__name">
@@ -282,6 +368,14 @@ async function saveChanges() {
     </template>
 
     <p v-else class="friends-hint">暂无友链</p>
+
+    <input
+      ref="fileInput"
+      type="file"
+      class="friends-upload-input"
+      accept="image/png,image/jpeg,image/webp"
+      @change="onFileChange"
+    />
   </div>
 </template>
 
@@ -367,25 +461,61 @@ async function saveChanges() {
 }
 
 /* 头像缩略图：圆形，居中裁切；无图时显示站点名首字符占位 */
-.friends-table__avatar {
+.friends-table__avatar-wrap {
+  position: relative;
   display: inline-block;
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  object-fit: cover;
-  object-position: center;
   overflow: hidden;
   vertical-align: middle;
 }
 
+.friends-table__avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center;
+}
+
 .friends-table__avatar--fallback {
-  /* inline-flex 使其参与行内排版，能被单元格 text-align:center 居中 */
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   font-size: 1.2rem;
   font-weight: 700;
   background-color: var(--pink-hot);
+}
+
+/* 编辑模式下头像上的上传覆盖按钮 */
+.friends-table__upload {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.45);
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.friends-table__upload:hover:not(:disabled) {
+  background-color: rgba(0, 0, 0, 0.62);
+}
+
+.friends-table__upload:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* 隐藏的图片选择输入框 */
+.friends-upload-input {
+  display: none;
 }
 </style>
