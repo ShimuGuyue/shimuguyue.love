@@ -8,6 +8,7 @@ interface FriendLink {
   url: string
   description: string
   image: string
+  status?: 'online' | 'offline'
 }
 
 const friends = ref<FriendLink[]>([])
@@ -20,6 +21,7 @@ async function fetchFriends() {
       throw new Error(`HTTP ${resp.status}`)
     }
     friends.value = await resp.json()
+    friends.value.forEach(checkFriendStatus)
   } catch (e) {
     console.error('获取友链失败:', e)
     friends.value = []
@@ -29,6 +31,19 @@ async function fetchFriends() {
 }
 
 onMounted(fetchFriends)
+
+/** 探测友链站点是否可访问：no-cors 请求能建立连接即视为 ONLINE，超时或失败为 OFFLINE。 */
+async function checkFriendStatus(friend: FriendLink) {
+  try {
+    await fetch(friend.url, {
+      mode: 'no-cors',
+      signal: AbortSignal.timeout(8000),
+    })
+    friend.status = 'online'
+  } catch {
+    friend.status = 'offline'
+  }
+}
 
 </script>
 
@@ -77,6 +92,12 @@ onMounted(fetchFriends)
             >
               {{ friend.url }}
             </a>
+            <p
+              class="friend-card__status"
+              :class="`friend-card__status--${friend.status === 'offline' ? 'offline' : 'online'}`"
+            >
+              {{ friend.status === 'offline' ? 'OFFLINE' : 'ONLINE' }}
+            </p>
           </div>
         </div>
         <!-- 描述：固定两行位置 -->
@@ -191,6 +212,22 @@ onMounted(fetchFriends)
 .friend-card__url:hover {
   color: var(--pink-hot);
   text-decoration: underline;
+}
+
+/* 网站状态：可访问绿色 ONLINE，不可访问红色 OFFLINE */
+.friend-card__status {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.friend-card__status--online {
+  color: #22c55e;
+}
+
+.friend-card__status--offline {
+  color: #ef4444;
 }
 
 /* 描述：固定两行，超出裁剪，不足时仍占两行位置 */
