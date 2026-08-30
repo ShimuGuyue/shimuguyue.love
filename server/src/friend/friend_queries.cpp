@@ -317,12 +317,12 @@ namespace friends
         if (url.empty())
             return { std::string{ "站点链接不能为空" }, {} };
 
-        // 校验图片尺寸必须为 512×512。
+        // 校验图片宽高比例必须为 1:1（正方形）。
         const auto dims = parse_image_dimensions(data);
         if (!dims)
             return { std::string{ "无法识别图片尺寸" }, {} };
-        if (dims->first != 512 || dims->second != 512)
-            return { std::string{ "图片尺寸必须为 512×512" }, {} };
+        if (dims->first != dims->second)
+            return { std::string{ "图片宽高比例必须为 1:1" }, {} };
 
         // 校验站点存在，并取友链 id 作为头像文件名主体。
         int friend_id{ 0 };

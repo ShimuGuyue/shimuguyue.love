@@ -122,7 +122,7 @@ function startEdit() {
   editing.value = true
 }
 
-/** 进入头像编辑模式：可点击各行头像上传 512×512 图片替换。 */
+/** 进入头像编辑模式：可点击各行头像上传 1:1 方形图片替换。 */
 function startAvatarEdit() {
   if (!canEdit.value) {
     window.alert('操作失败：该操作需要 manage:edit 权限')
@@ -287,14 +287,14 @@ function openUpload(friend: FriendLink) {
   fileInput.value?.click()
 }
 
-/** 校验图片尺寸：宽、高均为 512。 */
-function isSquare512(file: File): Promise<boolean> {
+/** 校验图片宽高比例是否为 1:1（正方形）。 */
+function isSquare(file: File): Promise<boolean> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
       URL.revokeObjectURL(url)
-      resolve(img.naturalWidth === 512 && img.naturalHeight === 512)
+      resolve(img.naturalWidth === img.naturalHeight)
     }
     img.onerror = () => {
       URL.revokeObjectURL(url)
@@ -335,7 +335,7 @@ async function uploadAvatar(url: string, file: File) {
   }
 }
 
-/** 文件选择变化：先校验 512×512，再上传。 */
+/** 文件选择变化：先校验 1:1，再上传。 */
 async function onFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -345,9 +345,9 @@ async function onFileChange(event: Event) {
   const url = uploadName.value
   if (!url) return
 
-  const ok = await isSquare512(file)
+  const ok = await isSquare(file)
   if (!ok) {
-    window.alert('图片尺寸必须为 512×512')
+    window.alert('图片宽高比例必须为 1:1')
     return
   }
   await uploadAvatar(url, file)
