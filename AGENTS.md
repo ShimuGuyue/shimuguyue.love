@@ -145,6 +145,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
 | `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage:view 权限，保存编辑/创建用户需 manage:edit 权限） |
 | `client/src/views/BlogManageSection.vue` | 博客管理栏目页（路由 /manage/blogs，需 manage:view 权限，表格展示全部博客的 file_path / title / category / tags） |
+| `client/src/views/FriendManageSection.vue` | 友链管理栏目页（路由 /manage/friends，需 manage:view 权限，只读表格展示友链的 name / url / description / image） |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |
@@ -191,7 +192,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/export/export_queries.cpp` / `.h` | 数据导出查询：各数据表读取为 JSON 数组 |
 | `server/src/export/zip_writer.cpp` / `.h` | zip 打包工具（store 方式，无压缩） |
 | `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
-| `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（按站点名匹配 friend_avatars 图片） |
+| `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（按站点名匹配 friend_avatars 图片；`update_friend` 更新站点名/链接/描述并同步重命名头像；`upload_avatar` 上传/替换 512×512 头像） |
 | `server/src/profile/profile_queries.cpp` / `.h` | 个人介绍查询、更新 |
 | `server/src/about/about_queries.cpp` / `.h` | 关于我 README 内容数据库查询 |
 | `server/src/md/markdown_parser.cpp` / `.h` | Markdown YAML frontmatter 解析（用 yaml-cpp） |

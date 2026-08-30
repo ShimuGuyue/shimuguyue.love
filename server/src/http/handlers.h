@@ -148,6 +148,22 @@ void handle_get_friends(
     const std::string&      allowed);
 
 /**
+ * @brief 处理 PUT /api/friends/update 请求（需 manage:edit 权限）。
+ */
+void handle_update_friend(
+    const httplib::Request& req,
+    httplib::Response&      res,
+    const std::string&      allowed);
+
+/**
+ * @brief 处理 POST /api/friend/avatar/upload 请求（需 manage:edit 权限）。
+ */
+void handle_upload_avatar(
+    const httplib::Request& req,
+    httplib::Response&      res,
+    const std::string&      allowed);
+
+/**
  * @brief 处理 POST /api/image/save 请求（需 photo_wall:edit 权限）。
  */
 void handle_save_image(

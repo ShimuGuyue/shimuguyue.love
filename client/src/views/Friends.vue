@@ -132,7 +132,7 @@ function hostOf(url: string): string {
   text-decoration: none;
   background-color: var(--blog-surface-bg);
   border: 1px solid var(--color-border);
-  border-radius: var(--blog-surface-radius);
+  border-radius: 30px;
   box-shadow: var(--blog-surface-shadow);
   cursor: pointer;
   transition: box-shadow var(--transition-speed), border-color var(--transition-speed);

@@ -1469,6 +1469,156 @@ namespace http
         );
     }
 
+    void handle_update_friend(
+        const httplib::Request& req,
+        httplib::Response&      res,
+        const std::string&      allowed)
+    {
+        db::with_db(
+            [&](pqxx::connection& conn)
+            {
+                res.set_header("Access-Control-Allow-Origin", allowed);
+                res.set_header("Content-Type", "application/json");
+
+                const auto body = nlohmann::json::parse(req.body, nullptr, false);
+                if (body.is_discarded())
+                {
+                    spdlog::info("更新友链失败：无效的 JSON。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"无效的 JSON"})", "application/json");
+                    return;
+                }
+
+                // Session 验证
+                std::string token;  // 提取 Bearer token
+                if (req.has_header("Authorization"))
+                {
+                    const auto& auth_hdr = req.get_header_value("Authorization");
+                    constexpr std::string_view PREFIX = "Bearer ";
+                    if (auth_hdr.size() > PREFIX.size()
+                    &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
+                        token = auth_hdr.substr(PREFIX.size());
+                }
+                const auto session = auth::validate_session(conn, token);
+                if (!session)
+                {
+                    spdlog::info("更新友链失败：未登录或会话已过期。");
+                    res.status = 401;
+                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+                    return;
+                }
+
+                const auto& perms = session->permissions;
+                if (std::find(perms.begin(), perms.end(), "manage:edit") == perms.end())
+                {
+                    spdlog::info("更新友链失败：用户 {} 缺少 manage:edit 权限。", session->user_id);
+                    res.status = 403;
+                    res.set_content(R"({"error":"当前用户无 manage:edit 权限"})", "application/json");
+                    return;
+                }
+
+                const auto old_name    = body.value("old_name", "");
+                const auto name        = body.value("name", "");
+                const auto url         = body.value("url", "");
+                const auto description = body.value("description", "");
+
+                if (old_name.empty() || name.empty() || url.empty())
+                {
+                    spdlog::info("更新友链失败：缺少必填字段。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"站点名与站点链接均为必填"})", "application/json");
+                    return;
+                }
+
+                const auto err = friends::update_friend(conn, old_name, name, url, description);
+                if (err)
+                {
+                    spdlog::error("更新友链失败：{}", *err);
+                    res.status = 500;
+                    res.set_content(nlohmann::json{{"error", *err}}.dump(), "application/json");
+                    return;
+                }
+
+                spdlog::info("友链更新成功：{}。", name);
+                res.set_content(R"({"ok":true})", "application/json");
+                cache::del(cache::cache_key("/api/friends", {}));
+            }
+        );
+    }
+
+    void handle_upload_avatar(
+        const httplib::Request& req,
+        httplib::Response&      res,
+        const std::string&      allowed)
+    {
+        db::with_db(
+            [&](pqxx::connection& conn)
+            {
+                res.set_header("Access-Control-Allow-Origin", allowed);
+                res.set_header("Content-Type", "application/json");
+
+                if (!req.form.has_file("file") || !req.form.has_field("name"))
+                {
+                    spdlog::info("上传友链头像失败：缺少文件或站点名。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"缺少文件或站点名"})", "application/json");
+                    return;
+                }
+                const auto file = req.form.get_file("file");
+                const auto name = req.form.get_field("name");
+
+                // Session 验证
+                std::string token;  // 提取 Bearer token
+                if (req.has_header("Authorization"))
+                {
+                    const auto& auth_hdr = req.get_header_value("Authorization");
+                    constexpr std::string_view PREFIX = "Bearer ";
+                    if (auth_hdr.size() > PREFIX.size()
+                    &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
+                        token = auth_hdr.substr(PREFIX.size());
+                }
+                const auto session = auth::validate_session(conn, token);
+                if (!session)
+                {
+                    spdlog::info("上传友链头像失败：未登录或会话已过期。");
+                    res.status = 401;
+                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+                    return;
+                }
+
+                const auto& perms = session->permissions;
+                if (std::find(perms.begin(), perms.end(), "manage:edit") == perms.end())
+                {
+                    spdlog::info("上传友链头像失败：用户 {} 缺少 manage:edit 权限。", session->user_id);
+                    res.status = 403;
+                    res.set_content(R"({"error":"当前用户无 manage:edit 权限"})", "application/json");
+                    return;
+                }
+
+                if (name.empty() || file.filename.empty())
+                {
+                    spdlog::info("上传友链头像失败：缺少必填字段。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"缺少必填字段"})", "application/json");
+                    return;
+                }
+
+                auto [err, result] = friends::upload_avatar(conn, name, file.filename, file.content);
+                if (err)
+                {
+                    spdlog::error("上传友链头像失败：{}", *err);
+                    res.status = 400;
+                    res.set_content(nlohmann::json{{"error", *err}}.dump(), "application/json");
+                    return;
+                }
+
+                spdlog::info("友链头像上传成功：{}.", name);
+                res.set_content(result.dump(), "application/json");
+                cache::del(cache::cache_key("/api/friends", {}));
+            }
+        );
+    }
+
     void handle_save_image(
         const httplib::Request& req,
         httplib::Response&      res,
