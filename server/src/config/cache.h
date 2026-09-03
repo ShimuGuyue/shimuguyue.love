@@ -19,7 +19,6 @@ namespace config
         int64_t images;     ///< 照片墙
         int64_t friends;    ///< 友情链接
         int64_t about;      ///< 关于我
-        int64_t profile;    ///< 个人介绍
     };
 
     /**

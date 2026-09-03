@@ -32,7 +32,6 @@
 #include "friend/friend_queries.h"
 #include "img/image_queries.h"
 #include "md/markdown_parser.h"
-#include "profile/profile_queries.h"
 
 namespace
 {
@@ -2341,100 +2340,6 @@ namespace http
                 res.set_header("Content-Type", "application/json");
                 res.set_content(nlohmann::json{{"content", about::get_about(conn)}}.dump(), "application/json");
                 cache::set(key, res.body, config::cache_ttl().about);
-            }
-        );
-    }
-
-    void handle_get_profile(
-        const httplib::Request& req,
-        httplib::Response&      res,
-        const std::string&      allowed)
-    {
-        const auto key = cache::cache_key("/api/profile", {});
-        if (const auto cached = cache::get(key); cached.has_value())
-        {
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            res.set_content(*cached, "application/json");
-            return;
-        }
-
-        db::with_db(
-            [&](pqxx::connection& conn)
-            {
-                res.set_header("Access-Control-Allow-Origin", allowed);
-                res.set_header("Content-Type", "application/json");
-                res.set_content(profile::get_profile(conn).dump(), "application/json");
-                cache::set(key, res.body, config::cache_ttl().profile);
-            }
-        );
-    }
-
-    void handle_save_profile(
-        const httplib::Request& req,
-        httplib::Response&      res,
-        const std::string&      allowed)
-    {
-        db::with_db(
-            [&](pqxx::connection& conn)
-            {
-                res.set_header("Access-Control-Allow-Origin", allowed);
-                res.set_header("Content-Type", "application/json");
-
-                // Session 验证
-                std::string token;  // 提取 Bearer token
-                if (req.has_header("Authorization"))
-                {
-                    const auto& auth_hdr = req.get_header_value("Authorization");
-                    constexpr std::string_view PREFIX = "Bearer ";
-                    if (auth_hdr.size() > PREFIX.size()
-                    &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
-                        token = auth_hdr.substr(PREFIX.size());
-                }
-                const auto session = auth::validate_session(conn, token);
-                if (!session)
-                {
-                    spdlog::info("更新个人简介失败：未登录或会话已过期。");
-                    res.status = 401;
-                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
-                    return;
-                }
-                const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "introduction:edit") == perms.end())
-                {
-                    spdlog::info("更新个人简介失败：用户 {} 无 introduction:edit 权限。", session->user_id);
-                    res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 introduction:edit 权限"})", "application/json");
-                    return;
-                }
-
-                const auto body = nlohmann::json::parse(req.body, nullptr, false);
-                if (body.is_discarded())
-                {
-                    spdlog::error("更新个人简介失败：无效的 JSON。");
-                    res.status = 400;
-                    res.set_content(R"({"error":"无效的 JSON"})", "application/json");
-                    return;
-                }
-
-                const auto err = profile::update_profile(
-                    conn,
-                    body.value("title", ""),
-                    body.value("subtitle", ""),
-                    body.value("bio", "")
-                );
-                if (err.has_value())
-                {
-                    spdlog::error("更新个人简介失败：{}", *err);
-                    res.status = 500;
-                    nlohmann::json j;
-                    j["error"] = *err;
-                    res.set_content(j.dump(), "application/json");
-                    return;
-                }
-                spdlog::info("个人简介更新成功。");
-                res.set_content(R"({"ok":true})", "application/json");
-                cache::invalidate_prefix("api-cache:/api/profile");
             }
         );
     }
