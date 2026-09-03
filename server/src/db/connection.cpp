@@ -28,7 +28,7 @@ namespace
             "sessions",
             "blogs", "categories", "tags", "blog_tags",
             "images",
-            "profile", "about",
+            "about",
             "friends"
         };
 
@@ -62,7 +62,7 @@ namespace
     {
         // 单行表：表中必须存在初始数据行
         const std::vector<std::string> single_row_tables = {
-            "profile", "about"
+            "about"
         };
 
         pqxx::nontransaction txn{ conn };

@@ -235,20 +235,4 @@ void handle_get_about(
     httplib::Response&      res,
     const std::string&      allowed);
 
-/**
- * @brief 处理 GET /api/profile 请求。
- */
-void handle_get_profile(
-    const httplib::Request& req,
-    httplib::Response&      res,
-    const std::string&      allowed);
-
-/**
- * @brief 处理 POST /api/profile/save 请求（需 introduction:edit 权限）。
- */
-void handle_save_profile(
-    const httplib::Request& req,
-    httplib::Response&      res,
-    const std::string&      allowed);
-
 } // namespace http

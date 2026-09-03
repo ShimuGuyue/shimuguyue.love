@@ -52,7 +52,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/doc/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/doc/blogs/` 的相对路径（不含 `.md` 后缀）。
 - **图片**：文件存于 `FILE_PATH/image/`，元数据存于数据库，文件名与对应 `id` 同名。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
-- **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片 / 关于我 / 个人介绍）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片 / 个人介绍写接口成功后在事务提交后失效相关缓存，`/api/about` 由 `tools/pull-readme.sh` 尽力而为失效、TTL 兜底。
+- **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片 / 关于我）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片写接口成功后在事务提交后失效相关缓存，`/api/about` 由 `tools/pull-readme.sh` 尽力而为失效、TTL 兜底。
 - **配置**：`conf/.env`（环境变量）+ `conf/cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。
 
 ## 关键环境变量
@@ -136,7 +136,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/components/NavBar.vue` | 公共组件：导航栏、主题切换、用户入口 |
 | `client/src/components/MarkdownPreview.vue` | 共享 Markdown 预览组件：封装 `MdPreview`，跟随暗色主题，标题 id 统一走 `md-editor-setup` 的 slug 规则 |
 | `client/src/lib/md-editor-setup.ts` | md-editor-v3 全局配置：注入本地 highlight.js / katex 实例、`typographer: true` / `breaks: false`，并导出标题 slug 函数 |
-| `client/src/views/Home.vue` | 主页：照片墙浏览、编辑、上传 |
+| `client/src/views/Home.vue` | 主页：照片墙浏览、编辑、上传；右侧个人简介静态硬编码展示 |
 | `client/src/views/Blogs.vue` | 博客列表页（分类/标签筛选、搜索） |
 | `client/src/views/BlogDetail.vue` | 博客详情页（`MarkdownPreview` 渲染，目录来自 `getCatalog` 事件，保留滚动高亮与点击标题滚动） |
 | `client/src/views/BlogEdit.vue` | 博客新建/编辑页（`MdEditor` 编辑器，图片/mermaid/echarts/prettier/全屏按钮禁用） |
@@ -159,7 +159,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/assets/blog/card.css` | 博客卡片样式 |
 | `client/src/assets/button/login.css` | 登录页按钮样式（`.form-submit`） |
 | `client/src/assets/button/manage.css` | 后台管理页按钮样式（`.manage-btn`） |
-| `client/src/assets/button/function.css` | 通用功能按钮样式（`.func-btn` 单一样式，`--func-btn-*` 变量统管颜色/透明度/圆角/尺寸），照片墙编辑、个人介绍编辑、便签编辑等复用 |
+| `client/src/assets/button/function.css` | 通用功能按钮样式（`.func-btn` 单一样式，`--func-btn-*` 变量统管颜色/透明度/圆角/尺寸），照片墙编辑、便签编辑等复用 |
 | `client/src/assets/markdown/` | Markdown 渲染样式（PinkFairy 主题），按类型拆分：`font.css`、`headings.css`、`divider.css`、`text.css`、`blockquote.css`、`lists.css`、`code.css`、`tables.css`、`images.css`、`tasks.css`、`alerts.css` |
 | `client/src/assets/manage/font.css` | 后台管理页文本样式 |
 | `client/src/assets/manage/table.css` | 后台管理页表格样式 |
@@ -194,7 +194,6 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/export/zip_writer.cpp` / `.h` | zip 打包工具（store 方式，无压缩） |
 | `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
 | `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（友链条目以站点链接 url 区分；按友链 id 匹配 `friend_avatars/<id>.<ext>` 图片；`update_friend` 按 old_url 定位并更新名称/链接/描述；`upload_avatar` 上传/替换 1:1 方形头像） |
-| `server/src/profile/profile_queries.cpp` / `.h` | 个人介绍查询、更新 |
 | `server/src/about/about_queries.cpp` / `.h` | 关于我 README 内容数据库查询 |
 | `server/src/md/markdown_parser.cpp` / `.h` | Markdown YAML frontmatter 解析（用 yaml-cpp） |
 
@@ -205,7 +204,6 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `sql/create_users.sql` | 用户表（users、permissions、user_permissions）+ 会话表（sessions） |
 | `sql/create_blogs.sql` | 博客表（categories、tags、blogs、blog_tags） |
 | `sql/create_images.sql` | 照片墙图片表（images） |
-| `sql/create_profile.sql` | 个人介绍表（profile，单行） |
 | `sql/create_about.sql` | 关于我内容表（about，单行） |
 | `sql/create_friends.sql` | 友情链接表（friends：name / url / description，url 唯一） |
 | `sql/migrate_friends_url_unique.sql` | 友链表迁移：移除 name 唯一约束、为 url 加唯一约束（友链条目改按站点链接区分） |
@@ -215,7 +213,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `tools/rebuild.sh` | 一键重构脚本：前端构建 → 后端构建 → 重启服务（仅由用户在服务端调用，不在本地开发环境使用） |
 | `tools/server-run.sh` | 服务端启动脚本 |
 | `tools/server-run.log` | 服务端运行日志（运行产物） |
-| `test/` | 测试脚本：`smoke-test.sh` 后端冒烟测试（CI 与本地共用；使用 `conf/.env`、终止旧服务端并用临时进程；写接口测试用专用账号 `smoke_test` 幂等创建并授权 `introduction:edit`，测试前后备份/恢复 profile） |
+| `test/` | 测试脚本：`smoke-test.sh` 后端冒烟测试（CI 与本地共用；使用 `conf/.env`、终止旧服务端并用临时进程；验证五个公开 GET 接口返回 200、Redis 缓存写入及空结果不缓存） |
 
 ## 注意事项
 

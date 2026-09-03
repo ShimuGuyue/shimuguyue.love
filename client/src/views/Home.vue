@@ -22,11 +22,19 @@ interface ImageItem {
   h?: number
 }
 
+/** 首页右侧个人介绍。 */
+const homeProfile = {
+  title: '石木古月',
+  subtitle: '看即便手中再小的火花也终将点亮星海',
+  bio: [
+    '爱编程，爱技术，技术宅拯救世界',
+    '爱动漫，爱游戏，二次元是种艺术',
+    '有想法，就去做，趁年轻活在当下',
+  ].join('\n'),
+}
+
 const images = ref<ImageItem[]>([])
 const permissions = ref<string[]>([])
-const profile = ref({ title: '', subtitle: '', bio: '' })
-const profileEditMode = ref(false)
-const profileDraft = ref({ title: '', subtitle: '', bio: '' })
 
 const previewId = ref<number | null>(null)
 const previewImage = computed(() =>
@@ -72,14 +80,8 @@ watch(previewImage, async (img) => {
 })
 
 onMounted(async () => {
-  // 照片墙是公开数据，不依赖登录态与权限，与个人介绍/权限检查并行加载
+  // 照片墙是公开数据，不依赖登录态与权限，与权限检查并行加载
   const imagesTask = loadImages()
-
-  // 先加载个人介绍
-  try {
-    const r = await fetch('/api/profile')
-    if (r.ok) profile.value = await r.json()
-  } catch { /* 静默 */ }
 
   if (auth.isLoggedIn && auth.id !== null) {
     try {
@@ -195,25 +197,11 @@ function bringToFront(imgId: number) {
   if (img) img.z = ++zCounter
 }
 
-/// 点击照片墙内进入编辑模式，点击外部退出编辑模式
-function profileHasChanges(): boolean {
-  return profileDraft.value.title !== profile.value.title
-    || profileDraft.value.subtitle !== profile.value.subtitle
-    || profileDraft.value.bio !== profile.value.bio
-}
-
 function onWallClick(e: MouseEvent) {
   // 点击预览遮罩时不处理
   if ((e.target as HTMLElement).closest('.home__preview')) return
   const inPhoto = !!(e.target as HTMLElement).closest('.home__photo')
   const onImg = !!(e.target as HTMLElement).closest('.home__img')
-  const inProfileEdit = !!(e.target as HTMLElement).closest('.home__profile-edit-box')
-
-  if (profileEditMode.value) {
-    // 个人介绍编辑：点击外部且无修改时退出
-    if (!inProfileEdit && !profileHasChanges()) cancelProfileEdit()
-    return
-  }
 
   if (editMode.value) {
     // 编辑模式下：仅点击外部且无修改时退出
@@ -498,41 +486,6 @@ function onPreviewOverlayClick() {
   }
 }
 
-// ── 个人介绍编辑 ──
-
-function enterProfileEdit() {
-  // 照片墙与个人简介编辑互斥：照片墙编辑中则无法进入个人简介编辑
-  if (editMode.value) return
-  profileDraft.value = { ...profile.value }
-  profileEditMode.value = true
-}
-
-function cancelProfileEdit() {
-  profileEditMode.value = false
-}
-
-async function saveProfile() {
-  if (!permissions.value.includes('introduction:edit')) {
-    alert('操作失败：该操作需要 introduction:edit 权限')
-    return
-  }
-  const resp = await fetch('/api/profile/save', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${auth.token}`,
-    },
-    body: JSON.stringify(profileDraft.value),
-  })
-  if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ error: '保存失败' }))
-    alert(err.error || '保存失败')
-    return
-  }
-  profile.value = { ...profileDraft.value }
-  profileEditMode.value = false
-}
-
 function imgStyle(img: ImageItem) {
   return {
     left: `${img.pos_x}%`,
@@ -597,23 +550,13 @@ function imgStyle(img: ImageItem) {
         </div>
       </div>
       <div class="home__info">
-        <div class="home__profile-edit-box" :class="{ 'home__profile-edit-box--active': profileEditMode }">
-          <div class="home__profile-field home__profile-field--title-row">
-            <div class="home__profile-actions" :class="{ 'home__profile-actions--hidden': !profileEditMode }">
-              <button class="func-btn" @click="saveProfile">完成编辑</button>
-              <button class="func-btn" @click="cancelProfileEdit">取消编辑</button>
-            </div>
-            <div class="home__profile-field" :class="{ 'home__profile-field--dashed': profileEditMode }" style="flex:1; margin-right: 4rem">
-              <input :value="profileEditMode ? profileDraft.title : profile.title" @input="profileEditMode && (profileDraft.title = ($event.target as HTMLInputElement).value)" :readonly="!profileEditMode" class="home__profile-input home__profile-input--title" @click="!profileEditMode && enterProfileEdit()" />
-            </div>
+        <div class="home__profile">
+          <div class="home__profile-title-row">
+            <div class="home__profile-title-gutter" aria-hidden="true"></div>
+            <p class="home__profile-title">{{ homeProfile.title }}</p>
           </div>
-          <div class="home__profile-field" :class="{ 'home__profile-field--dashed': profileEditMode }">
-            <input :value="profileEditMode ? profileDraft.subtitle : profile.subtitle" @input="profileEditMode && (profileDraft.subtitle = ($event.target as HTMLInputElement).value)" :readonly="!profileEditMode" class="home__profile-input home__profile-input--subtitle" />
-          </div>
-          <div class="home__profile-field" :class="{ 'home__profile-field--dashed': profileEditMode }">
-            <textarea v-if="profileEditMode" v-model="profileDraft.bio" class="home__profile-input home__profile-input--bio" rows="6" />
-            <textarea v-else :value="profile.bio" readonly class="home__profile-input home__profile-input--bio" rows="6" />
-          </div>
+          <p class="home__profile-subtitle">{{ homeProfile.subtitle }}</p>
+          <p class="home__profile-bio">{{ homeProfile.bio }}</p>
         </div>
         <RouterLink to="/thanks" class="home__info-link">致谢</RouterLink>
       </div>
@@ -688,68 +631,54 @@ function imgStyle(img: ImageItem) {
   align-items: flex-end;
   gap: 12px;
   padding: 0 0 20px 0;
+  padding-top: 8px;
   padding-right: 24px;
 }
 
-/* 个人介绍编辑模式 */
-.home__profile-edit-box {
+/* 首页右侧个人介绍 */
+.home__profile {
   display: flex;
   flex-direction: column;
-  padding: 12px;
-}
-
-.home__profile-edit-box--active {
-  outline: 2px dashed #000;
-  outline-offset: -1px;
-}
-
-.home__profile-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.home__profile-field--title-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.home__profile-actions--hidden {
-  visibility: hidden;
-}
-
-.home__profile-field--dashed {
-  outline: 2px dashed #000;
-  outline-offset: -1px;
-}
-
-.home__profile-input {
   width: 100%;
-  border: none;
-  background: transparent;
-  color: var(--btn-text-color, #333);
-  outline: none;
-  padding: 6px 8px;
-  font-family: inherit;
   box-sizing: border-box;
+  padding: 12px 12px 16px;
+}
+
+:where(.home__profile) p {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px;
   text-align: right;
 }
 
-.home__profile-input--title {
+.home__profile-title {
+  flex: 1 1 0%;
+  min-width: 0;
+  margin-right: 64px;
   font-size: 5rem;
   font-weight: 700;
+  line-height: 93px;
+  white-space: nowrap;
+  overflow: hidden;
   color: var(--title-color, #3451b2);
   text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
 }
 
-.home__profile-input--subtitle {
+.home__profile-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home__profile-title-gutter {
+  flex: 0 0 64.7px;
+}
+
+.home__profile-subtitle {
   font-size: 18px;
   font-weight: 700;
   color: var(--title-color, #3451b2);
-  
-  display: inline-block;
 
   /* 米哈游 https://www.mihoyo.com/?page=product 同款科技蓝与霓虹粉斜向渐变 */
   background-image: linear-gradient(
@@ -777,23 +706,16 @@ function imgStyle(img: ImageItem) {
   }
 }
 
-.home__profile-input--bio {
+.home__profile-bio {
+  min-height: 205px;
   font-size: 1.1rem;
   line-height: 1.8;
-  resize: none;
   border-bottom: 1px solid #000;
   padding-bottom: 8px;
   font-weight: 700;
   font-family: FangSong, STFangsong, serif;
   color: var(--title-color, #3451b2);
-}
-
-.home__profile-input[readonly] {
-  opacity: 1;
-}
-
-.home__profile-input--title[readonly] {
-  cursor: pointer;
+  white-space: pre-wrap;
 }
 
 .home__info-link {

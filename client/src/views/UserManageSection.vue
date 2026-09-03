@@ -60,7 +60,6 @@ const PERMISSION_GROUPS = [
   { label: '后台管理', pattern: /^manage:/ },
   { label: '博客', pattern: /^blog:/ },
   { label: '照片墙', pattern: /^photo_wall:/ },
-  { label: '个人简介', pattern: /^introduction:/ },
 ]
 
 /** “完整权限”弹窗中按大类型归组后的权限。 */

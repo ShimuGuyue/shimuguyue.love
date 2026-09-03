@@ -236,22 +236,6 @@ namespace http
                 handle_get_about(req, res, allowed);
             }
         );
-
-        // GET /api/profile — 获取个人介绍
-        svr.Get("/api/profile",
-            [allowed](const auto& req, auto& res)
-            {
-                handle_get_profile(req, res, allowed);
-            }
-        );
-
-        // POST /api/profile/save — 更新个人介绍（需要 introduction:edit 权限）
-        svr.Post("/api/profile/save",
-            [allowed](const auto& req, auto& res)
-            {
-                handle_save_profile(req, res, allowed);
-            }
-        );
     }
 
 } // namespace http

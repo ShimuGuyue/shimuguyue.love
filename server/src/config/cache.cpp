@@ -76,7 +76,6 @@ namespace config
         g_ttl.images     = read_ttl(root, "images");
         g_ttl.friends    = read_ttl(root, "friends");
         g_ttl.about      = read_ttl(root, "about");
-        g_ttl.profile    = read_ttl(root, "profile");
 
         spdlog::info("conf/cache.yml 缓存有效期配置加载完成。");
     }
