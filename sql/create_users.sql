@@ -63,7 +63,6 @@ COMMENT ON COLUMN user_permissions.permission_id IS '关联 permissions.id';
 -- ============================================================
 
 -- 权限列表
-INSERT INTO permissions (name) VALUES ('introduction:edit') ON CONFLICT (name) DO NOTHING;
 INSERT INTO permissions (name) VALUES ('manage:view')       ON CONFLICT (name) DO NOTHING;
 INSERT INTO permissions (name) VALUES ('manage:edit')       ON CONFLICT (name) DO NOTHING;
 INSERT INTO permissions (name) VALUES ('manage:download')   ON CONFLICT (name) DO NOTHING;
