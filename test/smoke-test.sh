@@ -82,7 +82,7 @@ INSERT INTO blogs (title, description, content, file_path, category_id)
 SELECT '测试博客', '', 'smoke content', 'smoke-test-blog', id
 FROM categories WHERE name = '测试分类'
 ON CONFLICT (file_path) DO NOTHING;
-INSERT INTO images (path, description) VALUES ('home/smoke.jpg', 'smoke')
+INSERT INTO images (path, description) VALUES ('smoke.jpg', 'smoke')
 ON CONFLICT (path) DO NOTHING;
 SQL
 
