@@ -51,8 +51,9 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/doc/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/doc/blogs/` 的相对路径（不含 `.md` 后缀）。
 - **图片**：文件存于 `FILE_PATH/image/`，元数据存于数据库，文件名与对应 `id` 同名。
+- **关于我**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-readme.sh` 从 GitHub 拉取 README 仓库到 `$FILE_PATH/doc/README`；前端构建时由 `client/vite.config.ts` 直接读取 `README.md`（缺失则构建报错）并以构建常量注入 `About.vue`，不再从数据库获取，页面不设“暂无内容”占位。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
-- **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片 / 关于我）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片写接口成功后在事务提交后失效相关缓存，`/api/about` 由 `tools/pull-readme.sh` 尽力而为失效、TTL 兜底。
+- **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片写接口成功后在事务提交后失效相关缓存，TTL 兜底。
 - **配置**：`conf/.env`（环境变量）+ `conf/cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。
 
 ## 关键环境变量
@@ -62,7 +63,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `SERVER_HOST` | 监听地址 | server |
 | `SERVER_PORT` | 监听端口 | server |
 | `FRONTEND_ORIGIN` | CORS 允许的前端地址 | server |
-| `FILE_PATH` | 文件根目录；启动时统一创建/检测博客（`FILE_PATH/doc/blogs`）、图片（`FILE_PATH/image`）、README（`FILE_PATH/doc/README`）目录 | server, tools |
+| `FILE_PATH` | 文件根目录；服务端启动时创建/检测博客、图片与 README 目录，`$FILE_PATH/doc/README` 内容由 `pull-readme.sh` 拉取、前端构建时读取 | server, tools, client (vite) |
 | `FIXED_SALT` | Argon2id 固定盐哈希盐值（32 位 hex = 16 字节） | server |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
 | `DB_POOL_SIZE` | 数据库连接池大小（正整数，必填） | server |
@@ -122,7 +123,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/package-lock.json` | 前端依赖锁定文件 |
 | `client/index.html` | Vite 入口 HTML |
 | `client/env.d.ts` | 环境变量类型声明 |
-| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/image/home` → localhost:8080，`BUILD_DIR` 输出目录 |
+| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/image/home` → localhost:8080，`BUILD_DIR` 输出目录；构建时直接读取 `$FILE_PATH/doc/README/README.md` 注入 About 页 |
 | `client/tsconfig.json` | TS 总配置 |
 | `client/tsconfig.app.json` | 应用代码 TS 配置 |
 | `client/tsconfig.node.json` | 构建脚本 TS 配置 |
@@ -140,7 +141,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/views/Blogs.vue` | 博客列表页（分类/标签筛选、搜索） |
 | `client/src/views/BlogDetail.vue` | 博客详情页（`MarkdownPreview` 渲染，目录来自 `getCatalog` 事件，保留滚动高亮与点击标题滚动） |
 | `client/src/views/BlogEdit.vue` | 博客新建/编辑页（`MdEditor` 编辑器，图片/mermaid/echarts/prettier/全屏按钮禁用） |
-| `client/src/views/About.vue` | 关于我页面（渲染 README，`MarkdownPreview` 预览） |
+| `client/src/views/About.vue` | 关于我页面（使用 `vite.config.ts` 构建期注入的 README 内容，`MarkdownPreview` 预览） |
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
 | `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage:view 权限，保存编辑/创建用户需 manage:edit 权限） |
@@ -194,7 +195,6 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/export/zip_writer.cpp` / `.h` | zip 打包工具（store 方式，无压缩） |
 | `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
 | `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（友链条目以站点链接 url 区分；按友链 id 匹配 `friend_avatars/<id>.<ext>` 图片；`update_friend` 按 old_url 定位并更新名称/链接/描述；`upload_avatar` 上传/替换 1:1 方形头像） |
-| `server/src/about/about_queries.cpp` / `.h` | 关于我 README 内容数据库查询 |
 | `server/src/md/markdown_parser.cpp` / `.h` | Markdown YAML frontmatter 解析（用 yaml-cpp） |
 
 **sql/ 与 tools/**
@@ -204,16 +204,15 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `sql/create_users.sql` | 用户表（users、permissions、user_permissions）+ 会话表（sessions） |
 | `sql/create_blogs.sql` | 博客表（categories、tags、blogs、blog_tags） |
 | `sql/create_images.sql` | 照片墙图片表（images） |
-| `sql/create_about.sql` | 关于我内容表（about，单行） |
 | `sql/create_friends.sql` | 友情链接表（friends：name / url / description，url 唯一） |
 | `sql/migrate_friends_url_unique.sql` | 友链表迁移：移除 name 唯一约束、为 url 加唯一约束（友链条目改按站点链接区分） |
 | `tools/auto-sync-blogs.sh` | 博客 `.md` 自动同步脚本 |
-| `tools/pull-readme.sh` | README 自动拉取脚本（psql 同步成功后重建 `/api/about` 缓存：先失效旧键，再请求接口回源） |
+| `tools/pull-readme.sh` | README 拉取脚本（由 `tools/rebuild.sh` 在 npm build 前调用；拉取到 `$FILE_PATH/doc/README`，前端构建时直接读取） |
 | `tools/migrate-friend-avatars.sh` | 友链头像迁移脚本：将 `friend_avatars` 下按站点名命名的头像文件重命名为 `<友链id>.<扩展名>`（配合 `sql/migrate_friends_url_unique.sql` 使用） |
-| `tools/rebuild.sh` | 一键重构脚本：前端构建 → 后端构建 → 重启服务（仅由用户在服务端调用，不在本地开发环境使用） |
+| `tools/rebuild.sh` | 一键重构脚本：git pull → 后端构建 → 重启服务 → 拉取 README → 前端构建（仅由用户在服务端调用，不在本地开发环境使用） |
 | `tools/server-run.sh` | 服务端启动脚本 |
 | `tools/server-run.log` | 服务端运行日志（运行产物） |
-| `test/` | 测试脚本：`smoke-test.sh` 后端冒烟测试（CI 与本地共用；使用 `conf/.env`、终止旧服务端并用临时进程；验证五个公开 GET 接口返回 200、Redis 缓存写入及空结果不缓存） |
+| `test/` | 测试脚本：`smoke-test.sh` 后端冒烟测试（CI 与本地共用；使用 `conf/.env`、终止旧服务端并用临时进程；验证四个公开 GET 接口返回 200、Redis 缓存写入及空结果不缓存） |
 
 ## 注意事项
 
