@@ -232,7 +232,6 @@ namespace config
         const std::filesystem::path SUBDIRS[] = {
             "blogs",
             "photo_wall",
-            "photo_wall/home",
             "friend_links",
             "README",
         };
@@ -254,7 +253,7 @@ namespace config
             }
         }
 
-        spdlog::info("文件目录已确认：${FILE_PATH}/blogs、${FILE_PATH}/photo_wall/home、${FILE_PATH}/friend_links、${FILE_PATH}/README。");
+        spdlog::info("文件目录已确认：${FILE_PATH}/blogs、${FILE_PATH}/photo_wall、${FILE_PATH}/friend_links、${FILE_PATH}/README。");
 
         spdlog::info("环境变量已加载。");
     }

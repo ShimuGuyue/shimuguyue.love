@@ -146,7 +146,7 @@ namespace img
                 "VALUES ('', '', 1.0, 0.0, 50.0, 50.0) RETURNING id"
             );
             image_id = r[0]["id"].as<int>();
-            rel_path = std::format("home/{}{}", image_id, ext);
+            rel_path = std::format("{}{}", image_id, ext);
             txn.exec("UPDATE images SET path = $1 WHERE id = $2",
                      pqxx::params{ rel_path, image_id });
             txn.commit();
