@@ -89,7 +89,7 @@ SQL
 # ---- 启动临时服务端（终止端口上已有进程，保证测试用本脚本创建的进程） ----
 # 探测用 curl 必须带超时：未监听端口在某些环境会静默丢包而非快速拒绝
 SERVER_PID=""
-if curl -sf --connect-timeout 2 --max-time 5 "$BASE_URL/api/about" > /dev/null 2>&1; then
+if curl -sf --connect-timeout 2 --max-time 5 "$BASE_URL/api/images" > /dev/null 2>&1; then
     echo "[smoke] ${BASE_URL} 已有服务端在运行，先终止旧进程。"
     OLD_PID=$(ss -ltnp 2>/dev/null \
         | sed -n "s/.*:${SERVER_PORT} .*pid=\([0-9][0-9]*\).*/\1/p" \
@@ -105,7 +105,7 @@ if curl -sf --connect-timeout 2 --max-time 5 "$BASE_URL/api/about" > /dev/null 2
     echo "[smoke] 终止旧服务端（PID=${OLD_PID}）。"
     kill "$OLD_PID" 2>/dev/null || true
     for _ in $(seq 1 10); do
-        if ! curl -sf --connect-timeout 1 --max-time 2 "$BASE_URL/api/about" > /dev/null 2>&1; then
+        if ! curl -sf --connect-timeout 1 --max-time 2 "$BASE_URL/api/images" > /dev/null 2>&1; then
             break
         fi
         sleep 1
@@ -115,7 +115,7 @@ if curl -sf --connect-timeout 2 --max-time 5 "$BASE_URL/api/about" > /dev/null 2
         kill -9 "$OLD_PID" 2>/dev/null || true
         sleep 1
     fi
-    if curl -sf --connect-timeout 1 --max-time 2 "$BASE_URL/api/about" > /dev/null 2>&1; then
+    if curl -sf --connect-timeout 1 --max-time 2 "$BASE_URL/api/images" > /dev/null 2>&1; then
         echo "[smoke] 端口 ${SERVER_PORT} 仍被占用，无法启动临时服务端" >&2
         exit 1
     fi
@@ -128,7 +128,7 @@ echo "[smoke] 临时服务端已启动（PID=${SERVER_PID}），等待就绪..."
 
 READY=false
 for _ in $(seq 1 "$START_TIMEOUT"); do
-    if curl -sf --connect-timeout 2 --max-time 5 "$BASE_URL/api/about" > /dev/null 2>&1; then
+    if curl -sf --connect-timeout 2 --max-time 5 "$BASE_URL/api/images" > /dev/null 2>&1; then
         READY=true
         break
     fi
@@ -153,7 +153,7 @@ cleanup() {
 trap cleanup EXIT
 
 # ---- 公开 GET 接口冒烟测试 ----
-for ep in images blogs categories tags about; do
+for ep in images blogs categories tags; do
     code=$(curl -s -o /dev/null -w '%{http_code}' \
         --connect-timeout 2 --max-time 10 "$BASE_URL/api/${ep}")
     if [[ "$code" != "200" ]]; then
@@ -164,7 +164,7 @@ for ep in images blogs categories tags about; do
 done
 
 # ---- 验证公开 GET 接口缓存写入 ----
-# SCAN 拉取全部 api-cache:* 键后逐键精确比对，确保五个接口都已写缓存
+# SCAN 拉取全部 api-cache:* 键后逐键精确比对，确保四个接口都已写缓存
 REDIS_ARGS=(-h "$REDIS_HOST" -p "$REDIS_PORT")
 if [[ -n "${REDIS_PASSWORD:-}" ]]; then
     REDIS_ARGS+=(-a "$REDIS_PASSWORD")
@@ -180,8 +180,7 @@ for key in \
     api-cache:/api/images \
     api-cache:/api/blogs \
     api-cache:/api/categories \
-    api-cache:/api/tags \
-    api-cache:/api/about; do
+    api-cache:/api/tags; do
     if grep -qxF "$key" "$CACHE_KEYS_FILE"; then
         echo "[smoke] 缓存键存在：${key}"
     else
@@ -190,7 +189,7 @@ for key in \
         exit 1
     fi
 done
-echo "[smoke] 五个公开接口的缓存键均已写入。"
+echo "[smoke] 四个公开接口的缓存键均已写入。"
 
 # ---- 空结果不缓存验证 ----
 curl -sf "$BASE_URL/api/blogs?q=__smoke_no_match__" > /dev/null
@@ -202,4 +201,4 @@ else
     exit 1
 fi
 
-echo "[smoke] 后端冒烟测试全部通过（5 个公开接口、5 个缓存键）。"
+echo "[smoke] 后端冒烟测试全部通过（4 个公开接口、4 个缓存键）。"
