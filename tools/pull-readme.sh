@@ -4,21 +4,21 @@
 # ============================================================
 # 用途：从 GitHub 拉取 $GITHUB_USER/$GITHUB_USER 仓库到本地。
 #       前端构建时由 client/vite.config.ts 直接读取
-#       $FILE_PATH/doc/README/README.md，生成《关于我》静态内容。
+#       $FILE_PATH/README/README.md，生成《关于我》静态内容。
 # 部署：由 tools/rebuild.sh 在每次 npm build 前调用；也可手动执行。
 #
 # 前置条件：
 #   1. 目标仓库公开可访问（无需认证）。
-#   2. 本脚本对 $FILE_PATH/doc/README 目录有写权限。
+#   2. 本脚本对 $FILE_PATH/README 目录有写权限。
 #   3. git 已安装。
 #
 # 环境变量：
 #   GITHUB_USER    — GitHub 用户名，仓库地址为 github.com/$GITHUB_USER/$GITHUB_USER
-#   FILE_PATH      — 文件根目录，README 仓库本地存放路径为 $FILE_PATH/doc/README
+#   FILE_PATH      — 文件根目录，README 仓库本地存放路径为 $FILE_PATH/README
 #   BRANCH         — 拉取的分支名（默认 main）
 #
 # 工作原理：
-#   首次运行时 clone 仓库到 $FILE_PATH/doc/README。
+#   首次运行时 clone 仓库到 $FILE_PATH/README。
 #   之后每次运行执行 git fetch + reset --hard 获取最新内容。
 #   每次 npm build 前调用，保证构建进页面的 README 为最新内容。
 # ============================================================
@@ -45,17 +45,17 @@ export TZ="Asia/Shanghai"
 
 echo "[pull-readme] $(date '+%Y-%m-%d %H:%M') 开始拉取 README 仓库..."
 
-if [[ -d "$FILE_PATH/doc/README/.git" ]]; then
-    git -C "$FILE_PATH/doc/README" fetch origin "$BRANCH"
-    git -C "$FILE_PATH/doc/README" reset --hard "origin/$BRANCH"
+if [[ -d "$FILE_PATH/README/.git" ]]; then
+    git -C "$FILE_PATH/README" fetch origin "$BRANCH"
+    git -C "$FILE_PATH/README" reset --hard "origin/$BRANCH"
     echo "[pull-readme] 已更新 README 仓库。"
 else
-    git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$FILE_PATH/doc/README"
+    git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$FILE_PATH/README"
     echo "[pull-readme] 已 clone README 仓库。"
 fi
 
 # 检查拉取结果
-README_FILE="$FILE_PATH/doc/README/README.md"
+README_FILE="$FILE_PATH/README/README.md"
 if [[ ! -f "$README_FILE" ]]; then
     echo "[pull-readme] 错误：$README_FILE 不存在！" >&2
     exit 1

@@ -230,12 +230,11 @@ namespace config
         // 统一创建并检测 FILE_PATH 下的所有文件目录
         const auto root = std::filesystem::path{ EnvMap::env_values["FILE_PATH"] };
         const std::filesystem::path SUBDIRS[] = {
-            "doc",
-            "doc/blogs",
-            "image",
-            "image/home",
-            "image/friend_avatars",
-            "doc/README",
+            "blogs",
+            "photo_wall",
+            "photo_wall/home",
+            "friend_links",
+            "README",
         };
 
         std::error_code ec;
@@ -255,7 +254,7 @@ namespace config
             }
         }
 
-        spdlog::info("文件目录已确认：${FILE_PATH}/doc/blogs、${FILE_PATH}/image/home、${FILE_PATH}/image/friend_avatars、${FILE_PATH}/doc/README。");
+        spdlog::info("文件目录已确认：${FILE_PATH}/blogs、${FILE_PATH}/photo_wall/home、${FILE_PATH}/friend_links、${FILE_PATH}/README。");
 
         spdlog::info("环境变量已加载。");
     }

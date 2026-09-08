@@ -36,7 +36,7 @@ cmake --build build
 ```
 前端 (Vue 3, Vite, 端口 5173)
   │  dev 时 Vite 代理 /api → localhost:8080
-  │  /image/home → localhost:8080
+  │  /photo_wall → localhost:8080
   ▼
 服务端 (C++23, httplib, 端口由 SERVER_PORT 决定)
   │  连接池（libcpp-pg-pool / lklibs::PgPool，DB_POOL_SIZE 条常驻连接），
@@ -49,9 +49,10 @@ PostgreSQL
 Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据库）
 ```
 
-- **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/doc/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/doc/blogs/` 的相对路径（不含 `.md` 后缀）。
-- **图片**：文件存于 `FILE_PATH/image/`，元数据存于数据库，文件名与对应 `id` 同名。
-- **关于我**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-readme.sh` 从 GitHub 拉取 README 仓库到 `$FILE_PATH/doc/README`；前端构建时由 `client/vite.config.ts` 直接读取 `README.md`（缺失则构建报错）并以构建常量注入 `About.vue`，不再从数据库获取，页面不设“暂无内容”占位。
+- **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/blogs/` 的相对路径（不含 `.md` 后缀）。
+- **图片**：文件存于 `FILE_PATH/photo_wall/`，元数据存于数据库，文件名与对应 `id` 同名。
+- **关于我**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-readme.sh` 从 GitHub 拉取 README 仓库到 `$FILE_PATH/README`；前端构建时由 `client/vite.config.ts` 直接读取 `README.md`（缺失则构建报错）并以构建常量注入 `About.vue`，不再从数据库获取，页面不设“暂无内容”占位。
+- **友链**：条目数据存于数据库，头像文件存于 `FILE_PATH/friend_links/<id>.<ext>`，对外访问 URL 为 `/friend_links/<id>.<ext>`（后端静态挂载映射）。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
 - **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片写接口成功后在事务提交后失效相关缓存，TTL 兜底。
 - **配置**：`conf/.env`（环境变量）+ `conf/cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。
@@ -63,7 +64,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `SERVER_HOST` | 监听地址 | server |
 | `SERVER_PORT` | 监听端口 | server |
 | `FRONTEND_ORIGIN` | CORS 允许的前端地址 | server |
-| `FILE_PATH` | 文件根目录；服务端启动时创建/检测博客、图片与 README 目录，`$FILE_PATH/doc/README` 内容由 `pull-readme.sh` 拉取、前端构建时读取 | server, tools, client (vite) |
+| `FILE_PATH` | 文件根目录；服务端启动时创建/检测博客、照片墙、友链与 README 目录，`$FILE_PATH/README` 内容由 `pull-readme.sh` 拉取、前端构建时读取 | server, tools, client (vite) |
 | `FIXED_SALT` | Argon2id 固定盐哈希盐值（32 位 hex = 16 字节） | server |
 | `PGHOST` / `PGPORT` / `PGDATABASE` / `PGUSER` / `PGPASSWORD` | 数据库连接 | server |
 | `DB_POOL_SIZE` | 数据库连接池大小（正整数，必填） | server |
@@ -123,7 +124,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/package-lock.json` | 前端依赖锁定文件 |
 | `client/index.html` | Vite 入口 HTML |
 | `client/env.d.ts` | 环境变量类型声明 |
-| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/image/home` → localhost:8080，`BUILD_DIR` 输出目录；构建时直接读取 `$FILE_PATH/doc/README/README.md` 注入 About 页 |
+| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/photo_wall`、`/friend_links` → localhost:8080，`BUILD_DIR` 输出目录；构建时直接读取 `$FILE_PATH/README/README.md` 注入 About 页 |
 | `client/tsconfig.json` | TS 总配置 |
 | `client/tsconfig.app.json` | 应用代码 TS 配置 |
 | `client/tsconfig.node.json` | 构建脚本 TS 配置 |
@@ -189,12 +190,12 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/auth/session.cpp` / `.h` | 会话 token 创建、验证、过期清理 |
 | `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |
 | `server/src/crypto/argon2id.cpp` / `.h` | Argon2id 密码哈希，随机盐 / 固定盐两种模式 |
-| `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询（博客文件路径来自 `FILE_PATH/doc`） |
+| `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询（博客文件路径来自 `FILE_PATH/blogs`） |
 | `server/src/export/export_data.cpp` / `.h` | 后台数据导出 |
 | `server/src/export/export_queries.cpp` / `.h` | 数据导出查询：各数据表读取为 JSON 数组 |
 | `server/src/export/zip_writer.cpp` / `.h` | zip 打包工具（store 方式，无压缩） |
 | `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
-| `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（友链条目以站点链接 url 区分；按友链 id 匹配 `friend_avatars/<id>.<ext>` 图片；`update_friend` 按 old_url 定位并更新名称/链接/描述；`upload_avatar` 上传/替换 1:1 方形头像） |
+| `server/src/friend/friend_queries.cpp` / `.h` | 友情链接数据库查询（友链条目以站点链接 url 区分；按友链 id 匹配 `friend_links/<id>.<ext>` 头像；`update_friend` 按 old_url 定位并更新名称/链接/描述；`upload_avatar` 上传/替换 1:1 方形头像） |
 | `server/src/md/markdown_parser.cpp` / `.h` | Markdown YAML frontmatter 解析（用 yaml-cpp） |
 
 **sql/ 与 tools/**
@@ -207,7 +208,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `sql/create_friends.sql` | 友情链接表（friends：name / url / description，url 唯一） |
 | `sql/migrate_friends_url_unique.sql` | 友链表迁移：移除 name 唯一约束、为 url 加唯一约束（友链条目改按站点链接区分） |
 | `tools/auto-sync-blogs.sh` | 博客 `.md` 自动同步脚本 |
-| `tools/pull-readme.sh` | README 拉取脚本（由 `tools/rebuild.sh` 在 npm build 前调用；拉取到 `$FILE_PATH/doc/README`，前端构建时直接读取） |
+| `tools/pull-readme.sh` | README 拉取脚本（由 `tools/rebuild.sh` 在 npm build 前调用；拉取到 `$FILE_PATH/README`，前端构建时直接读取） |
 | `tools/migrate-friend-avatars.sh` | 友链头像迁移脚本：将 `friend_avatars` 下按站点名命名的头像文件重命名为 `<友链id>.<扩展名>`（配合 `sql/migrate_friends_url_unique.sql` 使用） |
 | `tools/rebuild.sh` | 一键重构脚本：git pull → 后端构建 → 重启服务 → 拉取 README → 前端构建（仅由用户在服务端调用，不在本地开发环境使用） |
 | `tools/server-run.sh` | 服务端启动脚本 |

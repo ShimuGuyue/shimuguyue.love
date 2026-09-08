@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   // 经 __ABOUT_MARKDOWN__ 注入 About.vue。
   const projectRoot = fileURLToPath(new URL('..', import.meta.url))
   const aboutReadmePath = env.FILE_PATH
-    ? resolve(projectRoot, env.FILE_PATH, 'doc/README/README.md')
+    ? resolve(projectRoot, env.FILE_PATH, 'README/README.md')
     : ''
   let aboutMarkdown = ''
   if (aboutReadmePath) {
@@ -43,8 +43,8 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': 'http://localhost:8080',
-        '/image/home': 'http://localhost:8080',
-        '/image/friend_avatars': 'http://localhost:8080',
+        '/photo_wall': 'http://localhost:8080',
+        '/friend_links': 'http://localhost:8080',
       },
     },
     build: {

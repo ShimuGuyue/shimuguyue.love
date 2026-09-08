@@ -165,10 +165,10 @@ namespace friends
         );
         txn.commit();
 
-        // 扫描 friend_avatars 目录，建立“文件名 stem → 带版本号的访问 URL”映射，
+        // 扫描 friend_links 目录（友链头像），建立“文件名 stem → 带版本号的访问 URL”映射，
         // 便于按友链 id（图片名等于友链 id）匹配实际图片；带 ?v= 修改时间可避免浏览器缓存旧图。
         std::unordered_map<std::string, std::string> avatar_url_by_stem;
-        const auto avatars_dir = std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / "friend_avatars";
+        const auto avatars_dir = std::filesystem::path{ config::env()["FILE_PATH"] } / "friend_links";
         std::error_code ec;
         if (std::filesystem::exists(avatars_dir, ec) && !ec)
         {
@@ -185,7 +185,7 @@ namespace friends
                     entry.last_write_time(ec).time_since_epoch()
                 ).count();
                 avatar_url_by_stem[entry.path().stem().string()] =
-                    "/image/friend_avatars/" + filename + "?v=" + std::to_string(mtime);
+                    "/friend_links/" + filename + "?v=" + std::to_string(mtime);
             }
         }
 
@@ -338,7 +338,7 @@ namespace friends
         }
 
         // 确保目录存在。
-        const auto avatars_dir = std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / "friend_avatars";
+        const auto avatars_dir = std::filesystem::path{ config::env()["FILE_PATH"] } / "friend_links";
         std::error_code ec;
 
         // 删除该友链的旧头像（任意扩展名），实现替换。
@@ -375,7 +375,7 @@ namespace friends
             std::filesystem::last_write_time(avatars_dir / new_filename, mtime_ec).time_since_epoch()
         ).count();
         nlohmann::json result;
-        result["image"] = "/image/friend_avatars/" + new_filename + "?v=" + std::to_string(mtime);
+        result["image"] = "/friend_links/" + new_filename + "?v=" + std::to_string(mtime);
         return { std::nullopt, result };
     }
 

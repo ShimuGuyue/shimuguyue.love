@@ -334,7 +334,7 @@ namespace
         fm << content;
 
         std::filesystem::path out_path{
-            std::filesystem::path{ config::env()["FILE_PATH"] } / "doc" / "blogs"
+            std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs"
             / (std::string{ file_path } + ".md")
         };
         std::filesystem::create_directories(out_path.parent_path());
@@ -358,7 +358,7 @@ namespace
     {
         std::error_code ec;
         std::filesystem::path md_path{
-            std::filesystem::path{ config::env()["FILE_PATH"] } / "doc" / "blogs"
+            std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs"
             / (std::string{ file_path } + ".md")
         };
         std::filesystem::remove(md_path, ec);
@@ -719,7 +719,7 @@ namespace doc
         link_blog_tags(txn, blog_id, tag_ids);
 
         // 生成 Frontmatter 并写入 .md
-        // 文件路径格式：{doc_path}/blogs/{category}/{name}.md
+        // 文件路径格式：$FILE_PATH/blogs/{category}/{name}.md
         if (auto err = write_blog_md(file_path, title, description, category_name, tag_names, content, date, "保存博客失败"); err)
             return err;
 

@@ -105,7 +105,7 @@ namespace img
 
         std::error_code ec;
         std::filesystem::path file_path{
-            std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / std::string{ path }
+            std::filesystem::path{ config::env()["FILE_PATH"] } / "photo_wall" / std::string{ path }
         };
         if (!std::filesystem::remove(file_path, ec) && ec)
             spdlog::error("删除文件失败: {} - {}", file_path.string(), ec.message());
@@ -156,7 +156,7 @@ namespace img
         // 写入文件
         spdlog::debug("正在将图片文件写入目录...");
         const auto full =
-            (std::filesystem::path{ config::env()["FILE_PATH"] } / "image" / rel_path).string();
+            (std::filesystem::path{ config::env()["FILE_PATH"] } / "photo_wall" / rel_path).string();
         std::error_code ec;
         std::filesystem::create_directories(std::filesystem::path(full).parent_path(), ec);
         if (ec)
