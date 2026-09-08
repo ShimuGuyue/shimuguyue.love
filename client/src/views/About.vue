@@ -17,10 +17,9 @@ const aboutContent = __ABOUT_MARKDOWN__
 
 <template>
   <main class="about-page">
-    <article v-if="aboutContent" class="blog-detail__content">
+    <article class="blog-detail__content">
       <MarkdownPreview :model-value="aboutContent" />
     </article>
-    <p v-else class="about-page__status">暂无内容</p>
   </main>
 </template>
 
@@ -37,11 +36,5 @@ const aboutContent = __ABOUT_MARKDOWN__
   border-radius: var(--blog-surface-radius);
   padding: var(--blog-surface-padding);
   box-shadow: var(--blog-surface-shadow);
-}
-.about-page__status {
-  text-align: center;
-  padding: 64px 0;
-  font-size: 1rem;
-  color: var(--color-text-secondary);
 }
 </style>

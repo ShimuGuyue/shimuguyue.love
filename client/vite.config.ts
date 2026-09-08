@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 
@@ -18,11 +18,13 @@ export default defineConfig(({ mode }) => {
     : ''
   let aboutMarkdown = ''
   if (aboutReadmePath) {
-    try {
-      aboutMarkdown = readFileSync(aboutReadmePath, 'utf8')
-    } catch {
-      console.warn(`[vite] 未读取到《关于我》README：${aboutReadmePath}`)
+    if (!existsSync(aboutReadmePath)) {
+      throw new Error(
+        `《关于我》README 缺失：${aboutReadmePath}\n` +
+        `请先运行 tools/pull-readme.sh 拉取 README 仓库后再构建。`
+      )
     }
+    aboutMarkdown = readFileSync(aboutReadmePath, 'utf8')
   }
 
   return {
