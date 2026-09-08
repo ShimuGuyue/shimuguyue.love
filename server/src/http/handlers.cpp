@@ -18,7 +18,6 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "about/about_queries.h"
 #include "auth/login.h"
 #include "auth/rate_limit.h"
 #include "auth/session.h"
@@ -2315,31 +2314,6 @@ namespace http
                 );
                 res.set_content(oss.str(), "text/markdown");
                 spdlog::info("博客下载成功：{}。", safe_fp);
-            }
-        );
-    }
-
-    void handle_get_about(
-        const httplib::Request& req,
-        httplib::Response&      res,
-        const std::string&      allowed)
-    {
-        const auto key = cache::cache_key("/api/about", {});
-        if (const auto cached = cache::get(key); cached.has_value())
-        {
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            res.set_content(*cached, "application/json");
-            return;
-        }
-
-        db::with_db(
-            [&](pqxx::connection& conn)
-            {
-                res.set_header("Access-Control-Allow-Origin", allowed);
-                res.set_header("Content-Type", "application/json");
-                res.set_content(nlohmann::json{{"content", about::get_about(conn)}}.dump(), "application/json");
-                cache::set(key, res.body, config::cache_ttl().about);
             }
         );
     }
