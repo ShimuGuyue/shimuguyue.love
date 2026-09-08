@@ -5,7 +5,7 @@
 # 用途：从 GitHub 拉取 $GITHUB_USER/$GITHUB_USER 仓库到本地。
 #       前端构建时由 client/vite.config.ts 直接读取
 #       $FILE_PATH/doc/README/README.md，生成《关于我》静态内容。
-# 部署：由 crontab 或 systemd timer 每天定时调用一次。
+# 部署：由 tools/rebuild.sh 在每次 npm build 前调用；也可手动执行。
 #
 # 前置条件：
 #   1. 目标仓库公开可访问（无需认证）。
@@ -20,7 +20,7 @@
 # 工作原理：
 #   首次运行时 clone 仓库到 $FILE_PATH/doc/README。
 #   之后每次运行执行 git fetch + reset --hard 获取最新内容。
-#   《关于我》页面实际发布由 npm build 执行。
+#   每次 npm build 前调用，保证构建进页面的 README 为最新内容。
 # ============================================================
 
 set -euo pipefail
