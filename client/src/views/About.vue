@@ -1,31 +1,24 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
 
 import '@/assets/blog-layout.css'
 import '@/assets/normal/color.css'
 import '@/assets/background/block.css'
 
-const content = ref('')
-const loading = ref(true)
-
-onMounted(async () => {
-  try {
-    const resp = await fetch('/api/about')
-    if (resp.ok) {
-      const data = await resp.json()
-      content.value = data.content || ''
-    }
-  } catch { /* 静默 */ }
-  loading.value = false
-})
+/**
+ * 《关于我》正文。
+ *
+ * 构建期静态注入：client/vite.config.ts 读取
+ * $FILE_PATH/doc/README/README.md（pull-readme.sh 拉取），
+ * 经 __ABOUT_MARKDOWN__ 直接打包进页面。
+ */
+const aboutContent = __ABOUT_MARKDOWN__
 </script>
 
 <template>
   <main class="about-page">
-    <p v-if="loading" class="about-page__status">加载中...</p>
-    <article v-else-if="content" class="blog-detail__content">
-      <MarkdownPreview :model-value="content" />
+    <article v-if="aboutContent" class="blog-detail__content">
+      <MarkdownPreview :model-value="aboutContent" />
     </article>
     <p v-else class="about-page__status">暂无内容</p>
   </main>
