@@ -176,7 +176,7 @@ function loadImageSize(path: string): Promise<{ w: number; h: number }> {
       resolve({ w, h })
     }
     img.onerror = () => resolve({ w: 200, h: 200 })
-    img.src = `/image/${path}`
+    img.src = `/photo_wall/${path}`
   })
 }
 
@@ -535,7 +535,7 @@ function imgStyle(img: ImageItem) {
             @wheel.prevent="e => onImgWheel(e, img.id)"
           >
             <img
-              :src="`/image/${img.path}`"
+              :src="`/photo_wall/${img.path}`"
               :alt="img.description"
               draggable="false"
               :style="{ border: `5px solid ${theme.isDark ? '#000' : '#fff'}` }"
@@ -570,7 +570,7 @@ function imgStyle(img: ImageItem) {
         @click="onPreviewOverlayClick"
       >
         <img
-          :src="`/image/${previewImage.path}`"
+          :src="`/photo_wall/${previewImage.path}`"
           class="home__preview-img"
         />
       </div>

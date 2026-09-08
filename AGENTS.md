@@ -36,7 +36,7 @@ cmake --build build
 ```
 前端 (Vue 3, Vite, 端口 5173)
   │  dev 时 Vite 代理 /api → localhost:8080
-  │  /image/home → localhost:8080
+  │  /photo_wall → localhost:8080
   ▼
 服务端 (C++23, httplib, 端口由 SERVER_PORT 决定)
   │  连接池（libcpp-pg-pool / lklibs::PgPool，DB_POOL_SIZE 条常驻连接），
@@ -124,7 +124,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/package-lock.json` | 前端依赖锁定文件 |
 | `client/index.html` | Vite 入口 HTML |
 | `client/env.d.ts` | 环境变量类型声明 |
-| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/image/home` → localhost:8080，`BUILD_DIR` 输出目录；构建时直接读取 `$FILE_PATH/README/README.md` 注入 About 页 |
+| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/photo_wall`、`/friend_links` → localhost:8080，`BUILD_DIR` 输出目录；构建时直接读取 `$FILE_PATH/README/README.md` 注入 About 页 |
 | `client/tsconfig.json` | TS 总配置 |
 | `client/tsconfig.app.json` | 应用代码 TS 配置 |
 | `client/tsconfig.node.json` | 构建脚本 TS 配置 |

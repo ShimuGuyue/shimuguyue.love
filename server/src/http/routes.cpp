@@ -17,6 +17,14 @@ namespace http
     {
         const std::string allowed = config::env()["FRONTEND_ORIGIN"];
 
+        // 挂载静态文件服务:
+        // 友链头像物理目录为 FILE_PATH/friend_links，
+        // 照片墙目录为 FILE_PATH/photo_wall，对外访问路径与目录同名
+        svr.set_mount_point("/friend_links",
+            (std::filesystem::path{ config::env()["FILE_PATH"] } / "friend_links").string());
+        svr.set_mount_point("/photo_wall",
+            (std::filesystem::path{ config::env()["FILE_PATH"] } / "photo_wall").string());
+
         svr.Options("/api/.*",
             [allowed](const auto& req, auto& res)
             {
@@ -128,13 +136,6 @@ namespace http
                 handle_blog_parse(req, res, allowed);
             }
         );
-
-        // 挂载静态文件服务：友链头像物理目录为 FILE_PATH/friend_links，
-        // 对外访问路径为 /friend_links；照片墙目录为 FILE_PATH/photo_wall
-        svr.set_mount_point("/friend_links",
-            (std::filesystem::path{ config::env()["FILE_PATH"] } / "friend_links").string());
-        svr.set_mount_point("/image",
-            (std::filesystem::path{ config::env()["FILE_PATH"] } / "photo_wall").string());
 
         // GET /api/images — 获取所有图片
         svr.Get("/api/images",
