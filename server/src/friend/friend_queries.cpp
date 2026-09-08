@@ -185,7 +185,7 @@ namespace friends
                     entry.last_write_time(ec).time_since_epoch()
                 ).count();
                 avatar_url_by_stem[entry.path().stem().string()] =
-                    "/image/friend_avatars/" + filename + "?v=" + std::to_string(mtime);
+                    "/friend_links/" + filename + "?v=" + std::to_string(mtime);
             }
         }
 
@@ -375,7 +375,7 @@ namespace friends
             std::filesystem::last_write_time(avatars_dir / new_filename, mtime_ec).time_since_epoch()
         ).count();
         nlohmann::json result;
-        result["image"] = "/image/friend_avatars/" + new_filename + "?v=" + std::to_string(mtime);
+        result["image"] = "/friend_links/" + new_filename + "?v=" + std::to_string(mtime);
         return { std::nullopt, result };
     }
 

@@ -130,8 +130,8 @@ namespace http
         );
 
         // 挂载静态文件服务：友链头像物理目录为 FILE_PATH/friend_links，
-        // 通过 /image/friend_avatars 保留原有访问 URL；照片墙目录为 FILE_PATH/photo_wall
-        svr.set_mount_point("/image/friend_avatars",
+        // 对外访问路径为 /friend_links；照片墙目录为 FILE_PATH/photo_wall
+        svr.set_mount_point("/friend_links",
             (std::filesystem::path{ config::env()["FILE_PATH"] } / "friend_links").string());
         svr.set_mount_point("/image",
             (std::filesystem::path{ config::env()["FILE_PATH"] } / "photo_wall").string());

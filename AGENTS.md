@@ -52,7 +52,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/blogs/` 的相对路径（不含 `.md` 后缀）。
 - **图片**：文件存于 `FILE_PATH/photo_wall/`，元数据存于数据库，文件名与对应 `id` 同名。
 - **关于我**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-readme.sh` 从 GitHub 拉取 README 仓库到 `$FILE_PATH/README`；前端构建时由 `client/vite.config.ts` 直接读取 `README.md`（缺失则构建报错）并以构建常量注入 `About.vue`，不再从数据库获取，页面不设“暂无内容”占位。
-- **友链**：条目数据存于数据库，头像文件存于 `FILE_PATH/friend_links/<id>.<ext>`；对外访问 URL 仍沿用 `/image/friend_avatars/<id>.<ext>`（后端静态挂载映射）。
+- **友链**：条目数据存于数据库，头像文件存于 `FILE_PATH/friend_links/<id>.<ext>`，对外访问 URL 为 `/friend_links/<id>.<ext>`（后端静态挂载映射）。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
 - **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片写接口成功后在事务提交后失效相关缓存，TTL 兜底。
 - **配置**：`conf/.env`（环境变量）+ `conf/cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。

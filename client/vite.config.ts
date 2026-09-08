@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': 'http://localhost:8080',
         '/image/home': 'http://localhost:8080',
-        '/image/friend_avatars': 'http://localhost:8080',
+        '/friend_links': 'http://localhost:8080',
       },
     },
     build: {
