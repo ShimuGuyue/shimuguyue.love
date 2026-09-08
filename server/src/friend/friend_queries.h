@@ -18,7 +18,7 @@ namespace friends
      * @brief 获取所有友情链接记录。
      *
      * 每项包含 name、url、description，以及根据友链 id（图片文件名）在
-     * FILE_PATH/image/friend_avatars 下匹配到的 image 路径；未匹配到图片时为空串。
+     * FILE_PATH/friend_links 下匹配到的 image 路径；未匹配到图片时为空串。
      *
      * @param conn 数据库连接。
      * @return JSON 数组。

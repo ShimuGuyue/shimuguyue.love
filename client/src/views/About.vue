@@ -9,7 +9,7 @@ import '@/assets/background/block.css'
  * 《关于我》正文。
  *
  * 构建期静态注入：client/vite.config.ts 读取
- * $FILE_PATH/doc/README/README.md（pull-readme.sh 拉取），
+ * $FILE_PATH/README/README.md（pull-readme.sh 拉取），
  * 经 __ABOUT_MARKDOWN__ 直接打包进页面。
  */
 const aboutContent = __ABOUT_MARKDOWN__

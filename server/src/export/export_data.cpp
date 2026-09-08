@@ -22,12 +22,12 @@
 namespace
 {
     /**
-     * @brief 递归收集博客目录（FILE_PATH/doc/blogs）下的全部文件。
+     * @brief 递归收集博客目录（FILE_PATH/blogs）下的全部文件。
      * @return 成功返回“zip 内相对路径 / 文件内容”列表；失败返回错误消息。
      */
     auto collect_blog_files() -> std::expected<std::vector<std::pair<std::string, std::string>>, std::string>
     {
-        const auto blogs_root = std::filesystem::path{ config::env()["FILE_PATH"] } / "doc" / "blogs";
+        const auto blogs_root = std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs";
         std::error_code ec;
         if (!std::filesystem::exists(blogs_root, ec) || ec)
             return std::unexpected{ "博客目录不可用：" + blogs_root.string() };

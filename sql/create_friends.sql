@@ -5,7 +5,7 @@
 -- name:        站点名称
 -- url:         站点链接（唯一，友链条目以站点链接区分）
 -- description: 站点描述
--- 头像文件约定：存放于 FILE_PATH/image/friend_avatars/<id>.<ext>，文件名与友链 id 同名。
+-- 头像文件约定：存放于 FILE_PATH/friend_links/<id>.<ext>，文件名与友链 id 同名。
 -- ============================================================
 
 CREATE TABLE friends (

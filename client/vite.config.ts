@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   // 经 __ABOUT_MARKDOWN__ 注入 About.vue。
   const projectRoot = fileURLToPath(new URL('..', import.meta.url))
   const aboutReadmePath = env.FILE_PATH
-    ? resolve(projectRoot, env.FILE_PATH, 'doc/README/README.md')
+    ? resolve(projectRoot, env.FILE_PATH, 'README/README.md')
     : ''
   let aboutMarkdown = ''
   if (aboutReadmePath) {

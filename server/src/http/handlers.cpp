@@ -2272,7 +2272,7 @@ namespace http
                 }
                 const auto& safe_fp = blog->file_path.value_or(fp);
 
-                const auto blogs_root = std::filesystem::path{ config::env()["FILE_PATH"] } / "doc" / "blogs";
+                const auto blogs_root = std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs";
                 const auto md_path    = blogs_root / (safe_fp + ".md");
 
                 // 防目录穿越：解析后的文件必须仍在博客目录内
