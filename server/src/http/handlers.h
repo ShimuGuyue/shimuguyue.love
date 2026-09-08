@@ -227,12 +227,4 @@ void handle_download_blog(
     httplib::Response&      res,
     const std::string&      allowed);
 
-/**
- * @brief 处理 GET /api/about 请求。
- */
-void handle_get_about(
-    const httplib::Request& req,
-    httplib::Response&      res,
-    const std::string&      allowed);
-
 } // namespace http

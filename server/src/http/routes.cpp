@@ -229,13 +229,6 @@ namespace http
             }
         );
 
-        // GET /api/about — 获取《关于我》README 内容（从数据库读取）
-        svr.Get("/api/about",
-            [allowed](const auto& req, auto& res)
-            {
-                handle_get_about(req, res, allowed);
-            }
-        );
     }
 
 } // namespace http

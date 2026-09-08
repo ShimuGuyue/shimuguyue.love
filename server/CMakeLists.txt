@@ -19,7 +19,6 @@ find_package(redis++           CONFIG REQUIRED)
 # 源文件
 add_executable(${PROJECT_NAME}
     main.cpp
-    src/about/about_queries.cpp
     src/cache/cache.cpp
     src/db/connection.cpp
     src/db/connection_pool.cpp

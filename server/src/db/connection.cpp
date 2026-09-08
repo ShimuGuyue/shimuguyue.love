@@ -28,7 +28,6 @@ namespace
             "sessions",
             "blogs", "categories", "tags", "blog_tags",
             "images",
-            "about",
             "friends"
         };
 
@@ -55,44 +54,13 @@ namespace
     }
 
     /**
-     * @brief 检查单行表的结构性数据：首行必须存在。
-     * @param conn 数据库连接。
-     */
-    void check_table_structures(pqxx::connection& conn)
-    {
-        // 单行表：表中必须存在初始数据行
-        const std::vector<std::string> single_row_tables = {
-            "about"
-        };
-
-        pqxx::nontransaction txn{ conn };
-
-        for (const auto& table_name : single_row_tables)
-        {
-            const auto res = txn.exec(
-                "SELECT 1 FROM " + table_name + " LIMIT 1"
-            );
-            if (res.empty())
-            {
-                spdlog::error("{} 表第一条数据不存在！", table_name);
-                std::exit(1);
-            }
-            else
-            {
-                spdlog::debug("{} 表第一条数据存在。", table_name);
-            }
-        }
-    }
-
-    /**
-     * @brief 检查项目所需数据库表：表存在性 + 表结构。
+     * @brief 检查项目所需数据库表是否齐全。
      * @param conn 数据库连接。
      */
     void check(pqxx::connection& conn)
     {
         spdlog::debug("正在检查项目所需数据库表...");
         check_tables_exist(conn);
-        check_table_structures(conn);
 
         spdlog::info("数据库表检查完成。");
     }
