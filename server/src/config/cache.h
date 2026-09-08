@@ -18,7 +18,6 @@ namespace config
         int64_t blog;       ///< 博客详情
         int64_t images;     ///< 照片墙
         int64_t friends;    ///< 友情链接
-        int64_t about;      ///< 关于我
     };
 
     /**
