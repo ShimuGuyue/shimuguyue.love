@@ -27,8 +27,7 @@ namespace
             "users", "permissions", "user_permissions",
             "sessions",
             "blogs", "categories", "tags", "blog_tags",
-            "images",
-            "friends"
+            "images"
         };
 
         pqxx::nontransaction txn{ conn };

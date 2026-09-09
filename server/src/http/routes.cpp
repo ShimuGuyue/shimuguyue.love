@@ -145,38 +145,6 @@ namespace http
             }
         );
 
-        // GET /api/friends — 获取友情链接列表
-        svr.Get("/api/friends",
-            [allowed](const auto& req, auto& res)
-            {
-                handle_get_friends(req, res, allowed);
-            }
-        );
-
-        // POST /api/friends — 新建友情链接（需要 manage:edit 权限）
-        svr.Post("/api/friends",
-            [allowed](const auto& req, auto& res)
-            {
-                handle_create_friend(req, res, allowed);
-            }
-        );
-
-        // PUT /api/friends/update — 更新友情链接文本（需要 manage:edit 权限）
-        svr.Put("/api/friends/update",
-            [allowed](const auto& req, auto& res)
-            {
-                handle_update_friend(req, res, allowed);
-            }
-        );
-
-        // POST /api/friend/avatar/upload — 上传/替换友链头像（需要 manage:edit 权限）
-        svr.Post("/api/friend/avatar/upload",
-            [allowed](const auto& req, auto& res)
-            {
-                handle_upload_avatar(req, res, allowed);
-            }
-        );
-
         // POST /api/image/save — 保存/更新图片元数据（需要 photo_wall:edit 权限）
         svr.Post("/api/image/save",
             [allowed](const auto& req, auto& res)
