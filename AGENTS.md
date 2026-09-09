@@ -1,8 +1,22 @@
 # AGENTS.md — shimuguyue.love
 
-石木古月个人网站（[shimuguyue.love](https://shimuguyue.love)），Vue 3 前端 + C++ 后端 + PostgreSQL 数据库。
+石木古月个人网站（[shimuguyue.love](https://shimuguyue.love)），`Vue3` 前端 / `C++` 后端 / `PostgreSQL` 数据库 / `Redis` 缓存。
+
+## AI Agent 行为准则
+
+- **要求冲突时停止执行**：多个要求不可调和时，AI 必须停止，明确指出冲突点并等待用户确认，不得自行选择或猜测。
+- **用户修改优先**：用户手动修改的内容为最终权威。若 AI 编写的代码遭到修改，判断是细节微调还是重大重构：若是细节微调，则视为用户个性化修改，保留之；若是逻辑重构，终止当前任务并向用户提出确认，等待下一步指示。
+- **环境安装权限**：当项目运行所需环境未下载时，AI 应停止任务，向用户指出缺失的环境及下载方式，待用户下载完成后再执行任务。
+- **文件修改记录**：当新建/删除文件时，AI应将其记录到 `AGENTS.md`。
+- **测试数据保留**：AI 在开发/测试过程中创建的数据库测试条目不需要删除，保留即可。
 
 ## 构建 / 运行
+
+- **要求冲突时停止执行**：多个要求不可调和时，AI 必须停止，明确指出冲突点并等待用户确认，不得自行选择或猜测。
+- **用户修改优先**：用户手动修改的内容为最终权威；AI 必须先读取当前文件内容再编辑，不得覆盖用户修改。
+- **环境安装权限**：当项目运行所需环境未下载时，AI 应停止任务，向用户指出缺失的环境及下载方式，待用户下载完成后再执行任务。
+- **文件修改记录**：当新建/删除文件时，AI应将其记录到 `AGENTS.md`。
+- **测试数据保留**：AI 在开发/测试过程中创建的数据库测试条目不需要删除，保留即可。
 
 ### 前端（`client/`）
 
@@ -27,9 +41,9 @@ cmake --build build
 ./build/server
 ```
 
-### 数据库
+### 数据库（`sql/`）
 
-初始化脚本在 `sql/` 下，用 `psql -f <脚本>` 按顺序执行（见 README）。
+初始化脚本为 `create_*.sql`，创建仓库并赋予初始条目。初始化脚本可按任意顺序执行，约定不同脚本创建的仓库之间不得有前置依赖。
 
 ## 架构
 
@@ -50,9 +64,9 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 ```
 
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/blogs/` 的相对路径（不含 `.md` 后缀）。
-- **图片**：文件存于 `FILE_PATH/photo_wall/`，元数据存于数据库，文件名与对应 `id` 同名。
-- **关于我**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-readme.sh` 从 GitHub 拉取 README 仓库到 `$FILE_PATH/README`；前端构建时由 `client/vite.config.ts` 直接读取 `README.md`（缺失则构建报错）并以构建常量注入 `About.vue`，不再从数据库获取，页面不设“暂无内容”占位。
-- **友链**：数据仓库 `shimuguyue.love-friend_links` 由 `tools/pull-friend-links.sh` 拉取到 `FILE_PATH/friend_links/`；前端构建时读取 `meta.yaml`（id / title / url / description）并匹配 `${id}.*` 头像，以构建常量注入 `Friends.vue`。头像对外访问 URL 为 `/friend_links/<id>.<ext>`（后端静态挂载映射）。`meta.yaml` 内部格式约定样：顶层键为 `friends:`，条目以 `- id:` 开头，`title` / `url` / `description` 为条目下缩进字段。
+- **照片墙**：文件存于 `FILE_PATH/photo_wall/`，元数据存于数据库，文件名与对应 `id` 同名。
+- **关于我**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-readme.sh` 从 GitHub 拉取 README 仓库到 `$FILE_PATH/README`；前端构建时由 `client/vite.config.ts` 直接读取 `README.md`（缺失则构建报错）并以构建常量注入 `About.vue`。
+- **友链**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-friend-links.sh` 从 Github 拉取数据仓库到 `FILE_PATH/friend_links/`；前端构建时读取 `meta.yaml`（id / title / url / description）并匹配 `${id}.*` 头像，以构建常量注入 `Friends.vue`。头像对外访问 URL 为 `/friend_links/<id>.<ext>`（后端静态挂载映射）。`meta.yaml` 内部格式约定参考 [friend_links]([shimuguyue.love-friend_links/meta.yaml at main · ShimuGuyue/shimuguyue.love-friend_links](https://github.com/ShimuGuyue/shimuguyue.love-friend_links/blob/main/meta.yaml))。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
 - **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片写接口成功后在事务提交后失效相关缓存，TTL 兜底。
 - **配置**：`conf/.env`（环境变量）+ `conf/cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。
@@ -77,25 +91,18 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 
 ## 编码约定
 
-### AI 行为准则
-
-- **要求冲突时停止执行**：多个要求不可调和时，AI 必须停止，明确指出冲突点并等待用户确认，不得自行选择或猜测。
-- **用户修改优先**：用户手动修改的内容为最终权威；AI 必须先读取当前文件内容再编辑，不得覆盖用户修改。
-- **环境安装权限**：当项目运行所需环境未下载时，AI 应停止任务，向用户指出缺失的环境及下载方式，待用户下载完成后再执行任务。
-- **文件修改记录**：当新建/删除文件时，AI应将其记录到 `AGENTS.md`。
-- **测试数据保留**：AI 在开发/测试过程中创建的数据库测试条目不需要删除，保留即可。
-
 ### C++（C++23）
 
-- **禁止异常**：禁止 `throw`/`try`/`catch`，调用第三方库时在最外层统一捕获异常并转换为错误返回值。使用 `std::optional`、`std::expected`、返回值错误字符串代替。
-- **Doxygen**：`/** */` 风格，函数、类、命名空间均需标注。
+- **最小化异常**：允许最小范围内的 `try`/`catch`，如第三方库强制要求异常处理或工具函数等场景，但绝对禁止主动将异常 `throw` 到上层。
+- **字符串安全**：返回值为字符串信息的，使用 `std::optional<std::string>` 区分空信息和其它信息。
+- **Doxygen 注释**：`/** */` 风格，函数、类、命名空间均需标注。
 - **`[[nodiscard]]`**：标注所有返回值不可丢弃的函数。
 - **尾置返回类型**：`auto func() -> int`。
-- 头文件 `#pragma once`。
-- 循环语句 `for`、`while` 循环体加大括号。
-- 命名空间、类、函数、循环、分支、lambda 等的大括号换行。变量赋值不换行。
-- 匿名命名空间写在有名命名空间之前。之间五行空白行分隔。
-- 缩进：命名空间内类和变量不缩进。函数进行缩进。
+- **头文件单次包含：** 使用 `#pragma once` 而不是 `#ifndef ... #define ... #endif`。
+- **代码块大括号包含**：循环语句的循环体必须加大括号；分支判断除非在最内层且所有分支均为单条语句，否则加大括号。
+- **左大括号换行规范**：命名空间、类、函数、循环、分支、lambda 等的大括号换行。仅 `std::array` 等类型变量赋值不换行。
+- **工具函数位置**：仅单文件使用的工具函数写入匿名命名空间，匿名命名空间写在有名命名空间之前，之间五行空白行分隔。
+- **头文件导入顺序**：若为 .cpp 文件，首先导入对应的 .h 文件；接下来导入标准库，第三方库，最后是自定义头文件。三/四部分中间加空行。
 
 ### 前端
 
@@ -106,18 +113,29 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 
 ## 目录速查
 
-**根目录**
+### **/** 根目录
 
 | 路径 | 说明 |
 |---|---|
 | `AGENTS.md` | 项目规范与协作说明（本文档） |
 | `README.md` | 项目说明文档 |
 | `TODO.md` | 待办清单 |
-| `conf/` | 配置文件目录：`.env`（环境变量，gitignore）、`cache.yml`（公开 GET 接口缓存有效期）、`.env.example`（模板）；由 `config::init_env()` / `config::init_cache()` 从项目目录向上查找并校验 |
+
+### **.github/** Github 配置目录
+
+| 路径 | 说明 |
+|---|---|
 | `.github/workflows/ci.yml` | CI：前端 type-check + 构建、后端 vcpkg + CMake 构建、PostgreSQL 冒烟测试 |
 | `.github/workflows/deploy.yml` | CD：CI 通过后 SSH 到服务器执行 `tools/rebuild.sh` 自动部署 |
 
-**client/**
+### **conf/** 配置文件目录
+
+| 路径 | 说明 |
+|---|---|
+| `.env` / `.env.example` | 环境变量/模板 |
+| `cache.yml` | 公开 GET 接口缓存有效期 |
+
+### **client** 前端开发目录
 
 | 路径 | 说明 |
 |---|---|
@@ -168,7 +186,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/assets/normal/color.css` | 颜色变量集中定义（基础色板 + `--pink-hot-rgb` + 半透明粉色 `--pink-<alpha>`） |
 | `client/src/assets/normal/link.css` | 全局超链接统一样式（粉色 + 实线下划线，悬停侵蚀紫，与 Markdown 渲染一致；单一来源，`markdown/text.css` 不再重复定义） |
 
-**server/**
+### **server/** 后端开发目录
 
 | 路径 | 说明 |
 |---|---|
@@ -197,20 +215,29 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/img/image_queries.cpp` / `.h` | 照片墙图片查询、上传、保存、删除 |
 | `server/src/md/markdown_parser.cpp` / `.h` | Markdown YAML frontmatter 解析（用 yaml-cpp） |
 
-**sql/ 与 tools/**
+### **sql/** 数据库表结构目录
 
 | 路径 | 说明 |
 |---|---|
 | `sql/create_users.sql` | 用户表（users、permissions、user_permissions）+ 会话表（sessions） |
 | `sql/create_blogs.sql` | 博客表（categories、tags、blogs、blog_tags） |
 | `sql/create_images.sql` | 照片墙图片表（images） |
+
+### **tools/** 自动化工具目录
+
+| 路径 | 说明 |
+|---|---|
 | `tools/auto-sync-blogs.sh` | 博客 `.md` 自动同步脚本 |
 | `tools/pull-readme.sh` | README 拉取脚本（由 `tools/rebuild.sh` 在 npm build 前调用；拉取到 `$FILE_PATH/README`，前端构建时直接读取） |
 | `tools/pull-friend-links.sh` | 友链数据仓库拉取脚本（由 `tools/rebuild.sh` 在 npm build 前调用；从 `FRIENDS_REPO` 环境变量读取仓库地址并拉取到 `$FILE_PATH/friend_links`，前端构建时读取 `meta.yaml` 与头像） |
 | `tools/rebuild.sh` | 一键重构脚本：git pull → 后端构建 → 重启服务 → 拉取 README/友链 → 前端构建（仅由用户在服务端调用，不在本地开发环境使用） |
 | `tools/server-run.sh` | 服务端启动脚本 |
-| `tools/server-run.log` | 服务端运行日志（运行产物） |
-| `test/` | 测试脚本：`smoke-test.sh` 后端冒烟测试（CI 与本地共用；使用 `conf/.env`、终止旧服务端并用临时进程；验证四个公开 GET 接口返回 200、Redis 缓存写入及空结果不缓存） |
+
+### **test/** 测试脚本目录
+
+| 路径 | 说明 |
+|---|---|
+| `smoke-test.sh` | 后端冒烟测试（CI 与本地共用；使用 `conf/.env`、终止旧服务端并用临时进程；验证四个公开 GET 接口返回 200、Redis 缓存写入及空结果不缓存） |
 
 ## 注意事项
 
