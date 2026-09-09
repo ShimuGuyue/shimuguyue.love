@@ -1,36 +1,25 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import '@/assets/background/block.css'
 
-interface FriendLink {
-  name: string
-  url: string
-  description: string
-  image: string
+/** 展示用友链条目：构建期元数据 + 运行期可达性探测结果。 */
+interface FriendLink extends FriendLinkMeta {
   status?: 'online' | 'offline'
 }
 
-const friends = ref<FriendLink[]>([])
-const loading = ref(true)
+/**
+ * 《友情链接》条目。
+ *
+ * 构建期静态注入：client/vite.config.ts 读取
+ * $FILE_PATH/friend_links/meta.yaml（pull-friend-links.sh 拉取），
+ * 并匹配同目录 ${id}.* 头像，经 __FRIEND_LINKS__ 直接打包进页面。
+ */
+const friends = ref<FriendLink[]>(__FRIEND_LINKS__)
 
-async function fetchFriends() {
-  try {
-    const resp = await fetch('/api/friends')
-    if (!resp.ok) {
-      throw new Error(`HTTP ${resp.status}`)
-    }
-    friends.value = await resp.json()
-    friends.value.forEach(checkFriendStatus)
-  } catch (e) {
-    console.error('获取友链失败:', e)
-    friends.value = []
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(fetchFriends)
+onMounted(() => {
+  friends.value.forEach(checkFriendStatus)
+})
 
 /** 探测友链站点是否可访问：no-cors 请求能建立连接即视为 ONLINE，超时或失败为 OFFLINE。 */
 async function checkFriendStatus(friend: FriendLink) {
@@ -60,12 +49,10 @@ async function checkFriendStatus(friend: FriendLink) {
     </header>
 
     <!-- 友链卡片网格 -->
-    <p v-if="loading" class="friends-status">加载中...</p>
-    <p v-else-if="!friends.length" class="friends-status">暂无友链，期待与有趣的人互链。</p>
-    <section v-else class="blog-grid">
+    <section v-if="friends.length" class="blog-grid">
       <article
         v-for="friend in friends"
-        :key="friend.url"
+        :key="friend.id"
         class="friend-card"
       >
         <div class="friend-card__head">
@@ -74,15 +61,15 @@ async function checkFriendStatus(friend: FriendLink) {
             v-if="friend.image"
             class="friend-card__avatar"
             :src="friend.image"
-            :alt="friend.name"
+            :alt="friend.title"
             loading="lazy"
           />
           <div v-else class="friend-card__avatar friend-card__avatar--fallback">
-            {{ friend.name.charAt(0) }}
+            {{ friend.title.charAt(0) }}
           </div>
           <!-- 右侧两行：站点名称 + 站点链接 -->
           <div class="friend-card__info">
-            <div class="friend-card__name">{{ friend.name }}</div>
+            <div class="friend-card__name">{{ friend.title }}</div>
             <a
               class="friend-card__url"
               :href="friend.url"
@@ -104,6 +91,7 @@ async function checkFriendStatus(friend: FriendLink) {
         <p class="friend-card__desc">{{ friend.description }}</p>
       </article>
     </section>
+    <p v-else class="friends-status">暂无友链，期待与有趣的人互链。</p>
   </main>
 </template>
 
