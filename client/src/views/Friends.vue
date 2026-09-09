@@ -192,6 +192,7 @@ async function checkFriendStatus(friend: FriendLink) {
   font-size: 0.85rem;
   line-height: 1.6;
   overflow-wrap: anywhere;
+  text-decoration: none;
 }
 
 /* 网站状态：可访问绿色 ONLINE，不可访问红色 OFFLINE */
