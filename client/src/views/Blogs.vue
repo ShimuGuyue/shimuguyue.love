@@ -38,6 +38,42 @@ const categories = ref<Category[]>([])
 const tags = ref<Tag[]>([])
 const blogs = ref<BlogItem[]>([])
 
+// ── 分页 ──
+
+/** 每页显示的博客条目数 */
+const PAGE_SIZE = 15
+
+const page = ref(1)
+
+/** 总页数：至少 1 页，空结果时不出现 0 页 */
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(blogs.value.length / PAGE_SIZE))
+)
+
+const pageNumbers = computed(() =>
+  Array.from({ length: pageCount.value }, (_, i) => i + 1)
+)
+
+/** 当前页要展示的博客条目 */
+const pagedBlogs = computed(() => {
+  const start = (page.value - 1) * PAGE_SIZE
+  return blogs.value.slice(start, start + PAGE_SIZE)
+})
+
+/** 翻页：越界或与当前页相同时忽略，翻页后滚回列表顶部 */
+function goToPage(num: number) {
+  if (num < 1 || num > pageCount.value || num === page.value) return
+  page.value = num
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+// 筛选后条目变少时，把页码收敛到最后一页
+watch(pageCount, () => {
+  if (page.value > pageCount.value) {
+    page.value = pageCount.value
+  }
+})
+
 // ── 筛选状态 ──
 
 const selectedCategoryIds = ref<number[]>([])
@@ -120,6 +156,7 @@ async function fetchBlogs(skipSync = false) {
   }
 
   loading.value = true
+  page.value = 1
   try {
     const resp = await fetch('/api/blogs?' + params.toString())
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
@@ -292,7 +329,7 @@ onMounted(async () => {
     <p v-else-if="!blogs.length" class="blog-status">未检索到对应博客</p>
     <section v-else class="blog-grid">
       <RouterLink
-        v-for="blog in blogs"
+        v-for="blog in pagedBlogs"
         :key="blog.id"
         class="blog-card"
         :to="`/blogs/${(blog.file_path ?? '').replace(/^\/+/, '')}`"
@@ -310,6 +347,38 @@ onMounted(async () => {
         <time class="blog-card__time">{{ blog.update_time }}</time>
       </RouterLink>
     </section>
+
+    <!-- ── 分页 ── -->
+    <nav v-if="!loading && pageCount > 1" class="blog-pager">
+      <div class="blog-pager__pages">
+        <button
+          type="button"
+          class="blog-pager__btn"
+          :disabled="page <= 1"
+          @click="goToPage(page - 1)"
+        >
+          上一页
+        </button>
+        <button
+          v-for="num in pageNumbers"
+          :key="num"
+          type="button"
+          class="blog-pager__btn"
+          :class="{ 'blog-pager__btn--active': num === page }"
+          @click="goToPage(num)"
+        >
+          {{ num }}
+        </button>
+        <button
+          type="button"
+          class="blog-pager__btn"
+          :disabled="page >= pageCount"
+          @click="goToPage(page + 1)"
+        >
+          下一页
+        </button>
+      </div>
+    </nav>
   </main>
 </template>
 
@@ -353,5 +422,54 @@ onMounted(async () => {
   gap: 20px;
 }
 
+/* ── 分页 ── */
+
+.blog-pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.blog-pager__pages {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* 页码按钮：与卡片同一底色，悬停/选中用主题粉强调 */
+.blog-pager__btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    color var(--transition-speed),
+    background-color var(--transition-speed),
+    border-color var(--transition-speed);
+}
+
+.blog-pager__btn:hover:not(:disabled):not(.blog-pager__btn--active) {
+  color: var(--pink-hot);
+  border-color: var(--pink-hot);
+}
+
+.blog-pager__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 当前页：粉色实心 + 白字，与筛选器的选中态保持一致 */
+.blog-pager__btn--active {
+  color: #fff;
+  background-color: var(--pink-hot);
+  border-color: var(--pink-hot);
+}
 
 </style>
