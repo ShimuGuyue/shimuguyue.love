@@ -22,7 +22,7 @@
 namespace
 {
     /**
-     * @brief 递归收集博客目录（FILE_PATH/blogs）下的全部文件。
+     * @brief 递归收集博客目录（FILE_PATH/blogs）下的全部文件，跳过 .git 目录。
      * @return 成功返回“zip 内相对路径 / 文件内容”列表；失败返回错误消息。
      */
     auto collect_blog_files() -> std::expected<std::vector<std::pair<std::string, std::string>>, std::string>
@@ -37,6 +37,14 @@ namespace
         {
             if (ec)
                 return std::unexpected{ "遍历博客目录失败：" + it->path().string() };
+
+            // 跳过 .git 目录
+            if (it->path().filename() == ".git")
+            {
+                if (it->is_directory(ec))
+                    it.disable_recursion_pending();
+                continue;
+            }
 
             if (!it->is_regular_file(ec))
                 continue;
