@@ -5,22 +5,12 @@
 
 #include "config/cache.h"
 #include "config/config.h"
+#include "config/env.h"
 
 #include <cstdlib>
 
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
-
-namespace
-{
-    /// 加载后的缓存有效期配置。
-    config::CacheTtl g_ttl;
-} // namespace
-
-
-
-
-
 
 namespace config
 {
@@ -69,18 +59,14 @@ namespace config
             }
         };
 
-        g_ttl.categories = read_ttl(root, "categories");
-        g_ttl.tags       = read_ttl(root, "tags");
-        g_ttl.blogs      = read_ttl(root, "blogs");
-        g_ttl.blog       = read_ttl(root, "blog");
-        g_ttl.images     = read_ttl(root, "images");
+        // 校验通过的有效期写入 EnvMap，全部配置统一存储于此
+        EnvMap::env_values.set("CACHE_TTL_CATEGORIES", std::to_string(read_ttl(root, "categories")));
+        EnvMap::env_values.set("CACHE_TTL_TAGS",       std::to_string(read_ttl(root, "tags")));
+        EnvMap::env_values.set("CACHE_TTL_BLOGS",      std::to_string(read_ttl(root, "blogs")));
+        EnvMap::env_values.set("CACHE_TTL_BLOG",       std::to_string(read_ttl(root, "blog")));
+        EnvMap::env_values.set("CACHE_TTL_IMAGES",     std::to_string(read_ttl(root, "images")));
 
         spdlog::info("conf/cache.yml 缓存有效期配置加载完成。");
-    }
-
-    auto cache_ttl() -> const CacheTtl&
-    {
-        return g_ttl;
     }
 
 } // namespace config
