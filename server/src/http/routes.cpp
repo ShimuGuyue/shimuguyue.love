@@ -18,10 +18,7 @@ namespace http
         const std::string allowed = config::env()["FRONTEND_ORIGIN"];
 
         // 挂载静态文件服务:
-        // 友链头像物理目录为 FILE_PATH/friend_links，
         // 照片墙目录为 FILE_PATH/photo_wall，对外访问路径与目录同名
-        svr.set_mount_point("/friend_links",
-            (std::filesystem::path{ config::env()["FILE_PATH"] } / "friend_links").string());
         svr.set_mount_point("/photo_wall",
             (std::filesystem::path{ config::env()["FILE_PATH"] } / "photo_wall").string());
 

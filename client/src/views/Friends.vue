@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 
 import '@/assets/background/block.css'
+import friendLinks from 'virtual:friend-links'
 
 /** 展示用友链条目：构建期元数据 + 运行期可达性探测结果。 */
 interface FriendLink extends FriendLinkMeta {
@@ -12,10 +13,11 @@ interface FriendLink extends FriendLinkMeta {
  * 《友情链接》条目。
  *
  * 构建期静态注入：client/vite.config.ts 读取
- * $FILE_PATH/friend_links/meta.yaml（pull-friend-links.sh 拉取），
- * 并匹配同目录 ${id}.* 头像，经 __FRIEND_LINKS__ 直接打包进页面。
+ * $FILE_PATH/friend_links/meta.yaml（pull-friend-links.sh 拉取）与同目录
+ * ${id}.* 头像，经 virtual:friend-links 提供；头像 URL 由 Vite 资源管线
+ * 生成（构建期按内容哈希命名并复制进产物目录）。
  */
-const friends = ref<FriendLink[]>(__FRIEND_LINKS__)
+const friends = ref<FriendLink[]>(friendLinks)
 
 onMounted(() => {
   friends.value.forEach(checkFriendStatus)
