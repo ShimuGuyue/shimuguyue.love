@@ -60,10 +60,42 @@ const pagedBlogs = computed(() => {
   return blogs.value.slice(start, start + PAGE_SIZE)
 })
 
-/** 翻页：越界或与当前页相同时忽略，翻页后滚回列表顶部 */
+/** 读取 URL 页码：非正整数（空值、字母、0、负数）一律按第 1 页处理 */
+function readPage(raw: unknown): number {
+  const num = Number(raw)
+  return Number.isInteger(num) && num >= 1 ? num : 1
+}
+
+/** 解析 URL 页码：超出总页数的非法页回到第 1 页（需在数据加载后调用） */
+function parsePage(raw: unknown): number {
+  const num = readPage(raw)
+  return num > pageCount.value ? 1 : num
+}
+
+/**
+ * 应用 URL 中的页码：非法页回到第 1 页，并把 URL 归一化（去掉无效的 ?page=）。
+ * @param raw URL query 中的 page 值
+ */
+function applyUrlPage(raw: unknown) {
+  const requested = readPage(raw)
+  page.value = parsePage(raw)
+  if (requested > pageCount.value) {
+    syncUrl()
+  }
+}
+
+/** 判断两个 ID 集合是否相同（与顺序无关） */
+function sameIds(a: number[], b: number[]): boolean {
+  const key = (list: number[]) => [...list].sort((x, y) => x - y).join()
+  return key(a) === key(b)
+}
+
+/** 翻页：越界或与当前页相同时忽略，页码写入 URL 并滚回列表顶部 */
 function goToPage(num: number) {
   if (num < 1 || num > pageCount.value || num === page.value) return
   page.value = num
+  // 点击翻页按钮时页码始终写入 URL，第 1 页也保留 ?page=1
+  syncUrl(true)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -156,7 +188,6 @@ async function fetchBlogs(skipSync = false) {
   }
 
   loading.value = true
-  page.value = 1
   try {
     const resp = await fetch('/api/blogs?' + params.toString())
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
@@ -175,21 +206,39 @@ async function fetchBlogs(skipSync = false) {
 onBeforeRouteUpdate(async (to, from) => {
   const urlCatNames = parseNames(to.query.categories as string | undefined)
   const urlTagNames = parseNames(to.query.tags as string | undefined)
-  searchQuery.value   = (to.query.q as string) || ''
-  categoryMulti.value = to.query.cm === '1'
-  tagMulti.value      = to.query.tm === '1'
-
-  selectedCategoryIds.value = urlCatNames
+  const nextSearch      = (to.query.q as string) || ''
+  const nextCategoryIds = urlCatNames
     .map(n => categories.value.find(c => c.name === n)?.id)
     .filter(Boolean) as number[]
-  selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
+  const nextTagIds = urlTagNames.flatMap(n => tagIdsByName(n))
 
-  await fetchBlogs(true)
+  // 只有页码变化（翻页写 URL、前进后退）时筛选结果不变，无需重新请求
+  const pageOnly =
+    nextSearch === searchQuery.value &&
+    (to.query.cm === '1') === categoryMulti.value &&
+    (to.query.tm === '1') === tagMulti.value &&
+    sameIds(nextCategoryIds, selectedCategoryIds.value) &&
+    sameIds(nextTagIds, selectedTagIds.value)
+
+  searchQuery.value   = nextSearch
+  categoryMulti.value = to.query.cm === '1'
+  tagMulti.value      = to.query.tm === '1'
+  selectedCategoryIds.value = nextCategoryIds
+  selectedTagIds.value = nextTagIds
+
+  if (!pageOnly) {
+    await fetchBlogs(true)
+  }
+  applyUrlPage(to.query.page)
 })
 
 // ── URL 同步 ──
 
-function syncUrl() {
+/**
+ * 把当前筛选条件与页码同步到 URL。
+ * @param withPage 为 true 时页码为第 1 页也写入 URL（点击翻页按钮用）
+ */
+function syncUrl(withPage = false) {
   const q: Record<string, string> = {}
   // ID → name 转换
   const catNames = selectedCategoryIds.value
@@ -202,6 +251,7 @@ function syncUrl() {
   if (searchQuery.value.trim())     q.q = searchQuery.value.trim()
   if (categoryMulti.value)          q.cm = '1'
   if (tagMulti.value)               q.tm = '1'
+  if (page.value > 1 || withPage)   q.page = String(page.value)
   router.replace({ query: Object.keys(q).length ? q : {} })
 }
 
@@ -224,6 +274,7 @@ function toggleCategory(id: number) {
     selectedCategoryIds.value =
       selectedCategoryIds.value[0] === id ? [] : [id]
   }
+  page.value = 1
   fetchBlogs()
 }
 
@@ -240,12 +291,16 @@ function toggleTag(name: string) {
   } else {
     selectedTagIds.value = anySelected ? [] : ids
   }
+  page.value = 1
   fetchBlogs()
 }
 
 function onSearchInput() {
   if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(fetchBlogs, 300)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    fetchBlogs()
+  }, 300)
 }
 
 // ── 生命周期 ──
@@ -257,6 +312,8 @@ onMounted(async () => {
   searchQuery.value   = (route.query.q as string) || ''
   categoryMulti.value = route.query.cm === '1'
   tagMulti.value      = route.query.tm === '1'
+  // 先按 URL 设定页码，fetchBlogs 内的 syncUrl 才不会把 ?page= 丢掉
+  page.value          = readPage(route.query.page)
 
   initializing = true
   await Promise.all([fetchCategories(), fetchTags()])
@@ -267,6 +324,7 @@ onMounted(async () => {
   selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
 
   await fetchBlogs()
+  applyUrlPage(route.query.page)
   initializing = false
 })
 </script>
