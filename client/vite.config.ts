@@ -94,6 +94,38 @@ function findFriendAvatarFile(friendLinksDir: string, id: string): string {
   return join(friendLinksDir, filename)
 }
 
+/**
+ * 读取 conf/page_size.yml 中的正整数配置项（形如 `key: value` 的简单 YAML）。
+ *
+ * 与友链 meta.yaml 一样按行解析，不为单个配置引入 YAML 依赖；
+ * 文件缺失或字段非法时抛错，使构建立即失败，避免前后端分页数不一致。
+ */
+function readPageSizeYaml(path: string, key: string): number {
+  if (!existsSync(path)) {
+    throw new Error(
+      `分页配置缺失：${path}\n` +
+      `conf/page_size.yml 由前后端共同读取，请确认该文件存在。`
+    )
+  }
+
+  for (const line of readFileSync(path, 'utf8').split(/\r?\n/)) {
+    const text = line.replace(/#.*$/, '').trim()
+    if (!text) continue
+
+    const match = text.match(/^([A-Za-z0-9_-]+)\s*:\s*(.+)$/)
+    if (!match || match[1] !== key) continue
+
+    const raw = unquoteYamlScalar(match[2] ?? '')
+    const value = Number(raw)
+    if (!Number.isInteger(value) || value <= 0) {
+      throw new Error(`conf/page_size.yml 字段 ${key} 必须是正整数，当前为：${raw}`)
+    }
+    return value
+  }
+
+  throw new Error(`conf/page_size.yml 缺少字段 ${key}。`)
+}
+
 /** 读取 pull-friend-links.sh 拉取到本地的友链仓库，组装条目与头像文件绝对路径。 */
 function loadFriendLinks(friendLinksDir: string): FriendLinkEntry[] {
   if (!friendLinksDir) return []
@@ -193,6 +225,12 @@ export default defineConfig(({ mode }) => {
     ? resolve(projectRoot, env.FILE_PATH, 'friend_links')
     : ''
 
+  // 博客分页每页条数：构建期注入 __BLOG_PAGE_SIZE__，前后端分页口径一致。
+  const blogPageSize = readPageSizeYaml(
+    resolve(projectRoot, 'conf/page_size.yml'),
+    'blogs'
+  )
+
   return {
     plugins: [
       vue(),
@@ -201,6 +239,7 @@ export default defineConfig(({ mode }) => {
     ],
     define: {
       __ABOUT_MARKDOWN__: JSON.stringify(aboutMarkdown),
+      __BLOG_PAGE_SIZE__: JSON.stringify(blogPageSize),
     },
     resolve: {
       alias: {
