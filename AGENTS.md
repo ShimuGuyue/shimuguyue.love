@@ -69,7 +69,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 - **友链**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-friend-links.sh` 从 Github 拉取数据仓库到 `FILE_PATH/friend_links/`；前端构建时读取 `meta.yaml`（id / title / url / description）并匹配 `${id}.*` 头像，经 `virtual:friend-links` 虚拟模块注入 `Friends.vue`。头像是纯静态产物：构建期交由 Vite 资源管线按内容哈希命名并复制进产物目录 `assets/<id>-<hash>.<ext>`，dev 时由 Vite 以 `/@fs/` 读取源文件。`meta.yaml` 内部格式约定参考 [shimuguyue.love-friend_links/meta.yaml](https://github.com/ShimuGuyue/shimuguyue.love-friend_links/blob/main/meta.yaml)。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
 - **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片写接口成功后在事务提交后失效相关缓存，TTL 兜底。
-- **配置**：`conf/.env`（环境变量）+ `conf/cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。
+- **配置**：`conf/.env`（环境变量）+ `conf/cache.yml`（公开 GET 接口缓存有效期）+ `conf/page_size.yml`（分页每页条数），由 `config::init()` 统一初始化并全部存入 ConfigMap（字符串键值），缺失或非法则 `exit(1)`。
 
 ## 关键环境变量
 
@@ -134,6 +134,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 |---|---|
 | `.env` / `.env.example` | 环境变量/模板 |
 | `cache.yml` | 公开 GET 接口缓存有效期 |
+| `page_size.yml` | 各筛选器分页每页条数（当前用于博客筛选页，前后端共同读取） |
 
 ### **client** 前端开发目录
 
@@ -143,7 +144,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/package-lock.json` | 前端依赖锁定文件 |
 | `client/index.html` | Vite 入口 HTML |
 | `client/env.d.ts` | 环境变量与虚拟模块类型声明 |
-| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/photo_wall` → localhost:8080，`BUILD_DIR` 输出目录；构建时直接读取 `$FILE_PATH/README/README.md` 注入 About 页、读取 `$FILE_PATH/friend_links/meta.yaml` 生成 `virtual:friend-links` 虚拟模块；头像交由 Vite 资源管线按内容哈希命名，dev 期以 `/@fs/` 提供 `$FILE_PATH` 下的头像 |
+| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/photo_wall` → localhost:8080，`BUILD_DIR` 输出目录；构建时直接读取 `$FILE_PATH/README/README.md` 注入 About 页、读取 `$FILE_PATH/friend_links/meta.yaml` 生成 `virtual:friend-links` 虚拟模块、读取 `conf/page_size.yml` 注入 `__BLOG_PAGE_SIZE__`；头像交由 Vite 资源管线按内容哈希命名，dev 期以 `/@fs/` 提供 `$FILE_PATH` 下的头像 |
 | `client/tsconfig.json` | TS 总配置 |
 | `client/tsconfig.app.json` | 应用代码 TS 配置 |
 | `client/tsconfig.node.json` | 构建脚本 TS 配置 |
@@ -200,10 +201,11 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/cache/cache.cpp` / `.h` | Redis 公开接口缓存（基于 redis++ / redis-plus-plus）：初始化（PING 校验）、get / set / del、按前缀 SCAN+DEL 失效、统一键构造 `api-cache:`，get 记录缓存命中/未命中日志、set 记录写缓存日志 |
 | `server/src/db/connection.cpp` / `.h` | 数据库连接池初始化 + 表检查 |
 | `server/src/db/connection_pool.cpp` / `.h` | 连接池实现：基于 `lklibs::PgPool` 的薄封装，`db::with_db()` 并发获取独占连接，无空闲时阻塞等待 |
-| `server/src/config/config.cpp` / `.h` | 配置统一初始化入口：依次调用 `init_env()` 与 `init_cache()`；共享 `config::find_config_file()` 向上查找 `conf/` 配置文件 |
+| `server/src/config/config.cpp` / `.h` | 配置统一入口：对外提供 `config::config()` 只读访问 ConfigMap；初始化依次调用 `init_env()`、`init_cache()` 与 `init_page_size()`；约定所有配置文件都在 `conf/` 下，`config::find_conf_dir()` 向上查找并缓存该目录（进程内只查找一次），`config::find_config_file()` 在其内取具体配置文件 |
 | `server/src/config/env.cpp` / `.h` | `conf/.env` 环境变量读取（`init_env()`，缺失则 `exit(1)`） |
-| `server/src/config/env_map.cpp` / `.h` | 环境变量存储封装类（内部 `unordered_map`，只读 `operator[]`） |
-| `server/src/config/cache.cpp` / `.h` | `conf/cache.yml` 缓存有效期配置加载：向上查找文件、yaml 解析校验（缺失或非法则 `exit(1)`），`config::cache_ttl()` 只读访问 |
+| `server/src/config/config_map.cpp` / `.h` | 配置统一存储封装类 `ConfigMap`：`.env` 环境变量与 `cache.yml` / `page_size.yml` 的配置项都以字符串键值存入同一个 `unordered_map`（`operator[]` 只读、`set` 写入） |
+| `server/src/config/cache.cpp` / `.h` | `conf/cache.yml` 缓存有效期配置加载：在 `conf/` 目录内取文件、yaml 解析校验（缺失或非法则 `exit(1)`），校验通过后以 `CACHE_TTL_*` 键写入 ConfigMap，读取方直接用 `config::config()["CACHE_TTL_*"]` |
+| `server/src/config/page_size.cpp` / `.h` | `conf/page_size.yml` 分页每页条数配置加载：在 `conf/` 目录内取文件、yaml 解析校验（缺失或非法则 `exit(1)`），校验通过后以 `BLOGS_PAGESIZE` 键写入 ConfigMap，读取方直接用 `config::config()["BLOGS_PAGESIZE"]` |
 | `server/src/auth/login.cpp` / `.h` | 密钥/密码登录、权限查询 |
 | `server/src/auth/session.cpp` / `.h` | 会话 token 创建、验证、过期清理 |
 | `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |
