@@ -66,7 +66,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/blogs/` 的相对路径（不含 `.md` 后缀）。
 - **照片墙**：文件存于 `FILE_PATH/photo_wall/`，元数据存于数据库，文件名与对应 `id` 同名。
 - **关于我**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-readme.sh` 从 GitHub 拉取 README 仓库到 `$FILE_PATH/README`；前端构建时由 `client/vite.config.ts` 直接读取 `README.md`（缺失则构建报错）并以构建常量注入 `About.vue`。
-- **友链**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-friend-links.sh` 从 Github 拉取数据仓库到 `FILE_PATH/friend_links/`；前端构建时读取 `meta.yaml`（id / title / url / description）并匹配 `${id}.*` 头像，以构建常量注入 `Friends.vue`。头像对外访问 URL 为 `/friend_links/<id>.<ext>`（后端静态挂载映射）。`meta.yaml` 内部格式约定参考 [friend_links]([shimuguyue.love-friend_links/meta.yaml at main · ShimuGuyue/shimuguyue.love-friend_links](https://github.com/ShimuGuyue/shimuguyue.love-friend_links/blob/main/meta.yaml))。
+- **友链**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-friend-links.sh` 从 Github 拉取数据仓库到 `FILE_PATH/friend_links/`；前端构建时读取 `meta.yaml`（id / title / url / description）并匹配 `${id}.*` 头像，经 `virtual:friend-links` 虚拟模块注入 `Friends.vue`。头像是纯静态产物：构建期交由 Vite 资源管线按内容哈希命名并复制进产物目录 `assets/<id>-<hash>.<ext>`，dev 时由 Vite 以 `/@fs/` 读取源文件。`meta.yaml` 内部格式约定参考 [shimuguyue.love-friend_links/meta.yaml](https://github.com/ShimuGuyue/shimuguyue.love-friend_links/blob/main/meta.yaml)。
 - **认证**：Bearer token，存于 `sessions` 表，过期时间由环境变量 `SESSION_TTL_MINUTES` 控制（分钟），权限 JSON 序列化存库；前端到期自动退出登录。
 - **缓存**：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片）经 Redis 缓存，统一键前缀 `api-cache:`；博客 / 图片写接口成功后在事务提交后失效相关缓存，TTL 兜底。
 - **配置**：`conf/.env`（环境变量）+ `conf/cache.yml`（公开 GET 接口缓存有效期），由 `config::init()` 统一初始化，缺失或非法则 `exit(1)`。
@@ -142,8 +142,8 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/package.json` | 前端依赖与 npm 脚本（dev / build / type-check / preview） |
 | `client/package-lock.json` | 前端依赖锁定文件 |
 | `client/index.html` | Vite 入口 HTML |
-| `client/env.d.ts` | 环境变量类型声明 |
-| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/photo_wall`、`/friend_links` → localhost:8080，`BUILD_DIR` 输出目录；构建时直接读取 `$FILE_PATH/README/README.md` 注入 About 页、读取 `$FILE_PATH/friend_links/meta.yaml` 与头像注入 Friends 页 |
+| `client/env.d.ts` | 环境变量与虚拟模块类型声明 |
+| `client/vite.config.ts` | Vite 配置：dev 代理 `/api`、`/photo_wall` → localhost:8080，`BUILD_DIR` 输出目录；构建时直接读取 `$FILE_PATH/README/README.md` 注入 About 页、读取 `$FILE_PATH/friend_links/meta.yaml` 生成 `virtual:friend-links` 虚拟模块；头像交由 Vite 资源管线按内容哈希命名，dev 期以 `/@fs/` 提供 `$FILE_PATH` 下的头像 |
 | `client/tsconfig.json` | TS 总配置 |
 | `client/tsconfig.app.json` | 应用代码 TS 配置 |
 | `client/tsconfig.node.json` | 构建脚本 TS 配置 |
@@ -171,7 +171,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/views/Projects.vue` | 项目页 |
 | `client/src/views/Acknowledgments.vue` | 致谢页 |
 | `client/src/views/Favorites.vue` | 收藏页 |
-| `client/src/views/Friends.vue` | 友情链接页（构建期由 `$FILE_PATH/friend_links/meta.yaml` 静态注入，站点状态在浏览器端探测） |
+| `client/src/views/Friends.vue` | 友情链接页（条目由构建期 `virtual:friend-links` 静态注入，头像为 Vite 资源管线产出的内容哈希 URL，站点状态在浏览器端探测） |
 | `client/src/assets/background.css` | 全局背景主题（粉色 × 紫色系） |
 | `client/src/assets/background/block.css` | 块级组件共用背景与外观 |
 | `client/src/assets/blog-layout.css` | 博客页布局共用样式 |
