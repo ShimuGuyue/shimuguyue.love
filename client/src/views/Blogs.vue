@@ -36,29 +36,27 @@ interface BlogItem {
 
 const categories = ref<Category[]>([])
 const tags = ref<Tag[]>([])
+/** 当前页的博客条目（由服务端按需查询，每页 PAGE_SIZE 条） */
 const blogs = ref<BlogItem[]>([])
 
 // ── 分页 ──
 
-/** 每页显示的博客条目数 */
-const PAGE_SIZE = 15
+/** 每页显示的博客条目数（构建期由 conf/page_size.yml 注入，与服务端一致） */
+const PAGE_SIZE = __BLOG_PAGE_SIZE__
 
 const page = ref(1)
 
+/** 符合条件的博客总数（服务端返回，用于计算总页数） */
+const total = ref(0)
+
 /** 总页数：至少 1 页，空结果时不出现 0 页 */
 const pageCount = computed(() =>
-  Math.max(1, Math.ceil(blogs.value.length / PAGE_SIZE))
+  Math.max(1, Math.ceil(total.value / PAGE_SIZE))
 )
 
 const pageNumbers = computed(() =>
   Array.from({ length: pageCount.value }, (_, i) => i + 1)
 )
-
-/** 当前页要展示的博客条目 */
-const pagedBlogs = computed(() => {
-  const start = (page.value - 1) * PAGE_SIZE
-  return blogs.value.slice(start, start + PAGE_SIZE)
-})
 
 /** 读取 URL 页码：非正整数（空值、字母、0、负数）一律按第 1 页处理 */
 function readPage(raw: unknown): number {
@@ -66,20 +64,16 @@ function readPage(raw: unknown): number {
   return Number.isInteger(num) && num >= 1 ? num : 1
 }
 
-/** 解析 URL 页码：超出总页数的非法页回到第 1 页（需在数据加载后调用） */
-function parsePage(raw: unknown): number {
-  const num = readPage(raw)
-  return num > pageCount.value ? 1 : num
-}
-
 /**
- * 应用 URL 中的页码：非法页回到第 1 页，并把 URL 归一化（去掉无效的 ?page=）。
- * @param raw URL query 中的 page 值
+ * 按需加载当前页。
+ * 页码超出总页数（非法页）时回到第 1 页重新加载，
+ * 并把 URL 归一化（去掉无效的 ?page=）。
  */
-function applyUrlPage(raw: unknown) {
-  const requested = readPage(raw)
-  page.value = parsePage(raw)
-  if (requested > pageCount.value) {
+async function loadCurrentPage() {
+  await fetchBlogs()
+  if (page.value > pageCount.value) {
+    page.value = 1
+    await fetchBlogs()
     syncUrl()
   }
 }
@@ -90,21 +84,15 @@ function sameIds(a: number[], b: number[]): boolean {
   return key(a) === key(b)
 }
 
-/** 翻页：越界或与当前页相同时忽略，页码写入 URL 并滚回列表顶部 */
+/** 翻页：越界或与当前页相同时忽略，按需查询该页、写入 URL 并滚回列表顶部 */
 function goToPage(num: number) {
   if (num < 1 || num > pageCount.value || num === page.value) return
   page.value = num
+  fetchBlogs()
   // 点击翻页按钮时页码始终写入 URL，第 1 页也保留 ?page=1
   syncUrl(true)
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
-
-// 筛选后条目变少时，把页码收敛到最后一页
-watch(pageCount, () => {
-  if (page.value > pageCount.value) {
-    page.value = pageCount.value
-  }
-})
 
 // ── 筛选状态 ──
 
@@ -171,7 +159,8 @@ async function fetchTags() {
   } catch (e) { console.error('获取标签失败:', e) }
 }
 
-async function fetchBlogs(skipSync = false) {
+/** 按当前筛选条件与页码请求服务端（服务端按需查询该页）。 */
+async function fetchBlogs() {
   const params = new URLSearchParams()
 
   if (selectedCategoryIds.value.length > 0) {
@@ -186,18 +175,20 @@ async function fetchBlogs(skipSync = false) {
   if (q) {
     params.set('q', q)
   }
+  params.set('page', String(page.value))
+  params.set('page_size', String(PAGE_SIZE))
 
   loading.value = true
   try {
     const resp = await fetch('/api/blogs?' + params.toString())
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    blogs.value = await resp.json()
-    if (!skipSync) {
-      syncUrl()
-    }
+    const data = await resp.json() as { items: BlogItem[]; total: number }
+    blogs.value = data.items
+    total.value = data.total
   } catch (e) {
     console.error('获取博客失败:', e)
     blogs.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -212,24 +203,28 @@ onBeforeRouteUpdate(async (to, from) => {
     .filter(Boolean) as number[]
   const nextTagIds = urlTagNames.flatMap(n => tagIdsByName(n))
 
-  // 只有页码变化（翻页写 URL、前进后退）时筛选结果不变，无需重新请求
-  const pageOnly =
+  // 与当前状态一致说明只是 URL 写法变化，无需重新查询
+  const filtersSame =
     nextSearch === searchQuery.value &&
     (to.query.cm === '1') === categoryMulti.value &&
     (to.query.tm === '1') === tagMulti.value &&
     sameIds(nextCategoryIds, selectedCategoryIds.value) &&
     sameIds(nextTagIds, selectedTagIds.value)
 
+  const loadedPage = page.value
+  const requested  = readPage(to.query.page)
+
   searchQuery.value   = nextSearch
   categoryMulti.value = to.query.cm === '1'
   tagMulti.value      = to.query.tm === '1'
   selectedCategoryIds.value = nextCategoryIds
   selectedTagIds.value = nextTagIds
+  page.value = requested
 
-  if (!pageOnly) {
-    await fetchBlogs(true)
+  // 筛选变化或页码变化（前进后退）时按需查询该页
+  if (!filtersSame || requested !== loadedPage) {
+    await loadCurrentPage()
   }
-  applyUrlPage(to.query.page)
 })
 
 // ── URL 同步 ──
@@ -276,6 +271,7 @@ function toggleCategory(id: number) {
   }
   page.value = 1
   fetchBlogs()
+  syncUrl()
 }
 
 function toggleTag(name: string) {
@@ -293,6 +289,7 @@ function toggleTag(name: string) {
   }
   page.value = 1
   fetchBlogs()
+  syncUrl()
 }
 
 function onSearchInput() {
@@ -300,6 +297,7 @@ function onSearchInput() {
   searchTimer = setTimeout(() => {
     page.value = 1
     fetchBlogs()
+    syncUrl()
   }, 300)
 }
 
@@ -312,7 +310,7 @@ onMounted(async () => {
   searchQuery.value   = (route.query.q as string) || ''
   categoryMulti.value = route.query.cm === '1'
   tagMulti.value      = route.query.tm === '1'
-  // 先按 URL 设定页码，fetchBlogs 内的 syncUrl 才不会把 ?page= 丢掉
+  // 先按 URL 设定页码，随后按需查询该页
   page.value          = readPage(route.query.page)
 
   initializing = true
@@ -323,8 +321,7 @@ onMounted(async () => {
     .map(n => categories.value.find(c => c.name === n)?.id).filter(Boolean) as number[]
   selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
 
-  await fetchBlogs()
-  applyUrlPage(route.query.page)
+  await loadCurrentPage()
   initializing = false
 })
 </script>
@@ -387,7 +384,7 @@ onMounted(async () => {
     <p v-else-if="!blogs.length" class="blog-status">未检索到对应博客</p>
     <section v-else class="blog-grid">
       <RouterLink
-        v-for="blog in pagedBlogs"
+        v-for="blog in blogs"
         :key="blog.id"
         class="blog-card"
         :to="`/blogs/${(blog.file_path ?? '').replace(/^\/+/, '')}`"
