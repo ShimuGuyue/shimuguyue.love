@@ -3,6 +3,9 @@
 /** 由 client/vite.config.ts 注入：《关于我》README.md 原文。 */
 declare const __ABOUT_MARKDOWN__: string
 
+/** 由 client/vite.config.ts 注入：博客页每页条数（读取 conf/page_size.yml）。 */
+declare const __BLOG_PAGE_SIZE__: number
+
 /** 友链条目。 */
 interface FriendLinkMeta {
   id: string

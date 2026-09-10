@@ -1,11 +1,11 @@
 /**
  * @file config/env.cpp
- * @brief 环境变量加载、初始化与存储实现
+ * @brief 环境变量（conf/.env）加载与初始化实现
  */
 
 #include "config/env.h"
 #include "config/config.h"
-#include "config/env_map.h"
+#include "config/config_map.h"
 
 #include <algorithm>
 #include <charconv>
@@ -58,7 +58,7 @@ constexpr std::string_view REQUIRED_KEYS[] = {
      * @param path .env 文件路径。
      * @param env  环境变量存储。
      */
-    void load_env_file(const std::filesystem::path& path, config::EnvMap& env)
+    void load_env_file(const std::filesystem::path& path, config::ConfigMap& env)
     {
         std::ifstream ifs{ path };
         if (!ifs)
@@ -114,12 +114,12 @@ namespace config
             spdlog::error("未找到 conf/.env 文件！请将 .env 放在项目 conf/ 目录中。");
             std::exit(1);
         }
-        load_env_file(*env_file, EnvMap::env_values);
+        load_env_file(*env_file, ConfigMap::config_values);
 
         // 校验必需的环境变量
         for (const auto& key : REQUIRED_KEYS)
         {
-            if (EnvMap::env_values[std::string{ key }].empty())
+            if (ConfigMap::config_values[std::string{ key }].empty())
             {
                 spdlog::error("缺少必需的环境变量 {}！", key);
                 std::exit(1);
@@ -128,7 +128,7 @@ namespace config
 
         // SERVER_PORT 必须是 1~65535 的端口号
         {
-            const auto& server_port = EnvMap::env_values["SERVER_PORT"];
+            const auto& server_port = ConfigMap::config_values["SERVER_PORT"];
             unsigned int parsed     = 0;
             const auto [ptr, ec]    = std::from_chars(
                 server_port.data(),
@@ -144,7 +144,7 @@ namespace config
         }
 
         // 校验 FIXED_SALT：16 字节盐值的 hex 编码（32 个 hex 字符）
-        const auto& fixed_salt = EnvMap::env_values["FIXED_SALT"];
+        const auto& fixed_salt = ConfigMap::config_values["FIXED_SALT"];
         const bool fixed_salt_valid{
             fixed_salt.size() == 32 &&
             std::all_of(fixed_salt.begin(), fixed_salt.end(),
@@ -164,7 +164,7 @@ namespace config
 
         // DB_POOL_SIZE 必须是正整数
         {
-            const auto& pool_size = EnvMap::env_values["DB_POOL_SIZE"];
+            const auto& pool_size = ConfigMap::config_values["DB_POOL_SIZE"];
             std::size_t parsed    = 0;
             const auto [ptr, ec]  = std::from_chars(
                 pool_size.data(),
@@ -180,7 +180,7 @@ namespace config
 
         // SESSION_TTL_MINUTES 必须是正整数
         {
-            const auto& ttl_minutes = EnvMap::env_values["SESSION_TTL_MINUTES"];
+            const auto& ttl_minutes = ConfigMap::config_values["SESSION_TTL_MINUTES"];
             std::size_t parsed      = 0;
             const auto [ptr, ec]    = std::from_chars(
                 ttl_minutes.data(),
@@ -196,7 +196,7 @@ namespace config
 
         // REDIS_PORT 必须是 1~65535 的端口号
         {
-            const auto& redis_port = EnvMap::env_values["REDIS_PORT"];
+            const auto& redis_port = ConfigMap::config_values["REDIS_PORT"];
             unsigned int parsed    = 0;
             const auto [ptr, ec]   = std::from_chars(
                 redis_port.data(),
@@ -213,7 +213,7 @@ namespace config
 
         // REDIS_POOL_SIZE 必须是正整数
         {
-            const auto& pool_size = EnvMap::env_values["REDIS_POOL_SIZE"];
+            const auto& pool_size = ConfigMap::config_values["REDIS_POOL_SIZE"];
             std::size_t parsed   = 0;
             const auto [ptr, ec] = std::from_chars(
                 pool_size.data(),
@@ -228,7 +228,7 @@ namespace config
         }
 
         // 统一创建并检测 FILE_PATH 下的所有文件目录
-        const auto root = std::filesystem::path{ EnvMap::env_values["FILE_PATH"] };
+        const auto root = std::filesystem::path{ ConfigMap::config_values["FILE_PATH"] };
         const std::filesystem::path SUBDIRS[] = {
             "blogs",
             "photo_wall",
@@ -256,11 +256,6 @@ namespace config
         spdlog::info("文件目录已确认：${FILE_PATH}/blogs、${FILE_PATH}/photo_wall、${FILE_PATH}/friend_links、${FILE_PATH}/README。");
 
         spdlog::info("环境变量已加载。");
-    }
-
-    auto env() -> const EnvMap&
-    {
-        return EnvMap::instance();
     }
 
 }

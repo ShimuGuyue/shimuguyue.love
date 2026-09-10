@@ -5,7 +5,7 @@
 
 #include "crypto/argon2id.h"
 
-#include "config/env.h"
+#include "config/config.h"
 
 #include <array>
 
@@ -121,7 +121,7 @@ namespace crypto::Argon2id
         // 使用环境变量 FIXED_SALT 指定的盐值进行确定性哈希，输出为 32 字节二进制
         // crypto_pwhash_BYTES = 32（libsodium 固定值；unofficial-sodium 未导出该宏）
         std::array<unsigned char, crypto_pwhash_SALTBYTES> salt{ };
-        const auto salt_hex = config::env()["FIXED_SALT"];
+        const auto salt_hex = config::config()["FIXED_SALT"];
         if (!hex_to_salt(salt_hex, salt))
         {
             spdlog::error("固定盐哈希失败：FIXED_SALT 格式无效。");

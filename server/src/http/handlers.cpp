@@ -22,8 +22,7 @@
 #include "auth/rate_limit.h"
 #include "auth/session.h"
 #include "cache/cache.h"
-#include "config/cache.h"
-#include "config/env.h"
+#include "config/config.h"
 #include "crypto/argon2id.h"
 #include "db/connection_pool.h"
 #include "doc/blog_queries.h"
@@ -72,6 +71,31 @@ namespace
             out << ids[i];
         }
         return out.str();
+    }
+
+    /**
+     * @brief 解析非负整数查询参数。
+     * @param req      请求。
+     * @param name     参数名。
+     * @param fallback 参数缺失或非法（非数字、负数、含多余字符）时返回的默认值。
+     * @return 解析得到的非负整数，或 fallback。
+     */
+    auto uint_param(const httplib::Request& req, const char* name, int fallback) -> int
+    {
+        if (!req.has_param(name))
+            return fallback;
+
+        const auto& raw = req.get_param_value(name);
+        int value{ 0 };
+        const auto [ptr, ec] = std::from_chars(
+            raw.data(),
+            raw.data() + raw.size(),
+            value
+        );
+        if (ec != std::errc{} || ptr != raw.data() + raw.size() || value < 0)
+            return fallback;
+
+        return value;
     }
 
     /**
@@ -1193,7 +1217,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
-                cache_set_list(key, res.body, config::cache_ttl().categories);
+                cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_CATEGORIES"]));
             }
         );
     }
@@ -1247,7 +1271,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
-                cache_set_list(key, res.body, config::cache_ttl().tags);
+                cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_TAGS"]));
             }
         );
     }
@@ -1257,6 +1281,21 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        // 分页参数：page 从 1 开始
+        const int page = std::max(1, uint_param(req, "page", 1));
+
+        // 分页由 page / page_size 触发；page_size 缺省时取 conf/page_size.yml 的配置值，
+        // 显式传 0 表示不分页（返回全部，供后台管理页等一次取全量）
+        int page_size{ 0 };
+        if (req.has_param("page_size"))
+        {
+            page_size = uint_param(req, "page_size", 0);
+        }
+        else if (req.has_param("page"))
+        {
+            page_size = std::stoi(config::config()["BLOGS_PAGESIZE"]);
+        }
+
         std::unordered_map<std::string, std::string> params;
         if (req.has_param("category_ids"))
             params["category_ids"] = normalize_id_list(req.get_param_value("category_ids"));
@@ -1264,6 +1303,12 @@ namespace http
             params["tag_ids"] = normalize_id_list(req.get_param_value("tag_ids"));
         if (req.has_param("q"))
             params["q"] = req.get_param_value("q");
+        // 每页内容独立缓存，缓存键需带上分页参数
+        if (page_size > 0)
+        {
+            params["page"]      = std::to_string(page);
+            params["page_size"] = std::to_string(page_size);
+        }
         const auto key = cache::cache_key("/api/blogs", params);
 
         if (const auto cached = cache::get(key); cached.has_value())
@@ -1309,6 +1354,14 @@ namespace http
                 if (req.has_param("q"))
                     query.search = req.get_param_value("q");
 
+                query.page      = page;
+                query.page_size = page_size;
+
+                // 分页时先统计总数，供前端计算页数
+                int total{ 0 };
+                if (page_size > 0)
+                    total = doc::count_blogs(conn, query);
+
                 auto blogs = doc::get_blogs(conn, query);
                 nlohmann::json arr = nlohmann::json::array();
                 for (const auto& b : blogs)
@@ -1329,8 +1382,25 @@ namespace http
                                         : nlohmann::json(nullptr);
                     arr.push_back(std::move(item));
                 }
-                res.set_content(arr.dump(), "application/json");
-                cache_set_list(key, res.body, config::cache_ttl().blogs);
+
+                if (page_size > 0)
+                {
+                    // 分页响应：当前页条目 + 符合条件的总数
+                    nlohmann::json body;
+                    body["items"]     = std::move(arr);
+                    body["total"]     = total;
+                    body["page"]      = page;
+                    body["page_size"] = page_size;
+                    res.set_content(body.dump(), "application/json");
+                }
+                else
+                {
+                    res.set_content(arr.dump(), "application/json");
+                }
+
+                // 空结果不缓存，避免空列表长期滞留导致页面空白
+                if (!blogs.empty())
+                    cache::set(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOGS"]));
             }
         );
     }
@@ -1400,7 +1470,7 @@ namespace http
                                     : nlohmann::json(nullptr);
                 item["tags"]        = blog->tags;
                 res.set_content(item.dump(), "application/json");
-                cache::set(key, res.body, config::cache_ttl().blog);
+                cache::set(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOG"]));
             }
         );
     }
@@ -1436,7 +1506,7 @@ namespace http
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
                 res.set_content(img::get_all_images(conn).dump(), "application/json");
-                cache_set_list(key, res.body, config::cache_ttl().images);
+                cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_IMAGES"]));
             }
         );
     }
@@ -2020,7 +2090,7 @@ namespace http
                 }
                 const auto& safe_fp = blog->file_path.value_or(fp);
 
-                const auto blogs_root = std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs";
+                const auto blogs_root = std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs";
                 const auto md_path    = blogs_root / (safe_fp + ".md");
 
                 // 防目录穿越：解析后的文件必须仍在博客目录内

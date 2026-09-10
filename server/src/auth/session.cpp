@@ -10,7 +10,7 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "config/env.h"
+#include "config/config.h"
 
 namespace
 {
@@ -67,7 +67,7 @@ namespace auth
         );
 
         // Step 2: 插入新 session，过期时间由环境变量 SESSION_TTL_MINUTES 控制
-        const auto ttl_minutes = std::stoi(config::env()["SESSION_TTL_MINUTES"]);
+        const auto ttl_minutes = std::stoi(config::config()["SESSION_TTL_MINUTES"]);
         const auto r = txn.exec(
             "INSERT INTO sessions (token, user_id, permissions, expires_at) "
             "VALUES ($1, $2, $3, NOW() + make_interval(mins => $4)) "

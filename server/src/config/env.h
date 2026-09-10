@@ -1,12 +1,8 @@
 /**
  * @file config/env.h
- * @brief 环境变量加载、初始化与存储
+ * @brief 环境变量（conf/.env）加载与初始化
  */
 #pragma once
-
-#include <string>
-
-#include "config/env_map.h"
 
 namespace config
 {
@@ -15,11 +11,5 @@ namespace config
      *        未设置或无效则打印错误并调用 std::exit(1)。
      */
     void init_env();
-
-    /**
-     * @brief 获取环境变量单例存储。
-     * @return 环境变量存储的只读引用。
-     */
-    [[nodiscard]] auto env() -> const EnvMap&;
 
 }

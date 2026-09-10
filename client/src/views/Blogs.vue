@@ -36,7 +36,63 @@ interface BlogItem {
 
 const categories = ref<Category[]>([])
 const tags = ref<Tag[]>([])
+/** 当前页的博客条目（由服务端按需查询，每页 PAGE_SIZE 条） */
 const blogs = ref<BlogItem[]>([])
+
+// ── 分页 ──
+
+/** 每页显示的博客条目数（构建期由 conf/page_size.yml 注入，与服务端一致） */
+const PAGE_SIZE = __BLOG_PAGE_SIZE__
+
+const page = ref(1)
+
+/** 符合条件的博客总数（服务端返回，用于计算总页数） */
+const total = ref(0)
+
+/** 总页数：至少 1 页，空结果时不出现 0 页 */
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(total.value / PAGE_SIZE))
+)
+
+const pageNumbers = computed(() =>
+  Array.from({ length: pageCount.value }, (_, i) => i + 1)
+)
+
+/** 读取 URL 页码：非正整数（空值、字母、0、负数）一律按第 1 页处理 */
+function readPage(raw: unknown): number {
+  const num = Number(raw)
+  return Number.isInteger(num) && num >= 1 ? num : 1
+}
+
+/**
+ * 按需加载当前页。
+ * 页码超出总页数（非法页）时回到第 1 页重新加载，
+ * 并把 URL 归一化（去掉无效的 ?page=）。
+ */
+async function loadCurrentPage() {
+  await fetchBlogs()
+  if (page.value > pageCount.value) {
+    page.value = 1
+    await fetchBlogs()
+    syncUrl()
+  }
+}
+
+/** 判断两个 ID 集合是否相同（与顺序无关） */
+function sameIds(a: number[], b: number[]): boolean {
+  const key = (list: number[]) => [...list].sort((x, y) => x - y).join()
+  return key(a) === key(b)
+}
+
+/** 翻页：越界或与当前页相同时忽略，按需查询该页、写入 URL 并滚回列表顶部 */
+function goToPage(num: number) {
+  if (num < 1 || num > pageCount.value || num === page.value) return
+  page.value = num
+  fetchBlogs()
+  // 点击翻页按钮时页码始终写入 URL，第 1 页也保留 ?page=1
+  syncUrl(true)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 // ── 筛选状态 ──
 
@@ -103,7 +159,8 @@ async function fetchTags() {
   } catch (e) { console.error('获取标签失败:', e) }
 }
 
-async function fetchBlogs(skipSync = false) {
+/** 按当前筛选条件与页码请求服务端（服务端按需查询该页）。 */
+async function fetchBlogs() {
   const params = new URLSearchParams()
 
   if (selectedCategoryIds.value.length > 0) {
@@ -118,18 +175,20 @@ async function fetchBlogs(skipSync = false) {
   if (q) {
     params.set('q', q)
   }
+  params.set('page', String(page.value))
+  params.set('page_size', String(PAGE_SIZE))
 
   loading.value = true
   try {
     const resp = await fetch('/api/blogs?' + params.toString())
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    blogs.value = await resp.json()
-    if (!skipSync) {
-      syncUrl()
-    }
+    const data = await resp.json() as { items: BlogItem[]; total: number }
+    blogs.value = data.items
+    total.value = data.total
   } catch (e) {
     console.error('获取博客失败:', e)
     blogs.value = []
+    total.value = 0
   } finally {
     loading.value = false
   }
@@ -138,21 +197,43 @@ async function fetchBlogs(skipSync = false) {
 onBeforeRouteUpdate(async (to, from) => {
   const urlCatNames = parseNames(to.query.categories as string | undefined)
   const urlTagNames = parseNames(to.query.tags as string | undefined)
-  searchQuery.value   = (to.query.q as string) || ''
-  categoryMulti.value = to.query.cm === '1'
-  tagMulti.value      = to.query.tm === '1'
-
-  selectedCategoryIds.value = urlCatNames
+  const nextSearch      = (to.query.q as string) || ''
+  const nextCategoryIds = urlCatNames
     .map(n => categories.value.find(c => c.name === n)?.id)
     .filter(Boolean) as number[]
-  selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
+  const nextTagIds = urlTagNames.flatMap(n => tagIdsByName(n))
 
-  await fetchBlogs(true)
+  // 与当前状态一致说明只是 URL 写法变化，无需重新查询
+  const filtersSame =
+    nextSearch === searchQuery.value &&
+    (to.query.cm === '1') === categoryMulti.value &&
+    (to.query.tm === '1') === tagMulti.value &&
+    sameIds(nextCategoryIds, selectedCategoryIds.value) &&
+    sameIds(nextTagIds, selectedTagIds.value)
+
+  const loadedPage = page.value
+  const requested  = readPage(to.query.page)
+
+  searchQuery.value   = nextSearch
+  categoryMulti.value = to.query.cm === '1'
+  tagMulti.value      = to.query.tm === '1'
+  selectedCategoryIds.value = nextCategoryIds
+  selectedTagIds.value = nextTagIds
+  page.value = requested
+
+  // 筛选变化或页码变化（前进后退）时按需查询该页
+  if (!filtersSame || requested !== loadedPage) {
+    await loadCurrentPage()
+  }
 })
 
 // ── URL 同步 ──
 
-function syncUrl() {
+/**
+ * 把当前筛选条件与页码同步到 URL。
+ * @param withPage 为 true 时页码为第 1 页也写入 URL（点击翻页按钮用）
+ */
+function syncUrl(withPage = false) {
   const q: Record<string, string> = {}
   // ID → name 转换
   const catNames = selectedCategoryIds.value
@@ -165,6 +246,7 @@ function syncUrl() {
   if (searchQuery.value.trim())     q.q = searchQuery.value.trim()
   if (categoryMulti.value)          q.cm = '1'
   if (tagMulti.value)               q.tm = '1'
+  if (page.value > 1 || withPage)   q.page = String(page.value)
   router.replace({ query: Object.keys(q).length ? q : {} })
 }
 
@@ -187,7 +269,9 @@ function toggleCategory(id: number) {
     selectedCategoryIds.value =
       selectedCategoryIds.value[0] === id ? [] : [id]
   }
+  page.value = 1
   fetchBlogs()
+  syncUrl()
 }
 
 function toggleTag(name: string) {
@@ -203,12 +287,18 @@ function toggleTag(name: string) {
   } else {
     selectedTagIds.value = anySelected ? [] : ids
   }
+  page.value = 1
   fetchBlogs()
+  syncUrl()
 }
 
 function onSearchInput() {
   if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(fetchBlogs, 300)
+  searchTimer = setTimeout(() => {
+    page.value = 1
+    fetchBlogs()
+    syncUrl()
+  }, 300)
 }
 
 // ── 生命周期 ──
@@ -220,6 +310,8 @@ onMounted(async () => {
   searchQuery.value   = (route.query.q as string) || ''
   categoryMulti.value = route.query.cm === '1'
   tagMulti.value      = route.query.tm === '1'
+  // 先按 URL 设定页码，随后按需查询该页
+  page.value          = readPage(route.query.page)
 
   initializing = true
   await Promise.all([fetchCategories(), fetchTags()])
@@ -229,7 +321,7 @@ onMounted(async () => {
     .map(n => categories.value.find(c => c.name === n)?.id).filter(Boolean) as number[]
   selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
 
-  await fetchBlogs()
+  await loadCurrentPage()
   initializing = false
 })
 </script>
@@ -310,6 +402,38 @@ onMounted(async () => {
         <time class="blog-card__time">{{ blog.update_time }}</time>
       </RouterLink>
     </section>
+
+    <!-- ── 分页 ── -->
+    <nav v-if="!loading && pageCount > 1" class="blog-pager">
+      <div class="blog-pager__pages">
+        <button
+          type="button"
+          class="blog-pager__btn"
+          :disabled="page <= 1"
+          @click="goToPage(page - 1)"
+        >
+          上一页
+        </button>
+        <button
+          v-for="num in pageNumbers"
+          :key="num"
+          type="button"
+          class="blog-pager__btn"
+          :class="{ 'blog-pager__btn--active': num === page }"
+          @click="goToPage(num)"
+        >
+          {{ num }}
+        </button>
+        <button
+          type="button"
+          class="blog-pager__btn"
+          :disabled="page >= pageCount"
+          @click="goToPage(page + 1)"
+        >
+          下一页
+        </button>
+      </div>
+    </nav>
   </main>
 </template>
 
@@ -353,5 +477,54 @@ onMounted(async () => {
   gap: 20px;
 }
 
+/* ── 分页 ── */
+
+.blog-pager {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.blog-pager__pages {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* 页码按钮：与卡片同一底色，悬停/选中用主题粉强调 */
+.blog-pager__btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  color: var(--color-text);
+  background-color: var(--blog-surface-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    color var(--transition-speed),
+    background-color var(--transition-speed),
+    border-color var(--transition-speed);
+}
+
+.blog-pager__btn:hover:not(:disabled):not(.blog-pager__btn--active) {
+  color: var(--pink-hot);
+  border-color: var(--pink-hot);
+}
+
+.blog-pager__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 当前页：粉色实心 + 白字，与筛选器的选中态保持一致 */
+.blog-pager__btn--active {
+  color: #fff;
+  background-color: var(--pink-hot);
+  border-color: var(--pink-hot);
+}
 
 </style>

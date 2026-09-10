@@ -12,7 +12,7 @@
 #include <libpq-fe.h>
 #include <spdlog/spdlog.h>
 
-#include "config/env.h"
+#include "config/config.h"
 
 namespace db
 {
@@ -24,11 +24,11 @@ namespace db
 
     void ConnectionPool::create(std::size_t size)
     {
-        const auto& env      = config::env();
+        const auto& config_map = config::config();
         const auto  conninfo = std::format(
             "host={} port={} dbname={} user={} password={} "
             "keepalives=1 keepalives_idle=60 keepalives_interval=10 keepalives_count=5",
-            env["PGHOST"], env["PGPORT"], env["PGDATABASE"], env["PGUSER"], env["PGPASSWORD"]
+            config_map["PGHOST"], config_map["PGPORT"], config_map["PGDATABASE"], config_map["PGUSER"], config_map["PGPASSWORD"]
         );
 
         // 启动时探测一次数据库连通性，连通失败终止程序。

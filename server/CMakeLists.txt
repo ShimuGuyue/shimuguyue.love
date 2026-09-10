@@ -37,7 +37,8 @@ add_executable(${PROJECT_NAME}
     src/config/cache.cpp
     src/config/config.cpp
     src/config/env.cpp
-    src/config/env_map.cpp
+    src/config/config_map.cpp
+    src/config/page_size.cpp
 )
 
 # 头文件

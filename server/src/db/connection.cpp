@@ -12,7 +12,7 @@
 #include <pqxx/pqxx>
 #include <spdlog/spdlog.h>
 
-#include "config/env.h"
+#include "config/config.h"
 #include "db/connection_pool.h"
 
 namespace
@@ -75,7 +75,7 @@ namespace db
     void init()
     {
         const auto pool_size = static_cast<std::size_t>(
-            std::stoull(config::env()["DB_POOL_SIZE"])
+            std::stoull(config::config()["DB_POOL_SIZE"])
         );
         ConnectionPool::instance().create(pool_size);
 

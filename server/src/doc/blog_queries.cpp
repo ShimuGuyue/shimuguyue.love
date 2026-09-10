@@ -15,7 +15,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "config/env.h"
+#include "config/config.h"
 
 namespace
 {
@@ -51,6 +51,72 @@ namespace
         }
         oss << "}";
         return oss.str();
+    }
+
+    /**
+     * @brief 博客筛选条件（WHERE 片段 + 绑定参数）。
+     */
+    struct BlogFilter
+    {
+        std::string  where;       ///< 形如 "WHERE ... AND ..."；无筛选时为空串
+        pqxx::params params;      ///< 与占位符顺序一致的查询参数
+        int          param_count; ///< 占位符个数，供 LIMIT / OFFSET 继续编号
+    };
+
+    /**
+     * @brief 构建博客筛选 SQL 片段。
+     *
+     * 分类 / 标签筛选与关键词搜索的 WHERE 条件集中在此，
+     * 供列表查询与计数查询复用，保证两者筛选口径一致。
+     *
+     * @param query 博客查询参数（page / page_size 不参与筛选）。
+     * @return WHERE 片段与对应参数。
+     */
+    auto build_blog_filter(const doc::BlogQuery& query) -> BlogFilter
+    {
+        BlogFilter filter{ "", pqxx::params{}, 0 };
+        std::ostringstream sql;
+        bool has_where{ false };
+        int  param_idx{ 0 };
+
+        // 分类筛选（多选取并集）
+        if (!query.category_ids.empty())
+        {
+            sql << "WHERE b.category_id = ANY($" << ++param_idx << "::int[]) ";
+            filter.params.append("{" + join_ids(query.category_ids) + "}");
+            has_where = true;
+        }
+
+        // 标签筛选（多选取并集）
+        if (!query.tag_ids.empty())
+        {
+            sql << (has_where ? "AND " : "WHERE ")
+                << "b.id IN (SELECT blog_id FROM blog_tags "
+                << "WHERE tag_id = ANY($" << ++param_idx << "::int[])) ";
+            filter.params.append("{" + join_ids(query.tag_ids) + "}");
+            has_where = true;
+        }
+
+        // 搜索（标题、描述、分类名、标签名）
+        // 使用 ILIKE 进行大小写不敏感模糊匹配
+        if (query.search && !query.search->empty())
+        {
+            spdlog::debug("博客搜索关键词：{}", *query.search);
+            sql << (has_where ? "AND " : "WHERE ")
+                << "(b.title ILIKE $" << ++param_idx
+                << " OR b.description ILIKE $" << param_idx
+                << " OR c.name ILIKE $" << param_idx
+                << " OR b.id IN ("
+                << "SELECT bt.blog_id FROM blog_tags bt "
+                << "JOIN tags t ON t.id = bt.tag_id "
+                << "WHERE t.name ILIKE $" << param_idx
+                << ")) ";
+            filter.params.append("%" + *query.search + "%");
+        }
+
+        filter.where       = sql.str();
+        filter.param_count = param_idx;
+        return filter;
     }
 
     /**
@@ -334,7 +400,7 @@ namespace
         fm << content;
 
         std::filesystem::path out_path{
-            std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs"
+            std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs"
             / (std::string{ file_path } + ".md")
         };
         std::filesystem::create_directories(out_path.parent_path());
@@ -358,7 +424,7 @@ namespace
     {
         std::error_code ec;
         std::filesystem::path md_path{
-            std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs"
+            std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs"
             / (std::string{ file_path } + ".md")
         };
         std::filesystem::remove(md_path, ec);
@@ -460,58 +526,31 @@ namespace doc
         spdlog::debug("正在从数据库获取博客列表...");
         pqxx::work txn{ conn };
 
+        auto filter = build_blog_filter(query);
+
         // 动态构建 SQL
         std::ostringstream sql;
         sql << "SELECT b.id, b.title, b.description, b.file_path, "
                "TO_CHAR(b.update_time, 'YYYY-MM-DD') AS update_time, "
                "c.name AS category_name "
                "FROM blogs b "
-               "LEFT JOIN categories c ON c.id = b.category_id ";
-
-        pqxx::params pq_params;
-        bool has_where{ false };
-        int param_idx{ 0 };
-
-        // 分类筛选（多选取并集）
-        if (!query.category_ids.empty())
-        {
-            sql << "WHERE b.category_id = ANY($" << ++param_idx << "::int[]) ";
-            pq_params.append("{" + join_ids(query.category_ids) + "}");
-            has_where = true;
-        }
-
-        // 标签筛选（多选取并集）
-        if (!query.tag_ids.empty())
-        {
-            sql << (has_where ? "AND " : "WHERE ")
-                << "b.id IN (SELECT blog_id FROM blog_tags "
-                << "WHERE tag_id = ANY($" << ++param_idx << "::int[])) ";
-            pq_params.append("{" + join_ids(query.tag_ids) + "}");
-            has_where = true;
-        }
-
-        // 搜索（标题、描述、分类名、标签名）
-        // 使用 ILIKE 进行大小写不敏感模糊匹配
-        if (query.search && !query.search->empty())
-        {
-            spdlog::debug("博客搜索关键词：{}", *query.search);
-            sql << (has_where ? "AND " : "WHERE ")
-                << "(b.title ILIKE $" << ++param_idx
-                << " OR b.description ILIKE $" << param_idx
-                << " OR c.name ILIKE $" << param_idx
-                << " OR b.id IN ("
-                << "SELECT bt.blog_id FROM blog_tags bt "
-                << "JOIN tags t ON t.id = bt.tag_id "
-                << "WHERE t.name ILIKE $" << param_idx
-                << ")) ";
-            const auto pattern = "%" + *query.search + "%";
-            pq_params.append(pattern);
-        }
+               "LEFT JOIN categories c ON c.id = b.category_id "
+            << filter.where;
 
         // 统一按更新时间倒序排列
         sql << "ORDER BY b.update_time DESC";
 
-        const auto rows = txn.exec(sql.str(), pq_params);
+        // 按需分页：只取当前页的数据（page_size 为 0 时不分页，返回全部）
+        if (query.page_size > 0)
+        {
+            const int page = query.page > 0 ? query.page : 1;
+            sql << " LIMIT $" << (filter.param_count + 1)
+                << " OFFSET $" << (filter.param_count + 2);
+            filter.params.append(query.page_size);
+            filter.params.append((page - 1) * query.page_size);
+        }
+
+        const auto rows = txn.exec(sql.str(), filter.params);
 
         // 所有博客的 ID
         std::vector<int> blog_ids;
@@ -572,6 +611,31 @@ namespace doc
         txn.commit();
         spdlog::debug("从数据库获取博客列表完成。");
         return result;
+    }
+
+    auto count_blogs(
+        pqxx::connection& conn,
+        const BlogQuery&  query)
+    -> int
+    {
+        spdlog::debug("正在统计符合条件的博客总数...");
+        pqxx::work txn{ conn };
+
+        const auto filter = build_blog_filter(query);
+
+        // 与 get_blogs 相同的 FROM / 筛选条件，保证计数与列表口径一致
+        std::ostringstream sql;
+        sql << "SELECT COUNT(*) "
+               "FROM blogs b "
+               "LEFT JOIN categories c ON c.id = b.category_id "
+            << filter.where;
+
+        const auto row = txn.exec(sql.str(), filter.params);
+
+        txn.commit();
+        const int total = row[0][0].as<int>();
+        spdlog::debug("符合条件的博客总数：{}", total);
+        return total;
     }
 
     auto get_blog_by_file_path(
