@@ -57,6 +57,8 @@ struct BlogQuery
     std::vector<int>           category_ids;
     std::vector<int>           tag_ids;
     std::optional<std::string> search;
+    int                        page      = 1; ///< 页码，从 1 开始
+    int                        page_size = 0; ///< 每页条数，0 表示不分页（返回全部）
 };
 
     /**
@@ -94,6 +96,21 @@ struct BlogQuery
         pqxx::connection& conn,
         const BlogQuery&  query)
     -> std::vector<BlogItem>;
+
+    /**
+     * @brief 统计符合条件的博客总数（分页用）。
+     *
+     * 筛选口径与 get_blogs 完全一致（分类 / 标签 / 关键词），
+     * 忽略 query.page 与 query.page_size。
+     *
+     * @param conn  数据库连接。
+     * @param query 筛选参数。
+     * @return 符合条件的博客总数。
+     */
+    [[nodiscard]] auto count_blogs(
+        pqxx::connection& conn,
+        const BlogQuery&  query)
+    -> int;
 
     /**
      * @brief 根据文件路径查询单篇博客。
