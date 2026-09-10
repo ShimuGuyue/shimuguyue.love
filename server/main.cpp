@@ -8,7 +8,6 @@
 
 #include "cache/cache.h"
 #include "config/config.h"
-#include "config/env.h"
 #include "db/connection.h"
 #include "http/routes.h"
 
@@ -34,5 +33,5 @@ int main(int argc, char* argv[])
 
     spdlog::info("项目初始化完成。\n");
 
-    svr.listen(config::env()["SERVER_HOST"], std::stoi(config::env()["SERVER_PORT"]));
+    svr.listen(config::config()["SERVER_HOST"], std::stoi(config::config()["SERVER_PORT"]));
 }

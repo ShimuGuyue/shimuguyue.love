@@ -22,8 +22,7 @@
 #include "auth/rate_limit.h"
 #include "auth/session.h"
 #include "cache/cache.h"
-#include "config/cache.h"
-#include "config/env.h"
+#include "config/config.h"
 #include "crypto/argon2id.h"
 #include "db/connection_pool.h"
 #include "doc/blog_queries.h"
@@ -1193,7 +1192,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
-                cache_set_list(key, res.body, config::cache_ttl().categories);
+                cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_CATEGORIES"]));
             }
         );
     }
@@ -1247,7 +1246,7 @@ namespace http
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
-                cache_set_list(key, res.body, config::cache_ttl().tags);
+                cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_TAGS"]));
             }
         );
     }
@@ -1400,7 +1399,7 @@ namespace http
                                     : nlohmann::json(nullptr);
                 item["tags"]        = blog->tags;
                 res.set_content(item.dump(), "application/json");
-                cache::set(key, res.body, config::cache_ttl().blog);
+                cache::set(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOG"]));
             }
         );
     }
@@ -1436,7 +1435,7 @@ namespace http
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
                 res.set_content(img::get_all_images(conn).dump(), "application/json");
-                cache_set_list(key, res.body, config::cache_ttl().images);
+                cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_IMAGES"]));
             }
         );
     }
@@ -2020,7 +2019,7 @@ namespace http
                 }
                 const auto& safe_fp = blog->file_path.value_or(fp);
 
-                const auto blogs_root = std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs";
+                const auto blogs_root = std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs";
                 const auto md_path    = blogs_root / (safe_fp + ".md");
 
                 // 防目录穿越：解析后的文件必须仍在博客目录内

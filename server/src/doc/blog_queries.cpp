@@ -15,7 +15,7 @@
 
 #include <spdlog/spdlog.h>
 
-#include "config/env.h"
+#include "config/config.h"
 
 namespace
 {
@@ -334,7 +334,7 @@ namespace
         fm << content;
 
         std::filesystem::path out_path{
-            std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs"
+            std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs"
             / (std::string{ file_path } + ".md")
         };
         std::filesystem::create_directories(out_path.parent_path());
@@ -358,7 +358,7 @@ namespace
     {
         std::error_code ec;
         std::filesystem::path md_path{
-            std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs"
+            std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs"
             / (std::string{ file_path } + ".md")
         };
         std::filesystem::remove(md_path, ec);

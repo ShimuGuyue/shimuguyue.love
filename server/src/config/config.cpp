@@ -11,6 +11,11 @@
 
 namespace config
 {
+    auto config() -> const ConfigMap&
+    {
+        return ConfigMap::instance();
+    }
+
     auto find_conf_dir() -> std::optional<std::filesystem::path>
     {
         // 约定所有配置文件均在 conf/ 下，故目录只向上查找并缓存一次

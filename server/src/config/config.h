@@ -8,8 +8,16 @@
 #include <optional>
 #include <string>
 
+#include "config/config_map.h"
+
 namespace config
 {
+    /**
+     * @brief 获取配置项单例存储（.env 环境变量与 cache.yml / page_size.yml 配置项）。
+     * @return 配置项存储的只读引用。
+     */
+    [[nodiscard]] auto config() -> const ConfigMap&;
+
     /**
      * @brief 从当前目录向上查找项目 conf/ 配置目录。
      *

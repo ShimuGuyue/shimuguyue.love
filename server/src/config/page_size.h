@@ -11,7 +11,7 @@ namespace config
      *
      * 在 conf/ 目录（由 find_conf_dir() 统一查找）内读取 page_size.yml；
      * 文件缺失、字段缺失或数值非法时打印错误并 exit(1)。
-     * 校验通过的每页条数写入 EnvMap 统一存储，键名见下：
+     * 校验通过的每页条数写入 ConfigMap 统一存储，键名见下：
      *   blogs → BLOGS_PAGESIZE
      */
     void init_page_size();

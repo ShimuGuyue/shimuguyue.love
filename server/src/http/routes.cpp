@@ -8,19 +8,19 @@
 #include <filesystem>
 #include <string>
 
-#include "config/env.h"
+#include "config/config.h"
 #include "http/handlers.h"
 
 namespace http
 {
     void setup_routes(httplib::Server& svr)
     {
-        const std::string allowed = config::env()["FRONTEND_ORIGIN"];
+        const std::string allowed = config::config()["FRONTEND_ORIGIN"];
 
         // 挂载静态文件服务:
         // 照片墙目录为 FILE_PATH/photo_wall，对外访问路径与目录同名
         svr.set_mount_point("/photo_wall",
-            (std::filesystem::path{ config::env()["FILE_PATH"] } / "photo_wall").string());
+            (std::filesystem::path{ config::config()["FILE_PATH"] } / "photo_wall").string());
 
         svr.Options("/api/.*",
             [allowed](const auto& req, auto& res)

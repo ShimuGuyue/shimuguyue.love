@@ -20,7 +20,7 @@
 #include <spdlog/spdlog.h>
 #include <sw/redis++/redis++.h>
 
-#include "config/env.h"
+#include "config/config.h"
 
 namespace
 {
@@ -87,10 +87,10 @@ namespace cache
     {
         // 为了安全使用 stoi / stoull。必须保证调用 cache::init() 前首先调用
         // config::init_env() 校验 REDIS_PORT 为 1~65535、REDIS_POOL_SIZE 为正整数，
-        const auto host      =             config::env()["REDIS_HOST"];
-        const auto password  =             config::env()["REDIS_PASSWORD"];
-        const auto port      = std::stoi  (config::env()["REDIS_PORT"]);
-        const auto pool_size = std::stoull(config::env()["REDIS_POOL_SIZE"]);
+        const auto host      =             config::config()["REDIS_HOST"];
+        const auto password  =             config::config()["REDIS_PASSWORD"];
+        const auto port      = std::stoi  (config::config()["REDIS_PORT"]);
+        const auto pool_size = std::stoull(config::config()["REDIS_POOL_SIZE"]);
 
         sw::redis::ConnectionOptions conn_opts;
         conn_opts.host            = host;

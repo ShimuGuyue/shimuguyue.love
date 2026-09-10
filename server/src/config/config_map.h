@@ -1,6 +1,6 @@
 /**
- * @file config/env_map.h
- * @brief 环境变量存储封装
+ * @file config/config_map.h
+ * @brief 配置项存储封装
  */
 #pragma once
 
@@ -16,40 +16,40 @@ namespace config
  * conf/page_size.yml 中经校验的配置项（键名见各配置模块的注释），
  * 内部使用 std::unordered_map 存储，键值均为字符串。
  * 仅提供读取（operator[]）和写入（set）接口。
- * 全局唯一实例以静态成员 env_values 存储，通过 instance() 只读访问。
+ * 全局唯一实例以静态成员 config_values 存储，通过 instance() 只读访问。
  */
-class EnvMap
+class ConfigMap
 {
 private:
     friend void init_env();
     friend void init_cache();
     friend void init_page_size();
 
-    EnvMap() = default;
-    EnvMap(const EnvMap&) = delete;
-    EnvMap& operator=(const EnvMap&) = delete;
+    ConfigMap() = default;
+    ConfigMap(const ConfigMap&) = delete;
+    ConfigMap& operator=(const ConfigMap&) = delete;
 
-    static EnvMap env_values;
+    static ConfigMap config_values;
     std::unordered_map<std::string, std::string> values_;
 
 public:
     /**
      * @brief 获取全局唯一实例（只读）。
-     * @return 环境变量存储的只读引用。
+     * @return 配置项存储的只读引用。
      */
-    [[nodiscard]] static auto instance() -> const EnvMap&;
+    [[nodiscard]] static auto instance() -> const ConfigMap&;
 
     /**
-     * @brief 读取环境变量的值。
-     * @param key 环境变量名。
-     * @return 环境变量的值；不存在时返回空字符串。
+     * @brief 读取配置项的值。
+     * @param key 配置项键名。
+     * @return 配置项的值；不存在时返回空字符串。
      */
     [[nodiscard]] auto operator[](const std::string& key) const -> const std::string&;
 
     /**
-     * @brief 写入环境变量的值。
-     * @param key   环境变量名。
-     * @param value 环境变量的值。
+     * @brief 写入配置项的值。
+     * @param key   配置项键名。
+     * @param value 配置项的值。
      */
     void set(const std::string& key, std::string value);
 

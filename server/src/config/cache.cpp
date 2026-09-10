@@ -5,7 +5,6 @@
 
 #include "config/cache.h"
 #include "config/config.h"
-#include "config/env.h"
 
 #include <cstdlib>
 
@@ -59,12 +58,12 @@ namespace config
             }
         };
 
-        // 校验通过的有效期写入 EnvMap，全部配置统一存储于此
-        EnvMap::env_values.set("CACHE_TTL_CATEGORIES", std::to_string(read_ttl(root, "categories")));
-        EnvMap::env_values.set("CACHE_TTL_TAGS",       std::to_string(read_ttl(root, "tags")));
-        EnvMap::env_values.set("CACHE_TTL_BLOGS",      std::to_string(read_ttl(root, "blogs")));
-        EnvMap::env_values.set("CACHE_TTL_BLOG",       std::to_string(read_ttl(root, "blog")));
-        EnvMap::env_values.set("CACHE_TTL_IMAGES",     std::to_string(read_ttl(root, "images")));
+        // 校验通过的有效期写入 ConfigMap，全部配置统一存储于此
+        ConfigMap::config_values.set("CACHE_TTL_CATEGORIES", std::to_string(read_ttl(root, "categories")));
+        ConfigMap::config_values.set("CACHE_TTL_TAGS",       std::to_string(read_ttl(root, "tags")));
+        ConfigMap::config_values.set("CACHE_TTL_BLOGS",      std::to_string(read_ttl(root, "blogs")));
+        ConfigMap::config_values.set("CACHE_TTL_BLOG",       std::to_string(read_ttl(root, "blog")));
+        ConfigMap::config_values.set("CACHE_TTL_IMAGES",     std::to_string(read_ttl(root, "images")));
 
         spdlog::info("conf/cache.yml 缓存有效期配置加载完成。");
     }

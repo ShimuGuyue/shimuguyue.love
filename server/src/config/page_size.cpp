@@ -5,7 +5,6 @@
 
 #include "config/page_size.h"
 #include "config/config.h"
-#include "config/env.h"
 
 #include <cstdlib>
 
@@ -59,8 +58,8 @@ namespace config
             }
         };
 
-        // 校验通过的每页条数写入 EnvMap，全部配置统一存储于此
-        EnvMap::env_values.set("BLOGS_PAGESIZE", std::to_string(read_size(root, "blogs")));
+        // 校验通过的每页条数写入 ConfigMap，全部配置统一存储于此
+        ConfigMap::config_values.set("BLOGS_PAGESIZE", std::to_string(read_size(root, "blogs")));
 
         spdlog::info("conf/page_size.yml 分页配置加载完成。");
     }

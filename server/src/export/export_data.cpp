@@ -15,7 +15,7 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "config/env.h"
+#include "config/config.h"
 #include "export/export_queries.h"
 #include "export/zip_writer.h"
 
@@ -27,7 +27,7 @@ namespace
      */
     auto collect_blog_files() -> std::expected<std::vector<std::pair<std::string, std::string>>, std::string>
     {
-        const auto blogs_root = std::filesystem::path{ config::env()["FILE_PATH"] } / "blogs";
+        const auto blogs_root = std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs";
         std::error_code ec;
         if (!std::filesystem::exists(blogs_root, ec) || ec)
             return std::unexpected{ "博客目录不可用：" + blogs_root.string() };
