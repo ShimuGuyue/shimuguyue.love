@@ -3,7 +3,12 @@ import { useAuthStore } from '@/stores/auth'
 import Home from '@/views/Home.vue'
 import Blogs from '@/views/Blogs.vue'
 import Projects from '@/views/Projects.vue'
-import Favorites from '@/views/Favorites.vue'
+import FavoritesMusic from '@/views/FavoritesMusic.vue'
+import FavoritesPhoto from '@/views/FavoritesPhoto.vue'
+import FavoritesWebsite from '@/views/FavoritesWebsite.vue'
+import FavoritesOpensource from '@/views/FavoritesOpensource.vue'
+import FavoritesAnime from '@/views/FavoritesAnime.vue'
+import FavoritesGame from '@/views/FavoritesGame.vue'
 import Friends from '@/views/Friends.vue'
 import LoginKey from '@/views/LoginKey.vue'
 import LoginPassword from '@/views/LoginPassword.vue'
@@ -19,7 +24,12 @@ const router = createRouter({
     { path: '/', name: 'home', component: Home },
     { path: '/blogs', name: 'blogs', component: Blogs },
     { path: '/projects', name: 'projects', component: Projects },
-    { path: '/favorites', name: 'favorites', component: Favorites },
+    { path: '/favorites/music', name: 'favorites-music', component: FavoritesMusic },
+    { path: '/favorites/photo', name: 'favorites-photo', component: FavoritesPhoto },
+    { path: '/favorites/website', name: 'favorites-website', component: FavoritesWebsite },
+    { path: '/favorites/opensource', name: 'favorites-opensource', component: FavoritesOpensource },
+    { path: '/favorites/anime', name: 'favorites-anime', component: FavoritesAnime },
+    { path: '/favorites/game', name: 'favorites-game', component: FavoritesGame },
     { path: '/friends', name: 'friends', component: Friends },
     { path: '/about', name: 'about', component: () => import('@/views/About.vue') },
     { path: '/thanks', name: 'acknowledgments', component: Acknowledgments },

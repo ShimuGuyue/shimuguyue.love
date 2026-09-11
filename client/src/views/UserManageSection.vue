@@ -815,7 +815,8 @@ async function saveChanges() {
 .create-mask {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  /* 高于导航栏（10000），弹窗遮罩仍需盖住整页 */
+  z-index: 10050;
   display: flex;
   align-items: center;
   justify-content: center;
