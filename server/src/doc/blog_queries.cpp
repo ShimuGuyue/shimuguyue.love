@@ -538,8 +538,8 @@ namespace doc
                "LEFT JOIN categories c ON c.id = b.category_id "
             << filter.where;
 
-        // 统一按更新时间倒序排列
-        sql << "ORDER BY b.update_time DESC";
+        // 统一排序：更新日期晚的在前；更新日期相同则 id 大的在前
+        sql << "ORDER BY b.update_time DESC, b.id DESC";
 
         // 按需分页：只取当前页的数据（page_size 为 0 时不分页，返回全部）
         if (query.page_size > 0)
