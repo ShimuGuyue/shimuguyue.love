@@ -830,7 +830,7 @@ function imgStyle(img: ImageItem) {
 .home__preview {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: 10000;
   backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
@@ -862,7 +862,7 @@ function imgStyle(img: ImageItem) {
   right: 32px;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 2001;
+  z-index: 10001;
   padding: 24px;
   width: 256px;
   height: 256px;
