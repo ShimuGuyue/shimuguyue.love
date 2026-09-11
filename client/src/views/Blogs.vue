@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue'
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router'
 
 import '@/assets/blog/selector.css'
@@ -138,6 +138,115 @@ watch(selectedCategoryIds, () => {
     return name !== undefined && visibleNames.has(name)
   })
 })
+
+// ── 筛选器折叠：分类 / 标签最多显示三行，超出则在三行末尾显示「更多...」 ──
+
+/** 折叠状态下筛选器最多显示的行数 */
+const MAX_FILTER_LINES = 3
+
+/** 分类 / 标签筛选是否已展开（仅本次页面停留内有效，刷新或重新进入页面后复位） */
+const categoriesExpanded = ref(false)
+const tagsExpanded = ref(false)
+
+/** 折叠状态下显示的条目数（按容器宽度实测得出） */
+const categoriesVisibleCount = ref(Number.POSITIVE_INFINITY)
+const tagsVisibleCount = ref(Number.POSITIVE_INFINITY)
+
+/** 条目是否超过三行（超过才需要「更多...」） */
+const categoriesOverflow = ref(false)
+const tagsOverflow = ref(false)
+
+const categoryChipsEl = ref<HTMLElement | null>(null)
+const tagChipsEl = ref<HTMLElement | null>(null)
+
+/**
+ * 按 flex 换行规则估算条目排布所需行数。
+ * @param widths   按顺序排列的条目宽度（px）。
+ * @param gap      条目之间的水平间距（px）。
+ * @param maxWidth 容器可用宽度（px）。
+ * @returns 排布所需行数。
+ */
+function countLines(widths: number[], gap: number, maxWidth: number): number {
+  let lines = 0
+  let lineWidth = 0
+  for (const width of widths) {
+    if (lineWidth === 0) {
+      lineWidth = width
+    } else if (lineWidth + gap + width <= maxWidth) {
+      lineWidth += gap + width
+    } else {
+      lines += 1
+      lineWidth = width
+    }
+  }
+  return lineWidth > 0 ? lines + 1 : lines
+}
+
+/** 每个容器最近一次测量依据（容器宽度 + 条目数），避免重复测量与观察器抖动 */
+const measuredKey = new WeakMap<HTMLElement, string>()
+
+/**
+ * 测量筛选器容器，得出折叠状态下可显示的条目数。
+ *
+ * 被折叠的条目依旧留在 DOM 中（绝对定位 + visibility: hidden），
+ * 因此无论是否展开、容器宽度如何变化，都能取到真实宽度重新计算。
+ *
+ * @param containerRef 筛选器条目容器。
+ * @param visibleCount 折叠时显示的条目数（输出）。
+ * @param overflow     是否超过三行（输出）。
+ */
+async function measureChips(
+  containerRef: Ref<HTMLElement | null>,
+  visibleCount: Ref<number>,
+  overflow: Ref<boolean>
+) {
+  await nextTick()
+  const container = containerRef.value
+  const more = container?.querySelector<HTMLElement>('.filter-more')
+  if (!container || !more) return
+
+  const style = getComputedStyle(container)
+  const gap = Number.parseFloat(style.columnGap) || 0
+  const maxWidth = container.clientWidth
+    - (Number.parseFloat(style.paddingLeft) || 0)
+    - (Number.parseFloat(style.paddingRight) || 0)
+  if (maxWidth <= 0) return
+
+  const widths = Array.from(container.querySelectorAll<HTMLElement>('.filter-chip'))
+    .map(chip => chip.offsetWidth)
+
+  const key = `${maxWidth}:${widths.length}`
+  if (measuredKey.get(container) === key) return
+  measuredKey.set(container, key)
+
+  // 三行内放得下全部条目：无需「......」
+  if (countLines(widths, gap, maxWidth) <= MAX_FILTER_LINES) {
+    visibleCount.value = widths.length
+    overflow.value = false
+    return
+  }
+
+  // 需要「......」：从后往前取能连按钮一起放进三行的最大条目数
+  let count = 0
+  for (let i = widths.length; i >= 0; i--) {
+    if (countLines([...widths.slice(0, i), more.offsetWidth], gap, maxWidth)
+        <= MAX_FILTER_LINES) {
+      count = i
+      break
+    }
+  }
+  visibleCount.value = count
+  overflow.value = true
+}
+
+/** 重新测量分类与标签筛选器（条目或容器宽度变化后调用）。 */
+function measureFilters() {
+  measureChips(categoryChipsEl, categoriesVisibleCount, categoriesOverflow)
+  measureChips(tagChipsEl, tagsVisibleCount, tagsOverflow)
+}
+
+/** 容器宽度变化（窗口缩放、字体加载完成等）时重新测量 */
+let chipsObserver: ResizeObserver | null = null
 
 // ── 远程获取 ──
 
@@ -303,6 +412,10 @@ function onSearchInput() {
 
 // ── 生命周期 ──
 
+// 分类 / 标签条目变化后重新测量折叠行数
+watch(categories, measureFilters, { flush: 'post' })
+watch(visibleTags, measureFilters, { flush: 'post' })
+
 onMounted(async () => {
   // 从 URL 读取 name 参数（等数据加载后转 ID）
   const urlCatNames = parseNames(route.query.categories as string | undefined)
@@ -323,6 +436,17 @@ onMounted(async () => {
 
   await loadCurrentPage()
   initializing = false
+
+  // 测量筛选器：超过三行的分类 / 标签折叠，并在三行末尾显示「更多...」
+  await measureFilters()
+  chipsObserver = new ResizeObserver(() => measureFilters())
+  if (categoryChipsEl.value) chipsObserver.observe(categoryChipsEl.value)
+  if (tagChipsEl.value) chipsObserver.observe(tagChipsEl.value)
+})
+
+onBeforeUnmount(() => {
+  chipsObserver?.disconnect()
+  chipsObserver = null
 })
 </script>
 
@@ -337,15 +461,26 @@ onMounted(async () => {
       <div class="filter-row">
         <span class="filter-label">分类</span>
         <button class="filter-mode-btn tag-pink" @click="categoryMulti = !categoryMulti">{{ categoryMulti ? '多选' : '单选' }}</button>
-        <div class="filter-chips">
+        <div ref="categoryChipsEl" class="filter-chips">
           <button
-            v-for="cat in categories"
+            v-for="(cat, index) in categories"
             :key="cat.id"
-            class="tag-normal"
-            :class="{ 'tag--active': selectedCategoryIds.includes(cat.id) }"
+            class="tag-normal filter-chip"
+            :class="{
+              'tag--active': selectedCategoryIds.includes(cat.id),
+              'filter-chip--hidden': !categoriesExpanded && index >= categoriesVisibleCount,
+            }"
             @click="toggleCategory(cat.id)"
           >
             {{ cat.name }}
+          </button>
+          <button
+            class="filter-more tag-pink"
+            :class="{ 'filter-chip--hidden': categoriesExpanded || !categoriesOverflow }"
+            :aria-expanded="categoriesExpanded"
+            @click="categoriesExpanded = true"
+          >
+            更多...
           </button>
         </div>
       </div>
@@ -354,15 +489,26 @@ onMounted(async () => {
       <div class="filter-row">
         <span class="filter-label">标签</span>
         <button class="filter-mode-btn tag-pink" @click="tagMulti = !tagMulti">{{ tagMulti ? '多选' : '单选' }}</button>
-        <div class="filter-chips">
+        <div ref="tagChipsEl" class="filter-chips">
           <button
-            v-for="tag in visibleTags"
+            v-for="(tag, index) in visibleTags"
             :key="tag.name"
-            class="tag-normal"
-            :class="{ 'tag--active': tagIdsByName(tag.name).some(id => selectedTagIds.includes(id)) }"
+            class="tag-normal filter-chip"
+            :class="{
+              'tag--active': tagIdsByName(tag.name).some(id => selectedTagIds.includes(id)),
+              'filter-chip--hidden': !tagsExpanded && index >= tagsVisibleCount,
+            }"
             @click="toggleTag(tag.name)"
           >
             {{ tag.name }}
+          </button>
+          <button
+            class="filter-more tag-pink"
+            :class="{ 'filter-chip--hidden': tagsExpanded || !tagsOverflow }"
+            :aria-expanded="tagsExpanded"
+            @click="tagsExpanded = true"
+          >
+            ......
           </button>
         </div>
       </div>

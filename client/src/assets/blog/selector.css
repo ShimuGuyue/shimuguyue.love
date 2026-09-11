@@ -120,12 +120,32 @@ html.dark .filter-bar {
    按钮本体复用 .tag-normal（灰色标签外观），
    选中时叠加 .tag--active（粉色实心）以示区分。*/
 
-/* 选择按钮容器：占满剩余宽度，可换行，按钮间距 8px */
+/* 选择按钮容器：占满剩余宽度，可换行，按钮间距 8px。
+   position: relative 作为折叠条目与「......」按钮的定位基准 */
 .filter-chips {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  position: relative;
+}
+
+/* ── 筛选器折叠（最多三行 + 「......」） ─────────────────
+   条目超过三行时只显示前三行，并在三行末尾显示「......」。
+   被折叠的条目改为绝对定位：脱离文档流（不参与换行、不撑高容器），
+   同时保留布局尺寸，visibility: hidden 之下仍可被脚本量取宽度。 */
+
+.filter-chip--hidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* 「......」按钮：外观复用 .tag-pink，作为筛选器内的展开控件 */
+.filter-more {
+  white-space: nowrap;
 }
 
 /* 选中态：粉色实心 + 白字 + 外发光，明确标识当前已选中的筛选项 */
