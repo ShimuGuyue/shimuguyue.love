@@ -156,7 +156,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/router/index.ts` | 13 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
 | `client/src/stores/auth.ts` | 认证状态（token、username），localStorage 持久化 |
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
-| `client/src/components/NavBar.vue` | 公共组件：导航栏、主题切换、用户入口 |
+| `client/src/components/NavBar.vue` | 公共组件：导航栏（收藏夹为下拉菜单）、主题切换、用户入口 |
 | `client/src/components/MarkdownPreview.vue` | 共享 Markdown 预览组件：封装 `MdPreview`，跟随暗色主题，标题 id 统一走 `md-editor-setup` 的 slug 规则 |
 | `client/src/lib/md-editor-setup.ts` | md-editor-v3 全局配置：注入本地 highlight.js / katex 实例、`typographer: true` / `breaks: false`，并导出标题 slug 函数 |
 | `client/src/views/Home.vue` | 主页：照片墙浏览、编辑、上传；右侧个人简介静态硬编码展示 |
