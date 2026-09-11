@@ -229,14 +229,12 @@ function onDropdownClick(event: MouseEvent): void {
   /* 去掉上边框，菜单与导航栏连成一体，不留横向接缝 */
   border-top: none;
   border-radius: 0;
-  opacity: 0;
   visibility: hidden;
   transform: translateX(-50%);
 }
 
 .header__nav-dropdown:hover .header__nav-dropdown-menu,
 .header__nav-dropdown:focus-within .header__nav-dropdown-menu {
-  opacity: 1;
   visibility: visible;
 }
 
