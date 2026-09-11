@@ -153,7 +153,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/public/assets/note-background.png` | 博客背景图 |
 | `client/src/main.ts` | 前端入口：挂载 App、注册 Pinia 与路由 |
 | `client/src/App.vue` | 根组件：全局 CSS 变量（`:root` / `html.dark`） |
-| `client/src/router/index.ts` | 13 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
+| `client/src/router/index.ts` | 18 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
 | `client/src/stores/auth.ts` | 认证状态（token、username），localStorage 持久化 |
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
 | `client/src/components/NavBar.vue` | 公共组件：导航栏（收藏夹为下拉菜单）、主题切换、用户入口 |
@@ -172,7 +172,12 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |
 | `client/src/views/Acknowledgments.vue` | 致谢页 |
-| `client/src/views/FavoritesMusic.vue` | 音乐收藏页（路由 /favorites/music |
+| `client/src/views/FavoritesMusic.vue` | 音乐收藏页（路由 /favorites/music，导航栏「收藏夹」下拉的子页面，占位） |
+| `client/src/views/FavoritesPhoto.vue` | 美图收藏页（路由 /favorites/photo，导航栏「收藏夹」下拉的子页面，占位） |
+| `client/src/views/FavoritesWebsite.vue` | 网站收藏页（路由 /favorites/website，导航栏「收藏夹」下拉的子页面，占位） |
+| `client/src/views/FavoritesOpensource.vue` | 开源项目收藏页（路由 /favorites/opensource，导航栏「收藏夹」下拉的子页面，占位） |
+| `client/src/views/FavoritesAnime.vue` | 动漫收藏页（路由 /favorites/anime，导航栏「收藏夹」下拉的子页面，占位） |
+| `client/src/views/FavoritesGame.vue` | 游戏收藏页（路由 /favorites/game，导航栏「收藏夹」下拉的子页面，占位） |
 | `client/src/views/Friends.vue` | 友情链接页（条目由构建期 `virtual:friend-links` 静态注入，头像为 Vite 资源管线产出的内容哈希 URL，站点状态在浏览器端探测） |
 | `client/src/assets/background.css` | 全局背景主题（粉色 × 紫色系） |
 | `client/src/assets/background/block.css` | 块级组件共用背景与外观 |

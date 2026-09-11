@@ -80,6 +80,11 @@ function onDropdownClick(event: MouseEvent): void {
         </button>
         <div class="header__nav-dropdown-menu">
           <RouterLink to="/favorites/music" class="header__nav-dropdown-item" @click="onDropdownClick">音乐</RouterLink>
+          <RouterLink to="/favorites/photo" class="header__nav-dropdown-item" @click="onDropdownClick">美图</RouterLink>
+          <RouterLink to="/favorites/website" class="header__nav-dropdown-item" @click="onDropdownClick">网站</RouterLink>
+          <RouterLink to="/favorites/opensource" class="header__nav-dropdown-item" @click="onDropdownClick">开源项目</RouterLink>
+          <RouterLink to="/favorites/anime" class="header__nav-dropdown-item" @click="onDropdownClick">动漫</RouterLink>
+          <RouterLink to="/favorites/game" class="header__nav-dropdown-item" @click="onDropdownClick">游戏</RouterLink>
         </div>
       </div>
       <RouterLink to="/about" class="header__nav-link">关于我</RouterLink>
