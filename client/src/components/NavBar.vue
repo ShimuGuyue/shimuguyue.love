@@ -78,6 +78,9 @@ function onDropdownClick(event: MouseEvent): void {
         >
           收藏夹
         </button>
+        <div class="header__nav-dropdown-menu">
+          <RouterLink to="/favorites/music" class="header__nav-dropdown-item" @click="onDropdownClick">音乐</RouterLink>
+        </div>
       </div>
       <RouterLink to="/about" class="header__nav-link">关于我</RouterLink>
       <RouterLink to="/friends" class="header__nav-link">友链推广</RouterLink>
