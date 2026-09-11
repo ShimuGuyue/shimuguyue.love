@@ -116,7 +116,9 @@ function onDropdownClick(event: MouseEvent): void {
   transition: all var(--transition-speed);
   position: sticky;
   top: 0;
-  z-index: 100;
+  /* 导航栏层：下拉菜单是它的子元素，只能随导航栏一起高于页面内容
+     （首页右侧个人简介为 9999），故整体抬到 9999 之上 */
+  z-index: 10000;
 }
 
 .navbar-logo {
@@ -225,6 +227,8 @@ function onDropdownClick(event: MouseEvent): void {
   position: absolute;
   top: 100%;
   left: 50%;
+  /* 层级紧贴导航栏：处于导航栏层叠上下文内，比导航栏低一级 */
+  z-index: 9999;
   display: flex;
   flex-direction: column;
   min-width: 120px;

@@ -830,7 +830,8 @@ function imgStyle(img: ImageItem) {
 .home__preview {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  /* 高于导航栏（10000），保证放大预览仍覆盖全站最上层内容 */
+  z-index: 10001;
   backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
@@ -862,7 +863,7 @@ function imgStyle(img: ImageItem) {
   right: 32px;
   top: 50%;
   transform: translateY(-50%);
-  z-index: 10001;
+  z-index: 10002;
   padding: 24px;
   width: 256px;
   height: 256px;
