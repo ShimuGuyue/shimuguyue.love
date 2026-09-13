@@ -7,7 +7,7 @@ import type { HeadList } from 'md-editor-v3'
 import { headingSlug } from '@/lib/md-editor-setup'
 
 import '@/assets/blog-layout.css'
-import '@/assets/blog/selector.css'
+import '@/assets/normal/tag.css'
 import '@/assets/normal/color.css'
 import '@/assets/button/function.css'
 
@@ -279,10 +279,10 @@ async function downloadBlog() {
         <aside class="blog-detail__side">
           <h1 class="blog-detail__title">{{ blog.title }}</h1>
           <p v-if="blog.description" class="blog-detail__desc">{{ blog.description }}</p>
-          <div v-if="blog.categories.length" class="blog-tags blog-detail__category">
+          <div v-if="blog.categories.length" class="tag-list blog-detail__category">
             <span v-for="category in blog.categories" :key="category" class="tag-pink">{{ category }}</span>
           </div>
-          <div class="blog-tags">
+          <div class="tag-list">
             <span v-for="tag in blog.tags" :key="tag" class="tag-normal">{{ tag }}</span>
           </div>
           <time class="blog-detail__time">{{ blog.update_time }}</time>

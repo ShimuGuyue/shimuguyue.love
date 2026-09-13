@@ -1,0 +1,45 @@
+/* ═══════════════════════════════════════════════════════════
+   标签统一样式
+   ─────────────────────────────────────────────────────────
+   集中管理全站共用的标签视觉：
+     · .tag-pink    粉色标签（分类 / 强调项）
+     · .tag-normal  普通标签（标签 / 一般项）
+     · .tag-list    标签容器（横向排列 + 自动换行）
+
+   博客卡片、博客详情、筛选器中的选择按钮均复用这里的类，
+   保证标签外观只有一处定义。
+   ═══════════════════════════════════════════════════════════ */
+
+@import "@/assets/normal/color.css";
+
+/* 粉色标签：用于强调标签（粉色文字 + 淡粉底 + 粉边） */
+.tag-pink {
+  padding: 2px 0.6rem;
+  font-size: 0.8rem;
+  color: var(--pink-hot);
+  background-color: var(--pink-12);
+  border: 1px solid var(--pink-12);
+  border-radius: 3px;
+}
+
+/* 普通标签：用于一般标签（次要文字色 + 中性底 + 粉边） */
+.tag-normal {
+  padding: 2px 0.6rem;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  background-color: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 119, 204, 0.12);
+  border-radius: 3px;
+}
+
+/* 暗色模式：普通标签底色由「黑 5%」反转为「白 5%」，保证在深色背景上可见 */
+html.dark .tag-normal {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 标签容器：多个标签横向排列，放不下自动换行，间距 6px */
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

@@ -159,9 +159,10 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
 | `client/src/components/NavBar.vue` | 公共组件：导航栏（收藏夹为下拉菜单）、主题切换、用户入口 |
 | `client/src/components/MarkdownPreview.vue` | 共享 Markdown 预览组件：封装 `MdPreview`，跟随暗色主题，标题 id 统一走 `md-editor-setup` 的 slug 规则 |
+| `client/src/components/FilterBar.vue` | 公共筛选器组件：按 `groups`（维度 + 条目 + 单选/多选）渲染筛选行，条目超过三行折叠并显示「更多...」，附搜索框（输入防抖后 `emit('update:search')`）；通过 `toggle` / `update:multi` / `update:search` 回调，选中态由使用方维护 |
 | `client/src/lib/md-editor-setup.ts` | md-editor-v3 全局配置：注入本地 highlight.js / katex 实例、`typographer: true` / `breaks: false`，并导出标题 slug 函数 |
 | `client/src/views/Home.vue` | 主页：照片墙浏览、编辑、上传；右侧个人简介静态硬编码展示 |
-| `client/src/views/Blogs.vue` | 博客列表页（分类/标签筛选、搜索） |
+| `client/src/views/Blogs.vue` | 博客列表页（分类/标签筛选、搜索；筛选 UI 由公共组件 `FilterBar` 提供，本页负责选中态、URL 同步与分页） |
 | `client/src/views/BlogDetail.vue` | 博客详情页（`MarkdownPreview` 渲染，目录来自 `getCatalog` 事件，保留滚动高亮与点击标题滚动） |
 | `client/src/views/BlogEdit.vue` | 博客新建/编辑页（`MdEditor` 编辑器，图片/mermaid/echarts/prettier/全屏按钮禁用） |
 | `client/src/views/About.vue` | 关于我页面（使用 `vite.config.ts` 构建期注入的 README 内容，`MarkdownPreview` 预览） |
@@ -183,7 +184,6 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/assets/background.css` | 全局背景主题（粉色 × 紫色系） |
 | `client/src/assets/background/block.css` | 块级组件共用背景与外观 |
 | `client/src/assets/blog-layout.css` | 博客页布局共用样式 |
-| `client/src/assets/blog/selector.css` | 博客筛选页样式（筛选栏 / 标签 / 搜索框） |
 | `client/src/assets/blog/card.css` | 博客卡片样式 |
 | `client/src/assets/button/login.css` | 登录页按钮样式（`.form-submit`） |
 | `client/src/assets/button/manage.css` | 后台管理页按钮样式（`.manage-btn`） |
@@ -192,6 +192,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/assets/manage/font.css` | 后台管理页文本样式 |
 | `client/src/assets/manage/table.css` | 后台管理页表格样式 |
 | `client/src/assets/normal/color.css` | 颜色变量集中定义（基础色板 + `--pink-hot-rgb` + 半透明粉色 `--pink-<alpha>`） |
+| `client/src/assets/normal/tag.css` | 标签统一样式（`.tag-pink` / `.tag-normal` / `.tag-list`），博客卡片、博客详情、筛选器条目共用 |
 | `client/src/assets/normal/link.css` | 全局超链接统一样式（粉色 + 实线下划线，悬停侵蚀紫，与 Markdown 渲染一致；单一来源，`markdown/text.css` 不再重复定义） |
 
 ### **server/** 后端开发目录
