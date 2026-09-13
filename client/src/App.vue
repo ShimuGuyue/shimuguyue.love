@@ -62,6 +62,11 @@ watch(
   --color-border: #e8e8e8;
   --color-hover: #f0f0f0;
   --transition-speed: 0.5s;
+
+  /* 导航栏高度：NavBar 自身高度与各页面按视口计算高度时共用（单一来源） */
+  --navbar-height: 80px;
+  /* 页面可用高度：视口减去导航栏，供页面铺满导航栏以下的剩余空间 */
+  --page-height: calc(100vh - var(--navbar-height));
 }
 
 html.dark {

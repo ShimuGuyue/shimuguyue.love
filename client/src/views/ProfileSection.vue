@@ -223,7 +223,8 @@ async function saveUsername() {
 .profile-section {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 144px);
+  /* 视口 − 导航栏 − .admin-content 上下内边距（32px × 2） */
+  min-height: calc(var(--page-height) - 64px);
   --checkbox-checked-color: #3366ff;
 }
 

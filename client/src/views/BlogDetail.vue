@@ -7,7 +7,7 @@ import type { HeadList } from 'md-editor-v3'
 import { headingSlug } from '@/lib/md-editor-setup'
 
 import '@/assets/blog-layout.css'
-import '@/assets/blog/selector.css'
+import '@/assets/normal/tag.css'
 import '@/assets/normal/color.css'
 import '@/assets/button/function.css'
 
@@ -279,10 +279,10 @@ async function downloadBlog() {
         <aside class="blog-detail__side">
           <h1 class="blog-detail__title">{{ blog.title }}</h1>
           <p v-if="blog.description" class="blog-detail__desc">{{ blog.description }}</p>
-          <div v-if="blog.categories.length" class="blog-tags blog-detail__category">
+          <div v-if="blog.categories.length" class="tag-list blog-detail__category">
             <span v-for="category in blog.categories" :key="category" class="tag-pink">{{ category }}</span>
           </div>
-          <div class="blog-tags">
+          <div class="tag-list">
             <span v-for="tag in blog.tags" :key="tag" class="tag-normal">{{ tag }}</span>
           </div>
           <time class="blog-detail__time">{{ blog.update_time }}</time>
@@ -378,7 +378,7 @@ async function downloadBlog() {
 /* ── 左侧 ── */
 .blog-detail__left {
   position: sticky;
-  top: 112px;
+  top: calc(var(--navbar-height) + 32px);
   align-self: start;
 }
 
@@ -438,15 +438,16 @@ async function downloadBlog() {
   overflow-wrap: break-word;
   word-wrap: break-word;
   min-width: 0;
-  min-height: calc(100vh - 177px);
+  /* 视口 − 导航栏 − 页面自身留白（原 177px 保持不变） */
+  min-height: calc(var(--page-height) - 97px);
 }
 
 /* ── 右侧目录 ── */
 .blog-detail__toc {
   position: sticky;
-  top: 120px;
+  top: calc(var(--navbar-height) + 40px);
   align-self: start;
-  max-height: calc(100vh - 120px);
+  max-height: calc(var(--page-height) - 40px);
   overflow-y: auto;
   margin-top: 8px;
   min-height: 300px;

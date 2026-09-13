@@ -58,7 +58,7 @@ function handleLogout() {
 /* 纯色背景铺满视口，覆盖全局渐变背景 */
 .admin {
   display: flex;
-  min-height: calc(100vh - 80px);
+  min-height: var(--page-height);
   background-color: var(--color-bg);
 }
 

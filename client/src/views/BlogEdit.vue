@@ -326,7 +326,7 @@ async function saveBlog() {
         <MdEditor
           v-model="content"
           v-bind="mdProps"
-          :style="{ height: 'calc(100vh - 226px)' }"
+          :style="{ height: 'calc(var(--page-height) - 146px)' }"
           placeholder="在此编辑博客 Markdown 文本..."
           :preview="true"
           no-upload-img
@@ -358,7 +358,7 @@ async function saveBlog() {
 /* ── 左侧 ── */
 .blog-edit__left {
   position: sticky;
-  top: 118px;
+  top: calc(var(--navbar-height) + 38px);
   align-self: start;
 }
 

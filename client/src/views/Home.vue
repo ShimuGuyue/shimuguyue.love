@@ -600,7 +600,7 @@ function imgStyle(img: ImageItem) {
 <style scoped>
 .home {
   padding: 24px;
-  height: calc(100vh - 80px);
+  height: var(--page-height);
   overflow: hidden;
 }
 

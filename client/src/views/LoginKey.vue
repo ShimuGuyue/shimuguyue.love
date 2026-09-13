@@ -90,7 +90,7 @@ async function handleSubmit() {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: calc(100vh - 80px);
+  min-height: var(--page-height);
   padding: 40px 20px;
 }
 

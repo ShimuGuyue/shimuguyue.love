@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick, type Ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute, onBeforeRouteUpdate } from 'vue-router'
 
-import '@/assets/blog/selector.css'
+import FilterBar, { type FilterGroup } from '@/components/FilterBar.vue'
+
+import '@/assets/normal/tag.css'
 import '@/assets/blog/card.css'
 import '@/assets/button/function.css'
 
@@ -103,8 +105,6 @@ const tagMulti = ref(false)
 
 const searchQuery = ref('')
 
-let searchTimer: ReturnType<typeof setTimeout> | null = null
-
 // ── 计算：当前可见的标签（标签与分类相互独立，直接展示全部标签） ──
 
 const visibleTags = computed<Tag[]>(() => tags.value)
@@ -114,114 +114,63 @@ function tagIdsByName(name: string): number[] {
   return tags.value.filter(t => t.name === name).map(t => t.id)
 }
 
-// ── 筛选器折叠：分类 / 标签最多显示三行，超出则在三行末尾显示「更多...」 ──
+// ── 公共筛选器（FilterBar）：分类 / 标签两行维度 ──
 
-/** 折叠状态下筛选器最多显示的行数 */
-const MAX_FILTER_LINES = 3
+/** 筛选器维度的唯一键，与 FilterBar 回调中的 groupKey 一一对应 */
+const FILTER_GROUP_CATEGORIES = 'categories'
+const FILTER_GROUP_TAGS = 'tags'
 
-/** 分类 / 标签筛选是否已展开（仅本次页面停留内有效，刷新或重新进入页面后复位） */
-const categoriesExpanded = ref(false)
-const tagsExpanded = ref(false)
+/** 拼装公共筛选器所需的维度数据（选中态与单选 / 多选均由本页维护） */
+const filterGroups = computed<FilterGroup[]>(() => [
+  {
+    key: FILTER_GROUP_CATEGORIES,
+    label: '分类',
+    multi: categoryMulti.value,
+    options: categories.value.map(cat => ({
+      key: String(cat.id),
+      label: cat.name,
+      selected: selectedCategoryIds.value.includes(cat.id),
+    })),
+  },
+  {
+    key: FILTER_GROUP_TAGS,
+    label: '标签',
+    multi: tagMulti.value,
+    options: visibleTags.value.map(tag => ({
+      key: tag.name,
+      label: tag.name,
+      selected: tagIdsByName(tag.name).some(id => selectedTagIds.value.includes(id)),
+    })),
+  },
+])
 
-/** 折叠状态下显示的条目数（按容器宽度实测得出） */
-const categoriesVisibleCount = ref(Number.POSITIVE_INFINITY)
-const tagsVisibleCount = ref(Number.POSITIVE_INFINITY)
-
-/** 条目是否超过三行（超过才需要「更多...」） */
-const categoriesOverflow = ref(false)
-const tagsOverflow = ref(false)
-
-const categoryChipsEl = ref<HTMLElement | null>(null)
-const tagChipsEl = ref<HTMLElement | null>(null)
-
-/**
- * 按 flex 换行规则估算条目排布所需行数。
- * @param widths   按顺序排列的条目宽度（px）。
- * @param gap      条目之间的水平间距（px）。
- * @param maxWidth 容器可用宽度（px）。
- * @returns 排布所需行数。
- */
-function countLines(widths: number[], gap: number, maxWidth: number): number {
-  let lines = 0
-  let lineWidth = 0
-  for (const width of widths) {
-    if (lineWidth === 0) {
-      lineWidth = width
-    } else if (lineWidth + gap + width <= maxWidth) {
-      lineWidth += gap + width
-    } else {
-      lines += 1
-      lineWidth = width
-    }
-  }
-  return lineWidth > 0 ? lines + 1 : lines
-}
-
-/** 每个容器最近一次测量依据（容器宽度 + 条目数），避免重复测量与观察器抖动 */
-const measuredKey = new WeakMap<HTMLElement, string>()
-
-/**
- * 测量筛选器容器，得出折叠状态下可显示的条目数。
- *
- * 被折叠的条目依旧留在 DOM 中（绝对定位 + visibility: hidden），
- * 因此无论是否展开、容器宽度如何变化，都能取到真实宽度重新计算。
- *
- * @param containerRef 筛选器条目容器。
- * @param visibleCount 折叠时显示的条目数（输出）。
- * @param overflow     是否超过三行（输出）。
- */
-async function measureChips(
-  containerRef: Ref<HTMLElement | null>,
-  visibleCount: Ref<number>,
-  overflow: Ref<boolean>
-) {
-  await nextTick()
-  const container = containerRef.value
-  const more = container?.querySelector<HTMLElement>('.filter-more')
-  if (!container || !more) return
-
-  const style = getComputedStyle(container)
-  const gap = Number.parseFloat(style.columnGap) || 0
-  const maxWidth = container.clientWidth
-    - (Number.parseFloat(style.paddingLeft) || 0)
-    - (Number.parseFloat(style.paddingRight) || 0)
-  if (maxWidth <= 0) return
-
-  const widths = Array.from(container.querySelectorAll<HTMLElement>('.filter-chip'))
-    .map(chip => chip.offsetWidth)
-
-  const key = `${maxWidth}:${widths.length}`
-  if (measuredKey.get(container) === key) return
-  measuredKey.set(container, key)
-
-  // 三行内放得下全部条目：无需「......」
-  if (countLines(widths, gap, maxWidth) <= MAX_FILTER_LINES) {
-    visibleCount.value = widths.length
-    overflow.value = false
+/** 筛选器点击某个筛选项：按维度分发到分类 / 标签的切换逻辑 */
+function onFilterToggle(groupKey: string, optionKey: string) {
+  if (groupKey === FILTER_GROUP_CATEGORIES) {
+    toggleCategory(Number(optionKey))
     return
   }
-
-  // 需要「......」：从后往前取能连按钮一起放进三行的最大条目数
-  let count = 0
-  for (let i = widths.length; i >= 0; i--) {
-    if (countLines([...widths.slice(0, i), more.offsetWidth], gap, maxWidth)
-        <= MAX_FILTER_LINES) {
-      count = i
-      break
-    }
+  if (groupKey === FILTER_GROUP_TAGS) {
+    toggleTag(optionKey)
   }
-  visibleCount.value = count
-  overflow.value = true
 }
 
-/** 重新测量分类与标签筛选器（条目或容器宽度变化后调用）。 */
-function measureFilters() {
-  measureChips(categoryChipsEl, categoriesVisibleCount, categoriesOverflow)
-  measureChips(tagChipsEl, tagsVisibleCount, tagsOverflow)
+/** 筛选器切换单选 / 多选 */
+function onFilterMulti(groupKey: string, multi: boolean) {
+  if (groupKey === FILTER_GROUP_CATEGORIES) {
+    categoryMulti.value = multi
+  } else if (groupKey === FILTER_GROUP_TAGS) {
+    tagMulti.value = multi
+  }
 }
 
-/** 容器宽度变化（窗口缩放、字体加载完成等）时重新测量 */
-let chipsObserver: ResizeObserver | null = null
+/** 搜索框内容变化（已防抖）：回到第 1 页重新查询并同步 URL */
+function onSearch(value: string) {
+  searchQuery.value = value
+  page.value = 1
+  fetchBlogs()
+  syncUrl()
+}
 
 // ── 远程获取 ──
 
@@ -376,20 +325,7 @@ function toggleTag(name: string) {
   syncUrl()
 }
 
-function onSearchInput() {
-  if (searchTimer) clearTimeout(searchTimer)
-  searchTimer = setTimeout(() => {
-    page.value = 1
-    fetchBlogs()
-    syncUrl()
-  }, 300)
-}
-
 // ── 生命周期 ──
-
-// 分类 / 标签条目变化后重新测量折叠行数
-watch(categories, measureFilters, { flush: 'post' })
-watch(visibleTags, measureFilters, { flush: 'post' })
 
 onMounted(async () => {
   // 从 URL 读取 name 参数（等数据加载后转 ID）
@@ -409,17 +345,6 @@ onMounted(async () => {
   selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
 
   await loadCurrentPage()
-
-  // 测量筛选器：超过三行的分类 / 标签折叠，并在三行末尾显示「更多...」
-  await measureFilters()
-  chipsObserver = new ResizeObserver(() => measureFilters())
-  if (categoryChipsEl.value) chipsObserver.observe(categoryChipsEl.value)
-  if (tagChipsEl.value) chipsObserver.observe(tagChipsEl.value)
-})
-
-onBeforeUnmount(() => {
-  chipsObserver?.disconnect()
-  chipsObserver = null
 })
 </script>
 
@@ -428,75 +353,15 @@ onBeforeUnmount(() => {
     <div class="blogs-top">
       <button class="func-btn" @click="router.push('/blog-edit/new')">新建博客</button>
     </div>
-    <!-- ── 筛选器 ── -->
-    <section class="filter-bar">
-      <!-- 分类筛选 -->
-      <div class="filter-row">
-        <span class="filter-label">分类</span>
-        <button class="filter-mode-btn tag-pink" @click="categoryMulti = !categoryMulti">{{ categoryMulti ? '多选' : '单选' }}</button>
-        <div ref="categoryChipsEl" class="filter-chips">
-          <button
-            v-for="(cat, index) in categories"
-            :key="cat.id"
-            class="tag-normal filter-chip"
-            :class="{
-              'tag--active': selectedCategoryIds.includes(cat.id),
-              'filter-chip--hidden': !categoriesExpanded && index >= categoriesVisibleCount,
-            }"
-            @click="toggleCategory(cat.id)"
-          >
-            {{ cat.name }}
-          </button>
-          <button
-            class="filter-more tag-pink"
-            :class="{ 'filter-chip--hidden': categoriesExpanded || !categoriesOverflow }"
-            :aria-expanded="categoriesExpanded"
-            @click="categoriesExpanded = true"
-          >
-            更多...
-          </button>
-        </div>
-      </div>
-
-      <!-- 标签筛选 -->
-      <div class="filter-row">
-        <span class="filter-label">标签</span>
-        <button class="filter-mode-btn tag-pink" @click="tagMulti = !tagMulti">{{ tagMulti ? '多选' : '单选' }}</button>
-        <div ref="tagChipsEl" class="filter-chips">
-          <button
-            v-for="(tag, index) in visibleTags"
-            :key="tag.name"
-            class="tag-normal filter-chip"
-            :class="{
-              'tag--active': tagIdsByName(tag.name).some(id => selectedTagIds.includes(id)),
-              'filter-chip--hidden': !tagsExpanded && index >= tagsVisibleCount,
-            }"
-            @click="toggleTag(tag.name)"
-          >
-            {{ tag.name }}
-          </button>
-          <button
-            class="filter-more tag-pink"
-            :class="{ 'filter-chip--hidden': tagsExpanded || !tagsOverflow }"
-            :aria-expanded="tagsExpanded"
-            @click="tagsExpanded = true"
-          >
-            ......
-          </button>
-        </div>
-      </div>
-
-      <!-- 搜索 -->
-      <div class="filter-search">
-        <input
-          v-model="searchQuery"
-          type="text"
-          class="search-input"
-          placeholder="搜索标题、描述、分类和标签中的内容..."
-          @input="onSearchInput"
-        />
-      </div>
-    </section>
+    <!-- ── 筛选器（公共组件） ── -->
+    <FilterBar
+      :groups="filterGroups"
+      :search="searchQuery"
+      search-placeholder="搜索标题、描述、分类和标签中的内容..."
+      @toggle="onFilterToggle"
+      @update:multi="onFilterMulti"
+      @update:search="onSearch"
+    />
 
     <!-- ── 博客卡片网格 ── -->
     <p v-if="loading" class="blog-status">加载中...</p>
@@ -510,7 +375,7 @@ onBeforeUnmount(() => {
       >
         <h3 class="blog-card__title">{{ blog.title }}</h3>
         <p class="blog-card__desc">{{ blog.description }}</p>
-        <div class="blog-card__meta blog-tags">
+        <div class="blog-card__meta tag-list">
           <span
             v-for="category in blog.categories"
             :key="category"
