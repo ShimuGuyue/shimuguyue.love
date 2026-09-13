@@ -73,15 +73,17 @@ fi
 # 写入最小测试数据，保证公开列表接口都有非空结果、缓存键验证仍然有效。
 echo "[smoke] 写入列表接口种子数据..."
 psql "${DB_ARGS[@]}" -v ON_ERROR_STOP=1 <<'SQL' > /dev/null
-INSERT INTO categories (name) VALUES ('测试分类')
+INSERT INTO blog_categories (name) VALUES ('测试分类')
 ON CONFLICT (name) DO NOTHING;
-INSERT INTO tags (name, category_id)
-SELECT '测试标签', id FROM categories WHERE name = '测试分类'
-ON CONFLICT (name, category_id) DO NOTHING;
-INSERT INTO blogs (title, description, content, file_path, category_id)
-SELECT '测试博客', '', 'smoke content', 'smoke-test-blog', id
-FROM categories WHERE name = '测试分类'
+INSERT INTO blog_tags (name) VALUES ('测试标签')
+ON CONFLICT (name) DO NOTHING;
+INSERT INTO blogs (title, description, content, file_path)
+VALUES ('测试博客', '', 'smoke content', 'smoke-test-blog')
 ON CONFLICT (file_path) DO NOTHING;
+INSERT INTO blog_categories_relations (blog_id, category_id)
+SELECT b.id, c.id FROM blogs b, blog_categories c
+WHERE b.file_path = 'smoke-test-blog' AND c.name = '测试分类'
+ON CONFLICT DO NOTHING;
 INSERT INTO images (path, description) VALUES ('smoke.jpg', 'smoke')
 ON CONFLICT (path) DO NOTHING;
 SQL
