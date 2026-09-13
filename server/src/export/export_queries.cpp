@@ -68,7 +68,7 @@ namespace export_queries
     {
         const auto rows = txn.exec(
             "SELECT id, title, description, TO_CHAR(update_time, 'YYYY-MM-DD') AS update_time, "
-            "content, file_path, category_id FROM blogs ORDER BY id"
+            "content, file_path FROM blogs ORDER BY id"
         );
         nlohmann::json arr = nlohmann::json::array();
         for (const auto& row : rows)
@@ -80,9 +80,6 @@ namespace export_queries
                 { "update_time", row["update_time"].as<std::string>() },
                 { "content",     row["content"]    .as<std::string>() },
                 { "file_path",   row["file_path"]  .as<std::string>() },
-                { "category_id", row["category_id"].is_null()
-                               ? nlohmann::json(nullptr)
-                               : nlohmann::json(row["category_id"].as<int>()) },
             });
         }
         return arr;
@@ -90,7 +87,7 @@ namespace export_queries
 
     auto query_categories(pqxx::work& txn) -> nlohmann::json
     {
-        const auto rows = txn.exec("SELECT id, name FROM categories ORDER BY id");
+        const auto rows = txn.exec("SELECT id, name FROM blog_categories ORDER BY id");
         nlohmann::json arr = nlohmann::json::array();
         for (const auto& row : rows)
         {
@@ -104,14 +101,13 @@ namespace export_queries
 
     auto query_tags(pqxx::work& txn) -> nlohmann::json
     {
-        const auto rows = txn.exec("SELECT id, name, category_id FROM tags ORDER BY id");
+        const auto rows = txn.exec("SELECT id, name FROM blog_tags ORDER BY id");
         nlohmann::json arr = nlohmann::json::array();
         for (const auto& row : rows)
         {
             arr.push_back({
-                { "id",          row["id"]         .as<int>() },
-                { "name",        row["name"]       .as<std::string>() },
-                { "category_id", row["category_id"].as<int>() },
+                { "id",   row["id"]  .as<int>() },
+                { "name", row["name"].as<std::string>() },
             });
         }
         return arr;
@@ -120,7 +116,7 @@ namespace export_queries
     auto query_blog_tags(pqxx::work& txn) -> nlohmann::json
     {
         const auto rows = txn.exec(
-            "SELECT blog_id, tag_id FROM blog_tags ORDER BY blog_id, tag_id"
+            "SELECT blog_id, tag_id FROM blog_tag_relations ORDER BY blog_id, tag_id"
         );
         nlohmann::json arr = nlohmann::json::array();
         for (const auto& row : rows)
@@ -128,6 +124,23 @@ namespace export_queries
             arr.push_back({
                 { "blog_id", row["blog_id"].as<int>() },
                 { "tag_id",  row["tag_id"] .as<int>() },
+            });
+        }
+        return arr;
+    }
+
+    auto query_blog_categories_relations(pqxx::work& txn) -> nlohmann::json
+    {
+        const auto rows = txn.exec(
+            "SELECT blog_id, category_id FROM blog_categories_relations "
+            "ORDER BY blog_id, category_id"
+        );
+        nlohmann::json arr = nlohmann::json::array();
+        for (const auto& row : rows)
+        {
+            arr.push_back({
+                { "blog_id",     row["blog_id"]    .as<int>() },
+                { "category_id", row["category_id"].as<int>() },
             });
         }
         return arr;

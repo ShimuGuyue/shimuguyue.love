@@ -25,7 +25,7 @@ interface BlogDetail {
   description: string | null
   content: string | null
   update_time: string
-  category: string | null
+  categories: string[]
   tags: string[]
 }
 
@@ -279,7 +279,9 @@ async function downloadBlog() {
         <aside class="blog-detail__side">
           <h1 class="blog-detail__title">{{ blog.title }}</h1>
           <p v-if="blog.description" class="blog-detail__desc">{{ blog.description }}</p>
-          <p v-if="blog.category" class="blog-detail__category tag-pink">{{ blog.category }}</p>
+          <div v-if="blog.categories.length" class="blog-tags blog-detail__category">
+            <span v-for="category in blog.categories" :key="category" class="tag-pink">{{ category }}</span>
+          </div>
           <div class="blog-tags">
             <span v-for="tag in blog.tags" :key="tag" class="tag-normal">{{ tag }}</span>
           </div>

@@ -31,7 +31,6 @@ struct Tag
 {
     int         id;
     std::string name;
-    int         category_id;
 };
 
 /**
@@ -45,7 +44,7 @@ struct BlogItem
     std::optional<std::string> content;
     std::optional<std::string> file_path;
     std::string                update_time;
-    std::optional<std::string> category;
+    std::vector<std::string>   categories;
     std::vector<std::string>   tags;
 };
 
@@ -76,15 +75,11 @@ struct BlogQuery
     [[nodiscard]] auto get_categories(pqxx::connection& conn) -> std::vector<Category>;
 
     /**
-     * @brief 查询标签列表，可按分类筛选（多选取并集）。
-     * @param conn         数据库连接。
-     * @param category_ids 分类 ID 列表，空则返回全部。
+     * @brief 查询全部标签。
+     * @param conn 数据库连接。
      * @return 标签列表。
      */
-    [[nodiscard]] auto get_tags(
-        pqxx::connection&       conn,
-        const std::vector<int>& category_ids)
-    -> std::vector<Tag>;
+    [[nodiscard]] auto get_tags(pqxx::connection& conn) -> std::vector<Tag>;
 
     /**
      * @brief 查询博客列表，支持筛选和搜索。
@@ -127,7 +122,7 @@ struct BlogQuery
     /**
      * @brief 删除博客及相关元数据，同时删除 .md 文件。
      *
-     * 删除博客记录（CASCADE 自动删除 blog_tags 关联）。
+     * 删除博客记录（CASCADE 自动清理 blog_categories_relations / blog_tag_relations 关联）。
      * 删除已无关联的标签。
      * 删除已无博客的分类。
      * 删除服务器上的 .md 文件。
@@ -146,7 +141,7 @@ struct BlogQuery
      * @param conn                数据库连接。
      * @param title               标题。
      * @param description         描述。
-     * @param category_name       分类名（不存在则新建）。
+     * @param category_names      分类名列表（不存在则新建）。
      * @param tag_names           标签名列表（不存在则新建）。
      * @param file_path_category  文件路径分类目录部分。
      * @param file_path_name      文件路径文件名部分。
@@ -158,7 +153,7 @@ struct BlogQuery
         pqxx::connection&               conn,
         std::string_view                title,
         std::string_view                description,
-        std::string_view                category_name,
+        const std::vector<std::string>& category_names,
         const std::vector<std::string>& tag_names,
         std::string_view                file_path_category,
         std::string_view                file_path_name,
@@ -172,7 +167,7 @@ struct BlogQuery
      * @param conn                数据库连接。
      * @param title               标题。
      * @param description         描述。
-     * @param category_name       分类名（不存在则新建）。
+     * @param category_names      分类名列表（不存在则新建）。
      * @param tag_names           标签名列表（不存在则新建）。
      * @param old_file_path       查找博客的旧文件路径。
      * @param file_path_category  新文件路径分类目录部分。
@@ -185,7 +180,7 @@ struct BlogQuery
         pqxx::connection&               conn,
         std::string_view                title,
         std::string_view                description,
-        std::string_view                category_name,
+        const std::vector<std::string>& category_names,
         const std::vector<std::string>& tag_names,
         std::string_view                old_file_path,
         std::string_view                file_path_category,

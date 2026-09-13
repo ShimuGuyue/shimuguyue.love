@@ -26,7 +26,7 @@ namespace
         const std::vector<std::string> required_tables = {
             "users", "permissions", "user_permissions",
             "sessions",
-            "blogs", "categories", "tags", "blog_tags",
+            "blogs", "blog_categories", "blog_tags", "blog_tag_relations",
             "images"
         };
 

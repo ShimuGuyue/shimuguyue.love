@@ -19,7 +19,6 @@ interface Category {
 interface Tag {
   id: number
   name: string
-  category_id: number
 }
 
 interface BlogItem {
@@ -27,7 +26,7 @@ interface BlogItem {
   title: string
   description: string | null
   update_time: string
-  category: string | null
+  categories: string[]
   file_path: string | null
   tags: string[]
 }
@@ -106,38 +105,14 @@ const searchQuery = ref('')
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
-// ── 计算：当前可见的标签（按选中的分类过滤，同名标签合并为一个） ──
+// ── 计算：当前可见的标签（标签与分类相互独立，直接展示全部标签） ──
 
-const visibleTags = computed<Tag[]>(() => {
-  let list = tags.value
-  if (selectedCategoryIds.value.length > 0) {
-    // 多选时取所有选中分类的标签并集
-    const idSet = new Set(selectedCategoryIds.value)
-    list = tags.value.filter(t => idSet.has(t.category_id))
-  }
-  const seen = new Set<string>()
-  return list.filter(t => {
-    if (seen.has(t.name)) return false
-    seen.add(t.name)
-    return true
-  })
-})
+const visibleTags = computed<Tag[]>(() => tags.value)
 
-/** 获取指定名称标签在全部分类下的所有 ID（同名标签一并选中） */
+/** 按名称获取标签 ID（标签名全局唯一） */
 function tagIdsByName(name: string): number[] {
   return tags.value.filter(t => t.name === name).map(t => t.id)
 }
-
-// 分类切换后清除已不存在的标签选中
-let initializing = false
-watch(selectedCategoryIds, () => {
-  if (initializing) return
-  const visibleNames = new Set(visibleTags.value.map(t => t.name))
-  selectedTagIds.value = selectedTagIds.value.filter(id => {
-    const name = tags.value.find(t => t.id === id)?.name
-    return name !== undefined && visibleNames.has(name)
-  })
-})
 
 // ── 筛选器折叠：分类 / 标签最多显示三行，超出则在三行末尾显示「更多...」 ──
 
@@ -426,7 +401,6 @@ onMounted(async () => {
   // 先按 URL 设定页码，随后按需查询该页
   page.value          = readPage(route.query.page)
 
-  initializing = true
   await Promise.all([fetchCategories(), fetchTags()])
 
   // name → ID 转换
@@ -435,7 +409,6 @@ onMounted(async () => {
   selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
 
   await loadCurrentPage()
-  initializing = false
 
   // 测量筛选器：超过三行的分类 / 标签折叠，并在三行末尾显示「更多...」
   await measureFilters()
@@ -538,7 +511,11 @@ onBeforeUnmount(() => {
         <h3 class="blog-card__title">{{ blog.title }}</h3>
         <p class="blog-card__desc">{{ blog.description }}</p>
         <div class="blog-card__meta blog-tags">
-          <span v-if="blog.category" class="tag-pink">{{ blog.category }}</span>
+          <span
+            v-for="category in blog.categories"
+            :key="category"
+            class="tag-pink"
+          >{{ category }}</span>
           <span
             v-for="tag in blog.tags"
             :key="tag"

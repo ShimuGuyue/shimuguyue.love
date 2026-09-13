@@ -19,7 +19,7 @@ const isEditing = computed(() => !!route.params.file_path)
 
 const title             = ref('')
 const description       = ref('')
-const category          = ref('')
+const categories        = ref('')
 const tags              = ref('')
 const pathCategory      = ref('')
 const pathName          = ref('')
@@ -38,7 +38,7 @@ const permissions       = ref<string[]>([])
 /// 判断是否有任何字段非空（有内容就拦截离开）
 function hasContent(): boolean {
   if (savedSuccessfully.value) return false
-  if (title.value || description.value || category.value || tags.value ||
+  if (title.value || description.value || categories.value || tags.value ||
       pathCategory.value || pathName.value) return true
   if (content.value.trim()) return true
   return false
@@ -80,7 +80,7 @@ onMounted(async () => {
         const data = await resp.json()
         title.value = data.title || ''
         description.value = data.description || ''
-        category.value = data.category || ''
+        categories.value = Array.isArray(data.categories) ? data.categories.join(', ') : ''
         tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : ''
         pathCategory.value = data.file_path?.split('/').slice(0, -1).join('/') || ''
         pathName.value = data.file_path?.split('/').pop() || ''
@@ -134,7 +134,7 @@ async function importFile() {
       const data = await resp.json()
       title.value = data.title || ''
       description.value = data.description || ''
-      category.value = data.category || ''
+      categories.value = Array.isArray(data.categories) ? data.categories.join(', ') : (data.categories || '')
       tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || '')
       const importedUpdateTime = data.update_time || ''
       updateTime.value = isValidDateString(importedUpdateTime) ? importedUpdateTime : todayString()
@@ -195,10 +195,11 @@ async function saveBlog() {
   // 每次保存时重置标志，确保本轮保存触发新的跳转提示
   savedSuccessfully.value = false
 
+  const categoryList = categories.value.split(',').map(s => s.trim()).filter(Boolean)
   const tagList = tags.value.split(',').map(s => s.trim()).filter(Boolean)
   const contentText = content.value
 
-  if (!title.value || !description.value || !category.value ||
+  if (!title.value || !description.value || !categoryList.length ||
       !pathCategory.value || !pathName.value || !contentText) {
     alert('请填写所有字段后再保存')
     return
@@ -215,10 +216,13 @@ async function saveBlog() {
     alert('描述 含有特殊字符');
     return;
   }
-  if (META_RE.test(category.value)) {
-    alert('分类 含有特殊字符');
-    return;
-  }
+  if (!categoryList.every(category => {
+    if (META_RE.test(category)) {
+      alert(`分类 含有特殊字符`);
+      return false;
+    }
+    return true;
+  })) return;
   if (META_RE.test(pathCategory.value) || META_RE.test(pathName.value)) {
     alert('文件路径 含有特殊字符');
     return;
@@ -246,7 +250,7 @@ async function saveBlog() {
     body: JSON.stringify(isEdit ? {
       title: title.value,
       description: description.value,
-      category: category.value,
+      categories: categoryList,
       tags: tagList,
       update_time: dateToSend,
       file_path_category: pathCategory.value,
@@ -256,7 +260,7 @@ async function saveBlog() {
     } : {
       title: title.value,
       description: description.value,
-      category: category.value,
+      categories: categoryList,
       tags: tagList,
       update_time: dateToSend,
       file_path_category: pathCategory.value,
@@ -292,7 +296,7 @@ async function saveBlog() {
           </div>
           <div class="blog-edit__field">
             <label class="blog-edit__label">分类</label>
-            <input v-model="category" class="blog-edit__input" placeholder="分类名称" />
+            <input v-model="categories" class="blog-edit__input" placeholder="用英文逗号分隔" />
           </div>
           <div class="blog-edit__field">
             <label class="blog-edit__label">标签</label>
