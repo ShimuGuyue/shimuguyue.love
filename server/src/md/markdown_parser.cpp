@@ -36,7 +36,7 @@ namespace md
         nlohmann::json json;
         json["title"]              = "";
         json["description"]        = "";
-        json["category"]           = "";
+        json["categories"]         = nlohmann::json::array();
         json["tags"]               = nlohmann::json::array();
         json["update_time"]        = "";
         json["file_path_category"] = "";
@@ -78,8 +78,13 @@ namespace md
             json["title"]       = fm["title"]      .as<std::string>();
         if (fm["description"])
             json["description"] = fm["description"].as<std::string>();
-        if (fm["category"])
-            json["category"]    = fm["category"]   .as<std::string>();
+        if (fm["categories"] && fm["categories"].IsSequence())
+        {
+            for (const auto& c : fm["categories"])
+            {
+                json["categories"].push_back(c.as<std::string>());
+            }
+        }
         if (fm["tags"] && fm["tags"].IsSequence())
         {
             for (const auto& t : fm["tags"])

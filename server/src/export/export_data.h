@@ -12,7 +12,7 @@
 namespace export_data
 {
     /**
-     * @brief 导出博客相关数据表为 zip 压缩包（blogs / categories / tags / blog_tags），
+     * @brief 导出博客相关数据表为 zip 压缩包（blogs / blog_categories / blog_tags / blog_tag_relations / blog_categories_relations），
      *        并附加服务器博客目录（FILE_PATH/blogs）下的全部文件（不含 .git 目录）。
      * @param conn 数据库连接。
      * @return 成功返回 zip 二进制内容；失败返回错误消息。
