@@ -4,6 +4,7 @@
 
 ## AI Agent 行为准则
 
+- **人类语言使用**：任务完成后输出给用户的总结文本使用中文。
 - **要求冲突时停止执行**：多个要求不可调和时，AI 必须停止，明确指出冲突点并等待用户确认，不得自行选择或猜测。
 - **用户修改优先**：用户手动修改的内容为最终权威。若 AI 编写的代码遭到修改，判断是细节微调还是重大重构：若是细节微调，则视为用户个性化修改，保留之；若是逻辑重构，终止当前任务并向用户提出确认，等待下一步指示。
 - **环境安装权限**：当项目运行所需环境未下载时，AI 应停止任务，向用户指出缺失的环境及下载方式，待用户下载完成后再执行任务。
@@ -228,7 +229,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | 路径 | 说明 |
 |---|---|
 | `sql/create_users.sql` | 用户表（users、permissions、user_permissions）+ 会话表（sessions） |
-| `sql/create_blogs.sql` | 博客表（categories、tags、blogs、blog_tags） |
+| `sql/create_blogs.sql` | 博客表（blog_categories、blog_tags、blogs、blog_tag_relations、blog_categories_relations） |
 | `sql/create_images.sql` | 照片墙图片表（images） |
 
 ### **tools/** 自动化工具目录

@@ -8,7 +8,7 @@ import '@/assets/manage/table.css'
 interface BlogRow {
   id: number
   title: string
-  category: string | null
+  categories: string[]
   file_path: string | null
   tags: string[]
   update_time: string
@@ -21,7 +21,7 @@ interface BlogDraft {
   file_path_category: string
   file_path_name: string
   title: string
-  category: string
+  categories: string
   tags: string
 }
 
@@ -36,7 +36,6 @@ const auth = useAuthStore()
 const blogs = ref<BlogRow[]>([])
 const loading = ref(false)
 const error = ref('')
-const tagDialogBlog = ref<BlogRow | null>(null)
 
 const editing = ref(false)
 const saving = ref(false)
@@ -84,10 +83,10 @@ async function loadBlogs() {
       return
     }
     const data = await resp.json() as BlogRow[]
-    // 博客条目按“所属分类 → 标题”排序，分类/标题为空时排在最后
+    // 博客条目按“关联分类 → 标题”排序，分类/标题为空时排在最后
     blogs.value = data.sort((a, b) => {
-      const catA = a.category || '\uffff'
-      const catB = b.category || '\uffff'
+      const catA = a.categories.join('、') || '\uffff'
+      const catB = b.categories.join('、') || '\uffff'
       const catDiff = catA.localeCompare(catB, 'zh')
       if (catDiff !== 0) return catDiff
       const titleA = a.title || '\uffff'
@@ -148,16 +147,6 @@ async function downloadData() {
   }
 }
 
-/** 打开指定博客的完整标签弹窗。 */
-function openTagDialog(blog: BlogRow) {
-  tagDialogBlog.value = blog
-}
-
-/** 关闭完整标签弹窗。 */
-function closeTagDialog() {
-  tagDialogBlog.value = null
-}
-
 /** 进入编辑模式：为所有博客生成草稿。 */
 function startEdit() {
   drafts.value = blogs.value.map((blog) => {
@@ -168,7 +157,7 @@ function startEdit() {
       file_path_category: slash >= 0 ? blog.file_path!.slice(0, slash) : '',
       file_path_name: slash >= 0 ? blog.file_path!.slice(slash + 1) : (blog.file_path ?? ''),
       title: blog.title,
-      category: blog.category ?? '',
+      categories: blog.categories.join(', '),
       tags: blog.tags.join(', '),
     }
   })
@@ -181,9 +170,9 @@ function cancelEdit() {
   drafts.value = []
 }
 
-/** 逗号分隔的标签文本 → 标签数组。 */
-function tagsToArray(tags: string): string[] {
-  return tags.split(',').map(s => s.trim()).filter(Boolean)
+/** 逗号分隔的文本 → 非空条目数组（分类与标签共用）。 */
+function listToArray(text: string): string[] {
+  return text.split(',').map(s => s.trim()).filter(Boolean)
 }
 
 /** 保存编辑：仅提交有改动的行（与博客编辑页同款校验规则）。 */
@@ -199,15 +188,17 @@ async function saveChanges() {
       window.alert('标题 含有特殊字符')
       return
     }
-    if (META_RE.test(draft.category)) {
-      window.alert('分类 含有特殊字符')
-      return
+    for (const category of listToArray(draft.categories)) {
+      if (META_RE.test(category)) {
+        window.alert('分类 含有特殊字符')
+        return
+      }
     }
     if (META_RE.test(draft.file_path_category) || META_RE.test(draft.file_path_name)) {
       window.alert('博客路径 含有特殊字符')
       return
     }
-    for (const tag of tagsToArray(draft.tags)) {
+    for (const tag of listToArray(draft.tags)) {
       if (META_RE.test(tag)) {
         window.alert('标签 含有特殊字符')
         return
@@ -232,11 +223,12 @@ async function saveChanges() {
       const original = blogs.value.find((blog) => blog.id === draft.id)
       if (!original) continue
 
-      const tagList = tagsToArray(draft.tags)
+      const categoryList = listToArray(draft.categories)
+      const tagList = listToArray(draft.tags)
       const newFilePath = `${draft.file_path_category}/${draft.file_path_name}`
       const changed =
         draft.title !== original.title ||
-        draft.category !== (original.category ?? '') ||
+        categoryList.join(',') !== original.categories.join(',') ||
         tagList.join(',') !== original.tags.join(',') ||
         newFilePath !== (original.file_path ?? '')
       if (!changed) continue
@@ -258,7 +250,7 @@ async function saveChanges() {
         body: JSON.stringify({
           title: draft.title,
           description: existing.description ?? '',
-          category: draft.category,
+          categories: categoryList,
           tags: tagList,
           update_time: existing.update_time ?? '',
           file_path_category: draft.file_path_category,
@@ -347,8 +339,8 @@ async function saveChanges() {
           <thead>
             <tr>
               <th class="blogs-table__title">标题</th>
-              <th class="blogs-table__category">所属分类</th>
-              <th class="blogs-table__tags">标签列表</th>
+              <th class="blogs-table__category">关联分类</th>
+              <th class="blogs-table__tags">关联标签</th>
               <th class="blogs-table__file-path">博客路径</th>
               <th class="blogs-table__content">博客详情</th>
               <th class="blogs-table__update-time">更新时间</th>
@@ -370,12 +362,16 @@ async function saveChanges() {
               <td class="blogs-table__category">
                 <input
                   v-if="editing && row.draft"
-                  v-model="row.draft.category"
+                  v-model="row.draft.categories"
                   class="blogs-table__input"
-                  placeholder="分类名称"
+                  placeholder="用英文逗号分隔"
                 />
-                <span v-else-if="row.blog?.category">{{ row.blog.category }}</span>
-                <span v-else-if="row.blog" class="blogs-hint">无</span>
+                <template v-else-if="row.blog">
+                  <div class="blogs-table__scroll">
+                    <span v-if="row.blog.categories.length">{{ row.blog.categories.join('、') }}</span>
+                    <span v-else class="blogs-hint">无</span>
+                  </div>
+                </template>
               </td>
               <td class="blogs-table__tags">
                 <input
@@ -385,19 +381,10 @@ async function saveChanges() {
                   placeholder="用英文逗号分隔"
                 />
                 <template v-else-if="row.blog">
-                  <div v-if="row.blog.tags.length" class="users-table__perms-view">
-                    <span class="users-table__perms-text" :title="row.blog.tags.join('、')">
-                      {{ row.blog.tags.join('、') }}
-                    </span>
-                    <button
-                      type="button"
-                      class="manage-btn users-table__perms-btn"
-                      @click="openTagDialog(row.blog)"
-                    >
-                      完整标签
-                    </button>
+                  <div class="blogs-table__scroll">
+                    <span v-if="row.blog.tags.length">{{ row.blog.tags.join('、') }}</span>
+                    <span v-else class="blogs-hint">无</span>
                   </div>
-                  <span v-else class="blogs-hint">无</span>
                 </template>
               </td>
               <td class="blogs-table__file-path">
@@ -482,22 +469,6 @@ async function saveChanges() {
     </template>
 
     <p v-else class="blogs-hint">暂无博客</p>
-
-    <div
-      v-if="tagDialogBlog"
-      class="create-mask"
-      @click.self="closeTagDialog"
-    >
-      <div class="create-box perm-box" role="dialog" aria-modal="true">
-        <h2 class="create-box__title">
-          标签列表：{{ tagDialogBlog.title || tagDialogBlog.file_path || '博客' }}
-        </h2>
-        <p v-if="tagDialogBlog.tags.length" class="perm-item blogs-dialog__tags">
-          {{ tagDialogBlog.tags.join('、') }}
-        </p>
-        <p v-else class="blogs-hint">无</p>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -574,41 +545,20 @@ async function saveChanges() {
   color: var(--color-text-secondary);
 }
 
-/* ── 完整标签弹窗（与用户管理页弹窗同款） ── */
+/* ── 关联分类 / 标签：内容过长时可在单元格内横向滚动（隐藏滚动条） ── */
 
-.create-mask {
-  position: fixed;
-  inset: 0;
-  /* 高于导航栏（10000），弹窗遮罩仍需盖住整页 */
-  z-index: 10050;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: rgba(0, 0, 0, 0.35);
+.blogs-table__scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+  /* Firefox */
+  scrollbar-width: none;
+  /* 旧版 Edge / IE */
+  -ms-overflow-style: none;
 }
 
-.create-box {
-  width: 380px;
-  padding: 24px;
-  background-color: var(--color-nav-bg);
-  border: 1px solid var(--color-border);
-  box-shadow: 0 0.25rem 1rem rgba(0, 0, 0, 0.15);
-}
-
-/* 完整标签弹窗：比新建/编辑弹窗略宽 */
-.perm-box {
-  width: 480px;
-  max-width: calc(100vw - 48px);
-}
-
-.create-box__title {
-  margin: 0 0 20px;
-  font-size: 1.2rem;
-  color: var(--color-text);
-}
-
-.blogs-dialog__tags {
-  margin: 0;
-  line-height: 1.7;
+/* Chrome / Edge / Safari */
+.blogs-table__scroll::-webkit-scrollbar {
+  display: none;
 }
 </style>

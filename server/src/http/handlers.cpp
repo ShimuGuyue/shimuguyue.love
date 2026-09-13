@@ -1227,12 +1227,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        const auto key = cache::cache_key(
-            "/api/tags",
-            req.has_param("category_ids")
-                ? std::unordered_map<std::string, std::string>{ { "category_ids", normalize_id_list(req.get_param_value("category_ids")) } }
-                : std::unordered_map<std::string, std::string>{}
-        );
+        const auto key = cache::cache_key("/api/tags", {});
         if (const auto cached = cache::get(key); cached.has_value())
         {
             res.set_header("Access-Control-Allow-Origin", allowed);
@@ -1247,27 +1242,13 @@ namespace http
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
 
-                std::vector<int> category_ids;
-                if (req.has_param("category_ids"))
-                {
-                    const auto raw = req.get_param_value("category_ids");
-                    std::istringstream iss{ raw };
-                    std::string token;
-                    while (std::getline(iss, token, ','))
-                    {
-                        if (!token.empty())
-                            category_ids.push_back(std::stoi(token));
-                    }
-                }
-
-                auto tags = doc::get_tags(conn, category_ids);
+                auto tags = doc::get_tags(conn);
                 nlohmann::json arr = nlohmann::json::array();
                 for (const auto& t : tags)
                 {
                     nlohmann::json item;
-                    item["id"]          = t.id;
-                    item["name"]        = t.name; 
-                    item["category_id"] = t.category_id;
+                    item["id"]   = t.id;
+                    item["name"] = t.name;
                     arr.push_back(std::move(item));
                 }
                 res.set_content(arr.dump(), "application/json");
@@ -1373,9 +1354,7 @@ namespace http
                                         ? nlohmann::json(*b.description)
                                         : nlohmann::json(nullptr);
                     item["update_time"] = b.update_time;
-                    item["category"]    = b.category.has_value()
-                                        ? nlohmann::json(*b.category)
-                                        : nlohmann::json(nullptr);
+                    item["categories"]  = b.categories;
                     item["tags"]        = b.tags;
                     item["file_path"]   = b.file_path.has_value()
                                         ? nlohmann::json(*b.file_path)
@@ -1462,9 +1441,7 @@ namespace http
                                     ? nlohmann::json(*blog->content)
                                     : nlohmann::json(nullptr);
                 item["update_time"] = blog->update_time;
-                item["category"]    = blog->category.has_value()
-                                    ? nlohmann::json(*blog->category)
-                                    : nlohmann::json(nullptr);
+                item["categories"]  = blog->categories;
                 item["file_path"]   = blog->file_path.has_value()
                                     ? nlohmann::json(*blog->file_path)
                                     : nlohmann::json(nullptr);
@@ -1759,18 +1736,35 @@ namespace http
                     return;
                 }
 
-                const auto title       = body.value("title", "");
-                const auto description = body.value("description", "");
-                const auto category    = body.value("category", "");
-                const auto content     = body.value("content", "");
-                const auto pathCat     = body.value("file_path_category", "");
-                const auto pathName    = body.value("file_path_name", "");
-                const auto tagsJson    = body.value("tags", nlohmann::json::array());
+                const auto title          = body.value("title", "");
+                const auto description    = body.value("description", "");
+                const auto content        = body.value("content", "");
+                const auto pathCat        = body.value("file_path_category", "");
+                const auto pathName       = body.value("file_path_name", "");
+                const auto categoriesJson = body.value("categories", nlohmann::json::array());
+                const auto tagsJson       = body.value("tags", nlohmann::json::array());
 
-                if (title.empty() || description.empty() || category.empty()
+                if (title.empty() || description.empty()
                 ||  pathCat.empty() || pathName.empty() || content.empty())
                 {
                     spdlog::info("保存博客失败：缺少必填字段。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"所有字段均为必填"})", "application/json");
+                    return;
+                }
+
+                std::vector<std::string> categoryList;
+                if (categoriesJson.is_array())
+                {
+                    for (const auto &c : categoriesJson)
+                    {
+                        if (c.is_string())
+                            categoryList.push_back(c.template get<std::string>());
+                    }
+                }
+                if (categoryList.empty())
+                {
+                    spdlog::info("保存博客失败：缺少分类。");
                     res.status = 400;
                     res.set_content(R"({"error":"所有字段均为必填"})", "application/json");
                     return;
@@ -1796,7 +1790,7 @@ namespace http
                 }
 
                 const auto err = doc::save_blog(
-                    conn, title, description, category, tagList,
+                    conn, title, description, categoryList, tagList,
                     pathCat, pathName,
                     content, date
                 );
@@ -1881,19 +1875,36 @@ namespace http
                     return;
                 }
 
-                const auto title         = body.value("title", "");
-                const auto description   = body.value("description", "");
-                const auto category      = body.value("category", "");
-                const auto content       = body.value("content", "");
-                const auto pathCat       = body.value("file_path_category", "");
-                const auto pathName      = body.value("file_path_name", "");
-                const auto old_file_path = body.value("old_file_path", "");
-                const auto tagsJson      = body.value("tags", nlohmann::json::array());
+                const auto title          = body.value("title", "");
+                const auto description    = body.value("description", "");
+                const auto content        = body.value("content", "");
+                const auto pathCat        = body.value("file_path_category", "");
+                const auto pathName       = body.value("file_path_name", "");
+                const auto old_file_path  = body.value("old_file_path", "");
+                const auto categoriesJson = body.value("categories", nlohmann::json::array());
+                const auto tagsJson       = body.value("tags", nlohmann::json::array());
 
-                if (title.empty() || description.empty() || category.empty()
+                if (title.empty() || description.empty()
                 ||  pathCat.empty() || pathName.empty() || old_file_path.empty() || content.empty())
                 {
                     spdlog::info("更新博客失败：缺少必填字段。");
+                    res.status = 400;
+                    res.set_content(R"({"error":"所有字段均为必填"})", "application/json");
+                    return;
+                }
+
+                std::vector<std::string> categoryList;
+                if (categoriesJson.is_array())
+                {
+                    for (const auto &c : categoriesJson)
+                    {
+                        if (c.is_string())
+                            categoryList.push_back(c.template get<std::string>());
+                    }
+                }
+                if (categoryList.empty())
+                {
+                    spdlog::info("更新博客失败：缺少分类。");
                     res.status = 400;
                     res.set_content(R"({"error":"所有字段均为必填"})", "application/json");
                     return;
@@ -1919,7 +1930,7 @@ namespace http
                 }
 
                 const auto err = doc::update_blog(
-                    conn, title, description, category, tagList,
+                    conn, title, description, categoryList, tagList,
                     old_file_path, pathCat, pathName, content, date
                 );
 
