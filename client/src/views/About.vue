@@ -30,7 +30,8 @@ const aboutContent = __ABOUT_MARKDOWN__
 .about-page .blog-detail__content {
   max-width: 900px;
   margin: 0 auto;
-  min-height: calc(100vh - 177px);
+  /* 视口 − 导航栏 − 页面自身留白（原 177px 保持不变） */
+  min-height: calc(var(--page-height) - 97px);
   background-color: var(--blog-surface-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--blog-surface-radius);

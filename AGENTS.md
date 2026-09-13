@@ -153,11 +153,11 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/public/assets/favicon.png` | 站点图标 |
 | `client/public/assets/note-background.png` | 博客背景图 |
 | `client/src/main.ts` | 前端入口：挂载 App、注册 Pinia 与路由 |
-| `client/src/App.vue` | 根组件：全局 CSS 变量（`:root` / `html.dark`） |
+| `client/src/App.vue` | 根组件：全局 CSS 变量（`:root` / `html.dark`），含导航栏高度 `--navbar-height` 与页面可用高度 `--page-height`（= 视口 − 导航栏），二者为各页面高度计算的单一来源 |
 | `client/src/router/index.ts` | 18 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
 | `client/src/stores/auth.ts` | 认证状态（token、username），localStorage 持久化 |
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
-| `client/src/components/NavBar.vue` | 公共组件：导航栏（收藏夹为下拉菜单）、主题切换、用户入口 |
+| `client/src/components/NavBar.vue` | 公共组件：导航栏（收藏夹为下拉菜单）、主题切换、用户入口；高度取全局变量 `--navbar-height`，各页面按视口计算高度 / sticky 偏移时同样引用该变量或 `--page-height` |
 | `client/src/components/MarkdownPreview.vue` | 共享 Markdown 预览组件：封装 `MdPreview`，跟随暗色主题，标题 id 统一走 `md-editor-setup` 的 slug 规则 |
 | `client/src/components/FilterBar.vue` | 公共筛选器组件：按 `groups`（维度 + 条目 + 单选/多选）渲染筛选行，条目超过三行折叠并显示「更多...」，附搜索框（输入防抖后 `emit('update:search')`）；通过 `toggle` / `update:multi` / `update:search` 回调，选中态由使用方维护 |
 | `client/src/lib/md-editor-setup.ts` | md-editor-v3 全局配置：注入本地 highlight.js / katex 实例、`typographer: true` / `breaks: false`，并导出标题 slug 函数 |

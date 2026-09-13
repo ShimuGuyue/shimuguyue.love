@@ -108,7 +108,7 @@ function onDropdownClick(event: MouseEvent): void {
 .navbar {
   display: flex;
   align-items: center;
-  height: 80px;
+  height: var(--navbar-height);
   padding: 0 32px;
   background-color: var(--color-nav-bg);
   border-bottom: 1px solid var(--color-border);
