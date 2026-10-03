@@ -9,7 +9,13 @@
 #include <string>
 
 #include "config/config.h"
-#include "http/handlers.h"
+#include "http/handlers/auth.h"
+#include "http/handlers/blog.h"
+#include "http/handlers/blog_edit.h"
+#include "http/handlers/common.h"
+#include "http/handlers/image.h"
+#include "http/handlers/manage_export.h"
+#include "http/handlers/manage_user.h"
 
 namespace http
 {

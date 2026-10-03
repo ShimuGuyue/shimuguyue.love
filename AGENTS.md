@@ -203,9 +203,15 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/CMakeLists.txt` | CMake 构建配置（源文件列表、vcpkg 依赖） |
 | `server/CMakePresets.json` | CMake 预设（default / release，release 继承 default 并设置 `CMAKE_BUILD_TYPE=Release`） |
 | `server/third_party/libcpp-pg-pool/` | 从 GitHub 拉取的连接池库（MIT 协议，纯头文件，基于 libpqxx） |
-| `server/src/http/routes.cpp` | API 路由注册（~180 行），统一调用 handlers 中的处理函数 |
+| `server/src/http/routes.cpp` | API 路由注册，直接包含 `http/handlers/` 下各功能模块头并注册对应处理函数 |
 | `server/src/http/routes.h` | HTTP 服务配置声明（`FRONTEND_ORIGIN` / `SERVER_HOST` / `SERVER_PORT`、`setup_routes`） |
-| `server/src/http/handlers.cpp` / `.h` | 全部 API 路由处理函数（业务逻辑），由 routes.cpp 统一注册调用 |
+| `server/src/http/handlers/common.cpp` / `.h` | 公共路由处理（CORS 预检）与跨模块共用工具 `http::cache_set_list()`（空数组不缓存） |
+| `server/src/http/handlers/auth.cpp` / `.h` | 认证：密钥 / 密码登录（限流、会话签发），当前用户权限 / 信息查询与自助更新 |
+| `server/src/http/handlers/manage_user.cpp` / `.h` | 后台用户管理：用户列表、更新用户、新建用户（manage:view / manage:edit 权限） |
+| `server/src/http/handlers/manage_export.cpp` / `.h` | 后台数据导出：`GET /api/manage/download` 打包数据表 zip（manage:download 权限） |
+| `server/src/http/handlers/blog.cpp` / `.h` | 博客公开查询：分类 / 标签 / 列表 / 详情 / frontmatter 解析（含 Redis cache-aside 缓存） |
+| `server/src/http/handlers/blog_edit.cpp` / `.h` | 博客写操作：新建 / 编辑 / 删除 / 下载 `.md`（含相关缓存失效） |
+| `server/src/http/handlers/image.cpp` / `.h` | 照片墙图片：列表查询、元数据保存、上传、删除（含缓存失效） |
 | `server/src/cache/cache.cpp` / `.h` | Redis 公开接口缓存（基于 redis++ / redis-plus-plus）：初始化（PING 校验）、get / set / del、按前缀 SCAN+DEL 失效、统一键构造 `api-cache:`，get 记录缓存命中/未命中日志、set 记录写缓存日志 |
 | `server/src/db/connection.cpp` / `.h` | 数据库连接池初始化 + 表检查 |
 | `server/src/db/connection_pool.cpp` / `.h` | 连接池实现：基于 `lklibs::PgPool` 的薄封装，`db::with_db()` 并发获取独占连接，无空闲时阻塞等待 |

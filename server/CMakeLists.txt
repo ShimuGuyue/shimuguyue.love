@@ -31,7 +31,13 @@ add_executable(${PROJECT_NAME}
     src/doc/blog_queries.cpp
     src/img/image_queries.cpp
     src/http/routes.cpp
-    src/http/handlers.cpp
+    src/http/handlers/common.cpp
+    src/http/handlers/auth.cpp
+    src/http/handlers/manage_user.cpp
+    src/http/handlers/manage_export.cpp
+    src/http/handlers/blog.cpp
+    src/http/handlers/blog_edit.cpp
+    src/http/handlers/image.cpp
     src/auth/rate_limit.cpp
     src/md/markdown_parser.cpp
     src/config/cache.cpp
