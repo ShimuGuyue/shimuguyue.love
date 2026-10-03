@@ -54,12 +54,4 @@ struct LoginResult
         std::string_view  password)
     -> std::expected<LoginResult, std::string>;
 
-    /**
-     * @brief 查询用户的权限列表。
-     * @param conn    数据库连接。
-     * @param user_id 用户 ID。
-     * @return 权限名称列表。
-     */
-    [[nodiscard]] auto get_permissions(pqxx::connection& conn, int user_id) -> std::vector<std::string>;
-
 } // namespace auth
