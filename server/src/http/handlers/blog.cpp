@@ -104,9 +104,13 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::debug("收到博客分类列表获取请求。");
+
         const auto key = cache::cache_key("/api/categories", {});
         if (const auto cached = cache::get(key); cached.has_value())
         {
+            spdlog::debug("博客分类列表从缓存获取成功。");
+
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
             res.set_content(*cached, "application/json");
@@ -128,8 +132,11 @@ namespace http
                     item["name"] = c.name;
                     arr.push_back(std::move(item));
                 }
+                spdlog::debug("博客分类列表从数据库获取成功。");
+
                 res.set_content(arr.dump(), "application/json");
                 cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_CATEGORIES"]));
+                spdlog::debug("博客分类列表已加入缓存。");
             }
         );
     }
@@ -139,9 +146,13 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::debug("收到博客标签列表获取请求。");
+
         const auto key = cache::cache_key("/api/tags", {});
         if (const auto cached = cache::get(key); cached.has_value())
         {
+            spdlog::debug("博客标签列表从缓存获取成功。");
+
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
             res.set_content(*cached, "application/json");
@@ -163,8 +174,11 @@ namespace http
                     item["name"] = t.name;
                     arr.push_back(std::move(item));
                 }
+                spdlog::debug("博客标签列表从数据库获取成功。");
+
                 res.set_content(arr.dump(), "application/json");
                 cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_TAGS"]));
+                spdlog::debug("博客标签列表已加入缓存。");
             }
         );
     }
@@ -174,28 +188,26 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::debug("收到博客列表获取请求。");
+
         // 分页参数：page 从 1 开始
         const int page = std::max(1, uint_param(req, "page", 1));
-
-        // 分页由 page / page_size 触发；page_size 缺省时取 conf/page_size.yml 的配置值，
-        // 显式传 0 表示不分页（返回全部，供后台管理页等一次取全量）
+        // 分页由 page / page_size 触发：显式传 0 表示不分页，一次取全量
+        // page_size 缺省时取 conf/page_size.yml 的配置值
         int page_size{ 0 };
         if (req.has_param("page_size"))
-        {
             page_size = uint_param(req, "page_size", 0);
-        }
         else if (req.has_param("page"))
-        {
             page_size = std::stoi(config::config()["BLOGS_PAGESIZE"]);
-        }
 
         std::unordered_map<std::string, std::string> params;
         if (req.has_param("category_ids"))
             params["category_ids"] = normalize_id_list(req.get_param_value("category_ids"));
         if (req.has_param("tag_ids"))
-            params["tag_ids"] = normalize_id_list(req.get_param_value("tag_ids"));
+            params["tag_ids"]      = normalize_id_list(req.get_param_value("tag_ids"));
         if (req.has_param("q"))
-            params["q"] = req.get_param_value("q");
+            params["q"]            = req.get_param_value("q");
+
         // 每页内容独立缓存，缓存键需带上分页参数
         if (page_size > 0)
         {
@@ -206,6 +218,8 @@ namespace http
 
         if (const auto cached = cache::get(key); cached.has_value())
         {
+            spdlog::debug("博客列表从缓存获取成功。");
+
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
             res.set_content(*cached, "application/json");
@@ -251,9 +265,7 @@ namespace http
                 query.page_size = page_size;
 
                 // 分页时先统计总数，供前端计算页数
-                int total{ 0 };
-                if (page_size > 0)
-                    total = doc::count_blogs(conn, query);
+                int total{ page_size > 0 ? doc::count_blogs(conn, query) : 0 };
 
                 auto blogs = doc::get_blogs(conn, query);
                 nlohmann::json arr = nlohmann::json::array();
@@ -288,10 +300,12 @@ namespace http
                 {
                     res.set_content(arr.dump(), "application/json");
                 }
+                spdlog::debug("博客列表从数据库获取成功。");
 
-                // 空结果不缓存，避免空列表长期滞留导致页面空白
+                // 缓存非空列表
                 if (!blogs.empty())
                     cache::set(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOGS"]));
+                spdlog::debug("博客列表已加入缓存。");
             }
         );
     }
@@ -301,21 +315,29 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        const auto key = cache::cache_key(
-            "/api/blog",
-            req.has_param("file_path")
-                ? std::unordered_map<std::string, std::string>{ { "file_path", req.get_param_value("file_path") } }
-                : std::unordered_map<std::string, std::string>{}
-        );
-        if (req.has_param("file_path"))
+        spdlog::debug("收到博客详情获取请求。");
+
+        if (!req.has_param("file_path"))
         {
-            if (const auto cached = cache::get(key); cached.has_value())
-            {
-                res.set_header("Access-Control-Allow-Origin", allowed);
-                res.set_header("Content-Type", "application/json");
-                res.set_content(*cached, "application/json");
-                return;
-            }
+            spdlog::debug("获取博客详情失败：缺少 file_path 参数。");
+            res.status = 400;
+
+            nlohmann::json err;
+            err["error"] = "缺少 file_path 参数";
+            res.set_content(err.dump(), "application/json");
+            return;
+        }
+
+        const auto file_path = req.get_param_value("file_path");
+        const auto key = cache::cache_key("/api/blog", { { "file_path", file_path } });
+        if (const auto cached = cache::get(key); cached.has_value())
+        {
+            spdlog::debug("博客详情从缓存获取成功：{}。", file_path);
+
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(*cached, "application/json");
+            return;
         }
 
         db::with_db(
@@ -324,42 +346,33 @@ namespace http
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
 
-                if (!req.has_param("file_path"))
-                {
-                    spdlog::error("获取博客失败：缺少 file_path 参数。");
-                    res.status = 400;
-                    res.set_content(R"({"error":"缺少 file_path 参数"})", "application/json");
-                    return;
-                }
-
-                const auto fp = req.get_param_value("file_path");
-                spdlog::debug("正在获取博客：{}", fp);
-                auto blog = doc::get_blog_by_file_path(conn, fp);
+                auto blog = doc::get_blog_by_file_path(conn, file_path);
                 if (!blog)
                 {
-                    spdlog::error("获取博客失败：{} 不存在。", fp);
+                    spdlog::debug("获取博客失败：{} 不存在。", file_path);
                     res.status = 404;
-                    res.set_content(R"({"error":"博客不存在"})", "application/json");
+
+                    nlohmann::json err;
+                    err["error"] = "博客不存在";
+                    res.set_content(err.dump(), "application/json");
                     return;
                 }
 
                 nlohmann::json item;
                 item["id"]          = blog->id;
                 item["title"]       = blog->title;
-                item["description"] = blog->description.has_value()
-                                    ? nlohmann::json(*blog->description)
-                                    : nlohmann::json(nullptr);
-                item["content"]     = blog->content.has_value()
-                                    ? nlohmann::json(*blog->content)
-                                    : nlohmann::json(nullptr);
+                item["description"] = blog->description;
+                item["content"]     = blog->content;
                 item["update_time"] = blog->update_time;
                 item["categories"]  = blog->categories;
-                item["file_path"]   = blog->file_path.has_value()
-                                    ? nlohmann::json(*blog->file_path)
-                                    : nlohmann::json(nullptr);
+                item["file_path"]   = blog->file_path;
                 item["tags"]        = blog->tags;
                 res.set_content(item.dump(), "application/json");
+                spdlog::debug("博客详情获取成功：{}。", file_path);
+
+                // 设置缓存
                 cache::set(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOG"]));
+                spdlog::debug("博客详情已写入缓存：{}。", file_path);
             }
         );
     }
@@ -369,9 +382,13 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::debug("收到 md 文件解析请求。");
+
         res.set_header("Access-Control-Allow-Origin", allowed);
         res.set_header("Content-Type", "application/json");
         auto result = md::parse_frontmatter(req.body);
+        spdlog::debug("md 文件解析请求完成。");
+
         res.set_content(result.dump(), "application/json");
     }
 
