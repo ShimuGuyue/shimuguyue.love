@@ -304,7 +304,7 @@ namespace http
 
                 // 缓存非空列表
                 if (!blogs.empty())
-                    cache::set(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOGS"]));
+                    cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOGS"]));
                 spdlog::debug("博客列表已加入缓存。");
             }
         );
