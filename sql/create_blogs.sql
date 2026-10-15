@@ -28,13 +28,15 @@ COMMENT ON COLUMN blogs.file_path    IS '关联文件相对路径（$BLOG_PATH/f
 -- ============================================================
 
 CREATE TABLE blog_categories (
-    id   SERIAL PRIMARY KEY,
-    name TEXT   NOT NULL UNIQUE
+    id    SERIAL PRIMARY KEY,
+    name  TEXT   NOT NULL UNIQUE,
+    count INT    NOT NULL DEFAULT 0
 );
 
 COMMENT ON TABLE  blog_categories IS '博客分类表';
-COMMENT ON COLUMN blog_categories.id   IS '主键，自增';
-COMMENT ON COLUMN blog_categories.name IS '分类名';
+COMMENT ON COLUMN blog_categories.id    IS '主键，自增';
+COMMENT ON COLUMN blog_categories.name  IS '分类名';
+COMMENT ON COLUMN blog_categories.count IS '属于该分类的博客数';
 
 -- ============================================================
 -- 博客-分类关联表（多对多）
@@ -63,13 +65,15 @@ CREATE INDEX idx_blog_categories_relations_category
 -- ============================================================
 
 CREATE TABLE blog_tags (
-    id   SERIAL PRIMARY KEY,
-    name TEXT   NOT NULL UNIQUE
+    id    SERIAL PRIMARY KEY,
+    name  TEXT   NOT NULL UNIQUE,
+    count INT    NOT NULL DEFAULT 0
 );
 
 COMMENT ON TABLE  blog_tags IS '博客标签表';
-COMMENT ON COLUMN blog_tags.id   IS '主键，自增';
-COMMENT ON COLUMN blog_tags.name IS '标签名';
+COMMENT ON COLUMN blog_tags.id    IS '主键，自增';
+COMMENT ON COLUMN blog_tags.name  IS '标签名';
+COMMENT ON COLUMN blog_tags.count IS '使用该标签的博客数';
 
 -- ============================================================
 -- 博客-标签关联表（多对多）
@@ -88,3 +92,30 @@ COMMENT ON COLUMN blog_tag_relations.tag_id  IS '关联 blog_tags.id';
 -- 按标签反查所属博客
 CREATE INDEX idx_blog_tag_relations_tag
     ON blog_tag_relations (tag_id);
+
+
+
+
+
+-- ============================================================
+-- 分类-标签关联表（多对多，带计数）
+-- ============================================================
+-- 记录“某个分类下有博客使用过某个标签”，count 为同时属于该分类与该标签的博客数。
+--   新建：涉及的组合 count + 1
+--   修改：新增的组合 count + 1，移除的组合 count - 1
+--   删除：该博客涉及的组合 count - 1
+CREATE TABLE category_tag_relations (
+    category_id INT NOT NULL REFERENCES blog_categories(id) ON DELETE CASCADE,
+    tag_id      INT NOT NULL REFERENCES blog_tags(id)       ON DELETE CASCADE,
+    count       INT NOT NULL DEFAULT 0,
+    PRIMARY KEY (category_id, tag_id)
+);
+
+COMMENT ON TABLE  category_tag_relations IS '分类-标签关联表';
+COMMENT ON COLUMN category_tag_relations.category_id IS '关联 blog_categories.id';
+COMMENT ON COLUMN category_tag_relations.tag_id      IS '关联 blog_tags.id';
+COMMENT ON COLUMN category_tag_relations.count       IS '该关联使用的次数';
+
+-- 按标签反查分类
+CREATE INDEX idx_category_tag_relations_tag
+    ON category_tag_relations (tag_id);
