@@ -14,51 +14,45 @@
 
 namespace doc
 {
+    /**
+    };
 
-/**
- * @brief 分类信息。
- */
-struct Category
-{
-    int         id;
-    std::string name;
-};
+    /**
+     * @brief 标签信息。
+     */
+    struct Tag
+    {
+        int         id;
+        std::string name;
+        int         count;
+    };
 
-/**
- * @brief 标签信息。
- */
-struct Tag
-{
-    int         id;
-    std::string name;
-};
+    /**
+     * @brief 博客列表项。
+     */
+    struct BlogItem
+    {
+        int                        id;
+        std::string                title;
+        std::optional<std::string> description;
+        std::optional<std::string> content;
+        std::optional<std::string> file_path;
+        std::string                update_time;
+        std::vector<std::string>   categories;
+        std::vector<std::string>   tags;
+    };
 
-/**
- * @brief 博客列表项。
- */
-struct BlogItem
-{
-    int                        id;
-    std::string                title;
-    std::optional<std::string> description;
-    std::optional<std::string> content;
-    std::optional<std::string> file_path;
-    std::string                update_time;
-    std::vector<std::string>   categories;
-    std::vector<std::string>   tags;
-};
-
-/**
- * @brief 博客列表查询参数。
- */
-struct BlogQuery
-{
-    std::vector<int>           category_ids;
-    std::vector<int>           tag_ids;
-    std::optional<std::string> search;
-    int                        page      = 1; ///< 页码，从 1 开始
-    int                        page_size = 0; ///< 每页条数，0 表示不分页（返回全部）
-};
+    /**
+     * @brief 博客列表查询参数。
+     */
+    struct BlogQuery
+    {
+        std::vector<int>           category_ids;
+        std::vector<int>           tag_ids;
+        std::optional<std::string> search;
+        int                        page      = 1; ///< 页码，从 1 开始
+        int                        page_size = 0; ///< 每页条数，0 表示不分页（返回全部）
+    };
 
     /**
      * @brief 校验博客更新时间（YYYY-MM-DD）。
