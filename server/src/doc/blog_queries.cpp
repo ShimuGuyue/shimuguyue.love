@@ -277,6 +277,33 @@ namespace
     }
 
     /**
+     * @brief 批量维护分类-标签关联计数。
+     * @details 先确保关联行存在（缺失时以 0 插入），再按 delta 增减计数。
+     * @param txn    当前事务。
+     * @param pairs  (分类 ID, 标签 ID) 组合列表。
+     * @param delta  计数增量（+1 / -1）。
+     */
+    void apply_category_tag_deltas(
+        pqxx::work&                             txn,
+        const std::vector<std::pair<int, int>>& pairs,
+        int                                     delta)
+    {
+        for (const auto& [category_id, tag_id] : pairs)
+        {
+            txn.exec(
+                "INSERT INTO category_tag_relations (category_id, tag_id, count) "
+                "VALUES ($1, $2, 0) ON CONFLICT DO NOTHING",
+                pqxx::params{ category_id, tag_id }
+            );
+            txn.exec(
+                "UPDATE category_tag_relations SET count = count + $3 "
+                "WHERE category_id = $1 AND tag_id = $2",
+                pqxx::params{ category_id, tag_id, delta }
+            );
+        }
+    }
+
+    /**
      * @brief 检查博客文件路径是否已被占用。
      * @param txn       当前事务。
      * @param file_path 博客文件相对路径。
