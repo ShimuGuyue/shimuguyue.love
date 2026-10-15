@@ -38,7 +38,7 @@ namespace http
             return;
         }
 
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -50,6 +50,14 @@ namespace http
                 spdlog::debug("照片墙信息已加入缓存。");
             }
         );
+        if (err)
+        {
+            spdlog::warn("获取照片墙列表失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
     void handle_save_image(
@@ -57,9 +65,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到照片墙信息保存请求。");
-
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -141,6 +147,14 @@ namespace http
                 cache::invalidate_prefix("api-cache:/api/images");
             }
         );
+        if (err)
+        {
+            spdlog::warn("保存图片元数据失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
     void handle_upload_image(
@@ -148,9 +162,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到照片墙图片上传请求。");
-
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -222,6 +234,14 @@ namespace http
                 cache::invalidate_prefix("api-cache:/api/images");
             }
         );
+        if (err)
+        {
+            spdlog::warn("上传图片失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
     void handle_delete_image(
@@ -229,9 +249,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到照片墙删除图片请求。");
-
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -306,6 +324,14 @@ namespace http
                 cache::invalidate_prefix("api-cache:/api/images");
             }
         );
+        if (err)
+        {
+            spdlog::warn("删除图片失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
 } // namespace http

@@ -25,9 +25,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::debug("收到后台数据打包导出请求。");
-
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -112,6 +110,14 @@ namespace http
                 spdlog::debug("数据下载成功。");
             }
         );
+        if (err)
+        {
+            spdlog::warn("数据下载失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
 } // namespace http
