@@ -40,8 +40,6 @@ static std::mutex g_attempts_mutex;                                             
         );
 
         const bool limited{ timestamps.size() >= static_cast<std::size_t>(MAX_ATTEMPTS) };
-        if (limited)
-            spdlog::info("IP {} 登录已被限流。", ip, timestamps.size());
         return limited;
     }
 
