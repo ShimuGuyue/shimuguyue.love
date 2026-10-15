@@ -41,7 +41,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::debug("密钥登录失败：无效的 JSON。");
+                    spdlog::info("密钥登录失败：无效的 JSON。");
 
                     res.status = 400;
 
@@ -71,7 +71,7 @@ namespace http
                 {
                     auth::record_failure(ip);
 
-                    spdlog::debug("密钥登录失败（ip={}）：{}", ip, result.error());
+                    spdlog::info("密钥登录失败（ip={}）：{}", ip, result.error());
 
                     res.status = 401;
 
@@ -116,7 +116,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::debug("密码登录失败：无效的 JSON。");
+                    spdlog::info("密码登录失败：无效的 JSON。");
 
                     res.status = 400;
 
@@ -129,7 +129,7 @@ namespace http
                 const auto& ip = req.remote_addr;
                 if (auth::is_rate_limited(ip))
                 {
-                    spdlog::debug("密码登录失败：IP {} 已被限流。", req.remote_addr);
+                    spdlog::info("密码登录失败：IP {} 已被限流。", req.remote_addr);
 
                     res.status = 429;
 
@@ -147,7 +147,7 @@ namespace http
                 {
                     auth::record_failure(ip);
 
-                    spdlog::debug("密码登录失败（ip={}）：{}", ip, result.error());
+                    spdlog::info("密码登录失败（ip={}）：{}", ip, result.error());
 
                     res.status = 401;
 
@@ -318,7 +318,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::debug("更新个人信息失败：未登录或会话已过期。");
+                    spdlog::info("更新个人信息失败：未登录或会话已过期。");
 
                     res.status = 401;
 
@@ -331,7 +331,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::debug("无效的 JSON。");
+                    spdlog::info("无效的 JSON。");
 
                     res.status = 400;
 
@@ -349,7 +349,7 @@ namespace http
                 {
                     if (!body["username"].is_string())
                     {
-                        spdlog::debug("用户名格式无效。");
+                        spdlog::info("用户名格式无效。");
 
                         res.status = 400;
 
@@ -366,7 +366,7 @@ namespace http
                     }
                     if (char_count > 10)
                     {
-                        spdlog::debug("用户名过长。");
+                        spdlog::info("用户名过长。");
 
                         res.status = 400;
 
@@ -377,7 +377,7 @@ namespace http
                 }
                 if (has_key_state && !body["key_enabled"].is_boolean())
                 {
-                    spdlog::debug("密钥可用状态格式无效。");
+                    spdlog::info("密钥可用状态格式无效。");
 
                     res.status = 400;
 
@@ -387,7 +387,7 @@ namespace http
                 }
                 if (has_password && !body["password"].is_string())
                 {
-                    spdlog::debug("密码格式无效");
+                    spdlog::info("密码格式无效");
 
                     res.status = 400;
 
@@ -403,7 +403,7 @@ namespace http
                 );
                 if (rows.empty())
                 {
-                    spdlog::debug("用户不存在。");
+                    spdlog::info("用户不存在。");
 
                     res.status = 404;
 
@@ -422,7 +422,7 @@ namespace http
                     );
                     if (!dup_rows.empty())
                     {
-                        spdlog::debug("重复的用户名");
+                        spdlog::info("重复的用户名");
 
                         res.status = 400;
 

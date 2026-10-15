@@ -141,7 +141,7 @@ namespace http
 
                 cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_CATEGORIES"]));
 
-                spdlog::debug("博客分类列表已加入缓存。");
+                spdlog::info("博客分类列表已加入缓存。");
             }
         );
     }
@@ -188,7 +188,7 @@ namespace http
 
                 cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_TAGS"]));
 
-                spdlog::debug("博客标签列表已加入缓存。");
+                spdlog::info("博客标签列表已加入缓存。");
             }
         );
     }
@@ -319,7 +319,7 @@ namespace http
                 {
                     cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOGS"]));
 
-                    spdlog::debug("非空博客列表已加入缓存。");
+                    spdlog::info("非空博客列表已加入缓存。");
                 }
             }
         );
@@ -390,7 +390,7 @@ namespace http
 
                 cache::set(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOG"]));
 
-                spdlog::debug("博客详情已写入缓存：{}。", file_path);
+                spdlog::info("博客详情已写入缓存：{}。", file_path);
             }
         );
     }

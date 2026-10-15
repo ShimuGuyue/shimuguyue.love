@@ -53,7 +53,7 @@ namespace http
 
                 cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_IMAGES"]));
 
-                spdlog::debug("照片墙信息已加入缓存。");
+                spdlog::info("照片墙信息已加入缓存。");
             }
         );
     }
@@ -63,6 +63,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::info("收到图片元数据保存请求。");
+
         nlohmann::json json;
 
         with_db(res, allowed, "保存图片元数据",
@@ -85,7 +87,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::debug("保存图片元数据失败：未登录或会话已过期。");
+                    spdlog::info("保存图片元数据失败：未登录或会话已过期。");
 
                     res.status = 401;
 
@@ -155,6 +157,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::info("收到图片上传请求。");
+
         nlohmann::json json;
 
         with_db(res, allowed, "上传图片",
@@ -237,6 +241,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::info("收到图片删除请求。");
+
         nlohmann::json json;
 
         with_db(res, allowed, "删除图片",

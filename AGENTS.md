@@ -106,7 +106,13 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 - **左大括号换行规范**：命名空间、类、函数、循环、分支、lambda 等的大括号换行。仅 `std::array` 等类型变量赋值不换行。
 - **工具函数位置**：仅单文件使用的工具函数写入匿名命名空间，匿名命名空间写在有名命名空间之前，之间五行空白行分隔。
 - **头文件导入顺序**：若为 .cpp 文件，首先导入对应的 .h 文件；接下来导入标准库，第三方库，最后是自定义头文件。三/四部分中间加空行。
-- **日志记录**：`http/handlers/*.cpp` 中所有的 `API` 调用逻辑中，开头首先记录“收到...请求。”，内部逻辑调用失败/成功后记录日志；缓存建立/失效记录日志；**日志级别**：服务器系统错误导致的问题为 `error`，会修改数据库信息及文件等的操作及登录等其它敏感操作为 `info`，其余对服务器本身不产生影响的操作，如信息获取等，为 `debug`；给前端返回 JSON 信息时，使用 `nlohmann::json xxx; xxx[yyy] = zzz; res.set_content(xxx.dump(), application/jaon);` 的格式，拒绝 `res.set_content(R"({"yyy":zzz})", "application/json");` 的格式。
+- **日志记录**：`http/handlers/*.cpp` 中所有的 `API` 调用逻辑中，开头首先记录“收到...请求。”，内部逻辑调用失败/成功后记录日志；缓存建立/失效记录日志；给前端返回 JSON 信息时，使用 `nlohmann::json xxx; xxx[yyy] = zzz; res.set_content(xxx.dump(), application/json);` 的格式，拒绝 `res.set_content(R"({"yyy":zzz})", "application/json");` 的格式。
+- **日志级别**：影响程度由高到低为 `error` → `warn` → `info` → `debug` → `trace`；判断依据是“这次操作对服务器的影响”与“是否已降级/可自愈”，而不是“这次请求成功还是失败”。
+    - `error`：依赖或系统的**硬失败**，功能已不可用、需要人工介入。例如：`conf/.env` 与 `conf/*.yml` 缺失或字段非法；连接池创建失败、失效连接重建失败；Argon2id 返回系统错误码；文件读写失败；SQL 执行失败；必需的数据表缺失；数据导出打包失败。
+    - `warn`：出现异常但**服务仍能继续**——可自愈、已降级，或只是资源紧张。例如：取用空闲连接超时（`db::with_db()` 取连接失败时由 `http::with_db()` 记 `warn` 并统一返回 503）、连接探活失败后原地重建、配置文件中个别行无效被忽略。判断标准：请求方可能收到失败响应，但服务整体可用且存在兜底路径。
+    - `info`：**会修改数据库信息 / 文件的操作**与登录等**敏感操作**，其成功与失败都记 `info`（成功日志如 `更新用户成功：用户 {}。`）；这类接口的入口日志（“收到...请求。”）与内部全部分支——含请求体 / 字段校验失败（400）、未登录与权限不足（401 / 403）——同样用 `info`，让“谁尝试改过数据”在 `info` 级别可追溯。例如：登录与会话签发、用户与权限的增删改、博客与图片的保存 / 修改 / 删除、缓存写入与失效、数据导出、连接池创建完成、过期会话清理。
+    - `debug`：**对服务器本身不产生任何影响**的操作，主要是信息读取与被拒绝的请求。例如：公开 GET 接口（分类 / 标签 / 博客列表与详情 / 图片）的入口日志与成功日志、只读接口的请求体 / 字段校验失败（400）与未登录、权限不足（401 / 403）、缓存命中与未命中、限流计数与清除。
+    - `trace`：仅在排查问题时需要的极细粒度内部步骤，默认不启用（当前项目未使用）。
 
 ### 前端
 
@@ -207,7 +213,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/third_party/libcpp-pg-pool/` | 从 GitHub 拉取的连接池库（MIT 协议，纯头文件，基于 libpqxx） |
 | `server/src/http/routes.cpp` | API 路由注册，直接包含 `http/handlers/` 下各功能模块头并注册对应处理函数 |
 | `server/src/http/routes.h` | HTTP 服务配置声明（`FRONTEND_ORIGIN` / `SERVER_HOST` / `SERVER_PORT`、`setup_routes`） |
-| `server/src/http/handlers/common.cpp` / `.h` | 公共路由处理（CORS 预检）与跨模块共用工具 `http::cache_set_list()`（空数组不缓存） |
+| `server/src/http/handlers/common.cpp` / `.h` | 公共路由处理（CORS 预检）与跨模块共用工具：`http::cache_set_list()`（空数组不缓存）、`http::with_db()`（获取独占连接执行回调，取用失败统一记日志并返回 503） |
 | `server/src/http/handlers/auth.cpp` / `.h` | 认证：密钥 / 密码登录（限流、会话签发），当前用户权限 / 信息查询与自助更新 |
 | `server/src/http/handlers/manage_user.cpp` / `.h` | 后台用户管理：用户列表、更新用户、新建用户（manage:view / manage:edit 权限） |
 | `server/src/http/handlers/manage_export.cpp` / `.h` | 后台数据导出：`GET /api/manage/download` 打包数据表 zip（manage:download 权限） |

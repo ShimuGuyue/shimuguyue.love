@@ -455,7 +455,7 @@ namespace http
                 const auto file_path = body.value("file_path", "");
                 if (file_path.empty())
                 {
-                    spdlog::error("删除博客失败：缺少 file_path 参数。");
+                    spdlog::info("删除博客失败：缺少 file_path 参数。");
 
                     res.status = 400;
 

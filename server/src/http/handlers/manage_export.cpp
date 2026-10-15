@@ -26,6 +26,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::info("收到数据下载请求。");
+
         nlohmann::json json;
 
         with_db(res, allowed, "数据下载",
@@ -48,7 +50,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::debug("数据下载失败：未登录或会话已过期。");
+                    spdlog::info("数据下载失败：未登录或会话已过期。");
 
                     res.status = 401;
 
@@ -61,7 +63,7 @@ namespace http
                 const auto scope = req.get_param_value("scope");
                 if (scope != "blogs" && scope != "users")
                 {
-                    spdlog::debug("数据下载失败：无效的导出范围 {}", scope);
+                    spdlog::info("数据下载失败：无效的导出范围 {}", scope);
 
                     res.status = 400;
 
@@ -74,7 +76,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "manage:download") == permissions.end())
                 {
-                    spdlog::debug("数据下载失败：用户 {} 无 manage:download 权限。", session->user_id);
+                    spdlog::info("数据下载失败：用户 {} 无 manage:download 权限。", session->user_id);
 
                     res.status = 403;
 
@@ -111,7 +113,7 @@ namespace http
                 );
                 res.set_content(zip->data(), zip->size(), "application/zip");
 
-                spdlog::debug("数据下载成功。");
+                spdlog::info("数据下载成功。");
             }
         );
     }
