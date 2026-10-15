@@ -241,6 +241,40 @@ namespace
     }
 
     /**
+     * @brief 刷新指定分类与标签的博客计数。
+     * @details 分类 / 标签的 count 即“属于该分类 / 使用该标签的博客数”
+     *          在博客关联发生变化后调用：按实际关联重算而非手动修改，确保正确性。
+     * @param txn          当前事务。
+     * @param category_ids 需要重算的分类 ID 列表。
+     * @param tag_ids      需要重算的标签 ID 列表。
+     */
+    void refresh_category_tag_counts(
+        pqxx::work&             txn,
+        const std::vector<int>& category_ids,
+        const std::vector<int>& tag_ids)
+    {
+        if (!category_ids.empty())
+        {
+            txn.exec(
+                "UPDATE blog_categories c SET count = ("
+                "SELECT COUNT(*) FROM blog_categories_relations r WHERE r.category_id = c.id) "
+                "WHERE c.id = ANY($1::int[])",
+                pqxx::params{ "{" + join_ids(category_ids) + "}" }
+            );
+        }
+
+        if (!tag_ids.empty())
+        {
+            txn.exec(
+                "UPDATE blog_tags t SET count = ("
+                "SELECT COUNT(*) FROM blog_tag_relations r WHERE r.tag_id = t.id) "
+                "WHERE t.id = ANY($1::int[])",
+                pqxx::params{ "{" + join_ids(tag_ids) + "}" }
+            );
+        }
+    }
+
+    /**
      * @brief 检查博客文件路径是否已被占用。
      * @param txn       当前事务。
      * @param file_path 博客文件相对路径。
@@ -809,7 +843,7 @@ namespace doc
             {
                 cid = create_category(txn, cn);
                 if (!cid)
-                    return std::string{ "创建分类失败" };
+                    return "创建分类失败";
             }
             category_ids.push_back(*cid);
         }
@@ -823,10 +857,7 @@ namespace doc
             {
                 tid = create_tag(txn, tn);
                 if (!tid)
-                {
-                    spdlog::error("保存博客失败：创建标签 {} 失败。", tn);
-                    return std::string{ "创建标签失败" };
-                }
+                    return "创建标签失败";
             }
             tag_ids.push_back(*tid);
         }
@@ -844,8 +875,8 @@ namespace doc
         );
         if (rows.empty())
         {
-            spdlog::error("保存博客失败：插入数据库记录失败。");
-            return std::string{ "创建博客记录失败" };
+            spdlog::error("博客信息插入数据库失败。");
+            return "创建博客记录失败";
         }
 
         const auto row = rows[0];
@@ -856,7 +887,7 @@ namespace doc
         link_blog_tags(txn, blog_id, tag_ids);
         // 为该博客的每个 (分类, 标签) 组合累加关联计数
         add_blog_category_tag_counts(txn, category_ids, tag_ids);
-        // 更新分类/标签自身的计数
+        // 更新分类 / 标签自身的计数
         refresh_category_tag_counts(txn, category_ids, tag_ids);
 
         txn.commit();
