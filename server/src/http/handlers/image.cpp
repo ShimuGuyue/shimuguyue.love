@@ -41,7 +41,7 @@ namespace http
             return;
         }
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "获取照片墙列表",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -56,15 +56,6 @@ namespace http
                 spdlog::debug("照片墙信息已加入缓存。");
             }
         );
-        if (err)
-        {
-            spdlog::warn("获取照片墙列表失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_save_image(
@@ -74,7 +65,7 @@ namespace http
     {
         nlohmann::json json;
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "保存图片元数据",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -157,15 +148,6 @@ namespace http
                 cache::invalidate_prefix("api-cache:/api/images");
             }
         );
-        if (err)
-        {
-            spdlog::warn("保存图片元数据失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_upload_image(
@@ -175,7 +157,7 @@ namespace http
     {
         nlohmann::json json;
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "上传图片",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -248,15 +230,6 @@ namespace http
                 cache::invalidate_prefix("api-cache:/api/images");
             }
         );
-        if (err)
-        {
-            spdlog::warn("上传图片失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_delete_image(
@@ -266,7 +239,7 @@ namespace http
     {
         nlohmann::json json;
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "删除图片",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -339,15 +312,6 @@ namespace http
                 cache::invalidate_prefix("api-cache:/api/images");
             }
         );
-        if (err)
-        {
-            spdlog::warn("删除图片失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
 } // namespace http

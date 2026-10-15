@@ -17,6 +17,7 @@
 #include "auth/session.h"
 #include "db/connection_pool.h"
 #include "export/export_data.h"
+#include "http/handlers/common.h"
 
 namespace http
 {
@@ -27,7 +28,7 @@ namespace http
     {
         nlohmann::json json;
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "数据下载",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -113,15 +114,6 @@ namespace http
                 spdlog::debug("数据下载成功。");
             }
         );
-        if (err)
-        {
-            spdlog::warn("数据下载失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
 } // namespace http

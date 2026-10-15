@@ -21,6 +21,7 @@
 #include "config/config.h"
 #include "db/connection_pool.h"
 #include "doc/blog_queries.h"
+#include "http/handlers/common.h"
 
 namespace
 {
@@ -72,7 +73,7 @@ namespace http
 
         nlohmann::json json;
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "保存博客",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -219,15 +220,6 @@ namespace http
                 cache::invalidate_prefix("api-cache:/api/tags");
             }
         );
-        if (err)
-        {
-            spdlog::warn("保存博客失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_update_blog(
@@ -239,7 +231,7 @@ namespace http
 
         nlohmann::json json;
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "编辑博客",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -395,15 +387,6 @@ namespace http
                 cache::del(cache::cache_key("/api/blog", { { "file_path", path_categories + "/" + path_name } }));
             }
         );
-        if (err)
-        {
-            spdlog::warn("编辑博客失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_delete_blog(
@@ -415,7 +398,7 @@ namespace http
 
         nlohmann::json json;
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "删除博客",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -505,15 +488,6 @@ namespace http
                 cache::del(cache::cache_key("/api/blog", { { "file_path", file_path } }));
             }
         );
-        if (err)
-        {
-            spdlog::warn("删除博客失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_download_blog(
@@ -525,7 +499,7 @@ namespace http
 
         nlohmann::json json;
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "下载博客",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -646,15 +620,6 @@ namespace http
                 spdlog::debug("博客下载成功：{}。", file_path);
             }
         );
-        if (err)
-        {
-            spdlog::warn("下载博客失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
 } // namespace http

@@ -119,7 +119,7 @@ namespace http
             return;
         }
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "获取分类列表",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -144,15 +144,6 @@ namespace http
                 spdlog::debug("博客分类列表已加入缓存。");
             }
         );
-        if (err)
-        {
-            spdlog::warn("获取分类列表失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_get_tags(
@@ -175,7 +166,7 @@ namespace http
             return;
         }
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "获取标签列表",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -200,15 +191,6 @@ namespace http
                 spdlog::debug("博客标签列表已加入缓存。");
             }
         );
-        if (err)
-        {
-            spdlog::warn("获取标签列表失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_get_blogs(
@@ -256,7 +238,7 @@ namespace http
             return;
         }
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "获取博客列表",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -341,15 +323,6 @@ namespace http
                 }
             }
         );
-        if (err)
-        {
-            spdlog::warn("获取博客列表失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_get_blog(
@@ -384,7 +357,7 @@ namespace http
             return;
         }
 
-        const auto err = db::with_db(
+        with_db(res, allowed, "获取博客详情",
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -420,15 +393,6 @@ namespace http
                 spdlog::debug("博客详情已写入缓存：{}。", file_path);
             }
         );
-        if (err)
-        {
-            spdlog::warn("获取博客详情失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            json["error"] = "数据库繁忙，请稍后重试";
-            res.set_content(json.dump(), "application/json");
-        }
     }
 
     void handle_blog_parse(
