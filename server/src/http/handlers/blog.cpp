@@ -106,6 +106,8 @@ namespace http
     {
         spdlog::debug("收到博客分类列表获取请求。");
 
+        nlohmann::json json;
+
         const auto key = cache::cache_key("/api/categories", {});
         if (const auto cached = cache::get(key); cached.has_value())
         {
@@ -124,18 +126,21 @@ namespace http
                 res.set_header("Content-Type", "application/json");
 
                 auto categories = doc::get_categories(conn);
-                nlohmann::json arr = nlohmann::json::array();
+                json = nlohmann::json::array();
                 for (const auto& c : categories)
                 {
                     nlohmann::json item;
                     item["id"]   = c.id;
                     item["name"] = c.name;
-                    arr.push_back(std::move(item));
+                    json.push_back(std::move(item));
                 }
+
                 spdlog::debug("博客分类列表从数据库获取成功。");
 
-                res.set_content(arr.dump(), "application/json");
+                res.set_content(json.dump(), "application/json");
+
                 cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_CATEGORIES"]));
+
                 spdlog::debug("博客分类列表已加入缓存。");
             }
         );
@@ -145,7 +150,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 
@@ -155,6 +161,8 @@ namespace http
         const std::string&      allowed)
     {
         spdlog::debug("收到博客标签列表获取请求。");
+
+        nlohmann::json json;
 
         const auto key = cache::cache_key("/api/tags", {});
         if (const auto cached = cache::get(key); cached.has_value())
@@ -174,18 +182,21 @@ namespace http
                 res.set_header("Content-Type", "application/json");
 
                 auto tags = doc::get_tags(conn);
-                nlohmann::json arr = nlohmann::json::array();
+                json = nlohmann::json::array();
                 for (const auto& t : tags)
                 {
                     nlohmann::json item;
                     item["id"]   = t.id;
                     item["name"] = t.name;
-                    arr.push_back(std::move(item));
+                    json.push_back(std::move(item));
                 }
+
                 spdlog::debug("博客标签列表从数据库获取成功。");
 
-                res.set_content(arr.dump(), "application/json");
+                res.set_content(json.dump(), "application/json");
+
                 cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_TAGS"]));
+
                 spdlog::debug("博客标签列表已加入缓存。");
             }
         );
@@ -195,7 +206,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 
@@ -205,6 +217,8 @@ namespace http
         const std::string&      allowed)
     {
         spdlog::debug("收到博客列表获取请求。");
+
+        nlohmann::json json;
 
         // 分页参数：page 从 1 开始
         const int page = std::max(1, uint_param(req, "page", 1));
@@ -283,8 +297,21 @@ namespace http
                 // 分页时先统计总数，供前端计算页数
                 int total{ page_size > 0 ? doc::count_blogs(conn, query) : 0 };
 
+                // 分页响应：当前页条目 + 符合条件的总数；非分页时直接返回数组
+                if (page_size > 0)
+                {
+                    json["items"]     = nlohmann::json::array();
+                    json["total"]     = total;
+                    json["page"]      = page;
+                    json["page_size"] = page_size;
+                }
+                else
+                {
+                    json = nlohmann::json::array();
+                }
+                nlohmann::json& items = page_size > 0 ? json["items"] : json;
+
                 auto blogs = doc::get_blogs(conn, query);
-                nlohmann::json arr = nlohmann::json::array();
                 for (const auto& b : blogs)
                 {
                     nlohmann::json item;
@@ -299,29 +326,19 @@ namespace http
                     item["file_path"]   = b.file_path.has_value()
                                         ? nlohmann::json(*b.file_path)
                                         : nlohmann::json(nullptr);
-                    arr.push_back(std::move(item));
+                    items.push_back(std::move(item));
                 }
 
-                if (page_size > 0)
-                {
-                    // 分页响应：当前页条目 + 符合条件的总数
-                    nlohmann::json body;
-                    body["items"]     = std::move(arr);
-                    body["total"]     = total;
-                    body["page"]      = page;
-                    body["page_size"] = page_size;
-                    res.set_content(body.dump(), "application/json");
-                }
-                else
-                {
-                    res.set_content(arr.dump(), "application/json");
-                }
                 spdlog::debug("博客列表从数据库获取成功。");
 
-                // 缓存非空列表
+                res.set_content(json.dump(), "application/json");
+
                 if (!blogs.empty())
+                {
                     cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOGS"]));
-                spdlog::debug("博客列表已加入缓存。");
+
+                    spdlog::debug("非空博客列表已加入缓存。");
+                }
             }
         );
         if (err)
@@ -330,7 +347,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 
@@ -341,14 +359,16 @@ namespace http
     {
         spdlog::debug("收到博客详情获取请求。");
 
+        nlohmann::json json;
+
         if (!req.has_param("file_path"))
         {
             spdlog::debug("获取博客详情失败：缺少 file_path 参数。");
+
             res.status = 400;
 
-            nlohmann::json err;
-            err["error"] = "缺少 file_path 参数";
-            res.set_content(err.dump(), "application/json");
+            json["error"] = "缺少 file_path 参数";
+            res.set_content(json.dump(), "application/json");
             return;
         }
 
@@ -374,28 +394,29 @@ namespace http
                 if (!blog)
                 {
                     spdlog::debug("获取博客失败：{} 不存在。", file_path);
+
                     res.status = 404;
 
-                    nlohmann::json err;
-                    err["error"] = "博客不存在";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "博客不存在";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
-                nlohmann::json item;
-                item["id"]          = blog->id;
-                item["title"]       = blog->title;
-                item["description"] = blog->description;
-                item["content"]     = blog->content;
-                item["update_time"] = blog->update_time;
-                item["categories"]  = blog->categories;
-                item["file_path"]   = blog->file_path;
-                item["tags"]        = blog->tags;
-                res.set_content(item.dump(), "application/json");
+                json["id"]          = blog->id;
+                json["title"]       = blog->title;
+                json["description"] = blog->description;
+                json["content"]     = blog->content;
+                json["update_time"] = blog->update_time;
+                json["categories"]  = blog->categories;
+                json["file_path"]   = blog->file_path;
+                json["tags"]        = blog->tags;
+
                 spdlog::debug("博客详情获取成功：{}。", file_path);
 
-                // 设置缓存
+                res.set_content(json.dump(), "application/json");
+
                 cache::set(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOG"]));
+
                 spdlog::debug("博客详情已写入缓存：{}。", file_path);
             }
         );
@@ -405,7 +426,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 
@@ -416,12 +438,16 @@ namespace http
     {
         spdlog::debug("收到 md 文件解析请求。");
 
+        nlohmann::json json;
+
         res.set_header("Access-Control-Allow-Origin", allowed);
         res.set_header("Content-Type", "application/json");
-        auto result = md::parse_frontmatter(req.body);
+
+        json = md::parse_frontmatter(req.body);
+
         spdlog::debug("md 文件解析请求完成。");
 
-        res.set_content(result.dump(), "application/json");
+        res.set_content(json.dump(), "application/json");
     }
 
 } // namespace http

@@ -26,6 +26,10 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::info("收到密钥登录请求（ip={}）。", req.remote_addr);
+
+        nlohmann::json json;
+
         const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -33,16 +37,15 @@ namespace http
                 res.set_header("Content-Type", "application/json");
 
                 // 解析 JSON
-                spdlog::info("收到密钥登录请求（ip={}）。", req.remote_addr);
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
                     spdlog::debug("密钥登录失败：无效的 JSON。");
+
                     res.status = 400;
 
-                    nlohmann::json err;
-                    err["error"] = "无效的 JSON";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "无效的 JSON";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -51,11 +54,11 @@ namespace http
                 if (auth::is_rate_limited(ip))
                 {
                     spdlog::info("密钥登录失败：IP {} 已被限流。", ip);
+
                     res.status = 429;
 
-                    nlohmann::json err;
-                    err["error"] = "登录尝试过于频繁，请稍后再试";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "登录尝试过于频繁，请稍后再试";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -65,29 +68,30 @@ namespace http
 
                 if (!result)
                 {
-                    spdlog::debug("密钥登录失败（ip={}）：{}", ip, result.error());
-                    res.status = 401;
                     auth::record_failure(ip);
 
-                    nlohmann::json err;
-                    err["error"] = result.error();
-                    res.set_content(err.dump(), "application/json");
+                    spdlog::debug("密钥登录失败（ip={}）：{}", ip, result.error());
+
+                    res.status = 401;
+
+                    json["error"] = result.error();
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 // 登录成功清除 IP 限制
-                spdlog::info("密钥登录成功（ip={}, user_id={}）。", ip, result->id);
                 auth::clear(ip);
 
-                nlohmann::json success;
-                success["id"]         = result->id;
-                success["username"]   = result->username.has_value()
+                spdlog::info("密钥登录成功（ip={}, user_id={}）。", ip, result->id);
+
+                json["id"]         = result->id;
+                json["username"]   = result->username.has_value()
                                    ? nlohmann::json(*result->username)
                                    : nlohmann::json(nullptr);
-                const auto session    = auth::create_session(conn, result->id, result->permissions);
-                success["token"]      = session.token;
-                success["expires_at"] = session.expires_at;
-                res.set_content(success.dump(), "application/json");
+                const auto session = auth::create_session(conn, result->id, result->permissions);
+                json["token"]      = session.token;
+                json["expires_at"] = session.expires_at;
+                res.set_content(json.dump(), "application/json");
             }
         );
         if (err)
@@ -96,7 +100,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 
@@ -105,6 +110,10 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::info("收到密码登录请求（ip={}）。", req.remote_addr);
+
+        nlohmann::json json;
+
         const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -112,16 +121,15 @@ namespace http
                 res.set_header("Content-Type", "application/json");
 
                 // 解析 JSON
-                spdlog::info("收到密码登录请求（ip={}）。", req.remote_addr);
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
                     spdlog::debug("密码登录失败：无效的 JSON。");
+
                     res.status = 400;
 
-                    nlohmann::json err;
-                    err["error"] = "无效的 JSON";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "无效的 JSON";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -130,44 +138,45 @@ namespace http
                 if (auth::is_rate_limited(ip))
                 {
                     spdlog::debug("密码登录失败：IP {} 已被限流。", req.remote_addr);
+
                     res.status = 429;
 
-                    nlohmann::json err;
-                    err["error"] = "登录尝试过于频繁，请稍后再试";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "登录尝试过于频繁，请稍后再试";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 // 调用登录逻辑
                 const auto username = body.value("username", "");
-                const auto pwd      = body.value("password", "");
-                auto result = auth::login_by_password(conn, username, pwd);
+                const auto password = body.value("password", "");
+                auto result = auth::login_by_password(conn, username, password);
 
                 if (!result)
                 {
-                    spdlog::debug("密码登录失败（ip={}）：{}", ip, result.error());
-                    res.status = 401;
                     auth::record_failure(ip);
 
-                    nlohmann::json err;
-                    err["error"] = result.error();
-                    res.set_content(err.dump(), "application/json");
+                    spdlog::debug("密码登录失败（ip={}）：{}", ip, result.error());
+
+                    res.status = 401;
+
+                    json["error"] = result.error();
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 // 登录成功清除 IP 限制
-                spdlog::info("密码登录成功（ip={}, user_id={}）。", ip, result->id);
                 auth::clear(ip);
 
-                nlohmann::json success;
-                success["id"]         = result->id;
-                success["username"]   = result->username.has_value()
-                                      ? nlohmann::json(*result->username)
-                                      : nlohmann::json(nullptr);
-                const auto created    = auth::create_session(conn, result->id, result->permissions);
-                success["token"]      = created.token;
-                success["expires_at"] = created.expires_at;
-                res.set_content(success.dump(), "application/json");
+                spdlog::info("密码登录成功（ip={}, user_id={}）。", ip, result->id);
+
+                json["id"]         = result->id;
+                json["username"]   = result->username.has_value()
+                                   ? nlohmann::json(*result->username)
+                                   : nlohmann::json(nullptr);
+                const auto session = auth::create_session(conn, result->id, result->permissions);
+                json["token"]      = session.token;
+                json["expires_at"] = session.expires_at;
+                res.set_content(json.dump(), "application/json");
             }
         );
         if (err)
@@ -176,7 +185,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 
@@ -185,6 +195,10 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::debug("收到个人权限获取请求。");
+
+        nlohmann::json json;
+
         const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -192,7 +206,6 @@ namespace http
                 res.set_header("Content-Type", "application/json");
 
                 // Session 验证：仅返回已登录用户自身的权限
-                spdlog::debug("收到个人权限获取请求。");
                 std::string token;  // 提取 Bearer token
                 if (req.has_header("Authorization"))
                 {
@@ -202,23 +215,23 @@ namespace http
                     &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
                         token = auth_hdr.substr(PREFIX.size());
                 }
+
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
                     spdlog::debug("用户获取自身权限失败：未登录或会话已过期。");
+
                     res.status = 401;
 
-                    nlohmann::json err;
-                    err["error"] = "未登录或会话已过期";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "未登录或会话已过期";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 spdlog::debug("用户获取自身权限成功（user_id={}）。", session->user_id);
 
-                nlohmann::json success;
-                success["permissions"] = session->permissions;
-                res.set_content(success.dump(), "application/json");
+                json["permissions"] = session->permissions;
+                res.set_content(json.dump(), "application/json");
             }
         );
         if (err)
@@ -227,7 +240,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 
@@ -236,6 +250,10 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::debug("收到个人信息获取请求。");
+
+        nlohmann::json json;
+
         const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -243,7 +261,6 @@ namespace http
                 res.set_header("Content-Type", "application/json");
 
                 // Session 验证
-                spdlog::debug("收到个人信息获取请求。");
                 std::string token;  // 提取 Bearer token
                 if (req.has_header("Authorization"))
                 {
@@ -253,15 +270,16 @@ namespace http
                     &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
                         token = auth_hdr.substr(PREFIX.size());
                 }
+
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
                     spdlog::debug("用户获取自身信息失败：未登录或会话已过期。");
+
                     res.status = 401;
 
-                    nlohmann::json err;
-                    err["error"] = "未登录或会话已过期";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "未登录或会话已过期";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -277,23 +295,22 @@ namespace http
                 {
                     res.status = 404;
 
-                    nlohmann::json err;
-                    err["error"] = "用户不存在";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "用户不存在";
+
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
                 const auto& row = rows[0];
 
                 spdlog::debug("用户获取自身信息成功（user_id={}）。", session->user_id);
 
-                nlohmann::json success;
-                success["id"]           = session->user_id;
-                success["username"]     = row["username"].is_null()
-                                        ? nlohmann::json(nullptr)
-                                        : nlohmann::json(row["username"].as<std::string>());
-                success["key_enabled"]  = row["key_enabled"].as<bool>();
-                success["has_password"] = !row["password_hash"].is_null();
-                res.set_content(success.dump(), "application/json");
+                json["id"]           = session->user_id;
+                json["username"]     = row["username"].is_null()
+                                     ? nlohmann::json(nullptr)
+                                     : nlohmann::json(row["username"].as<std::string>());
+                json["key_enabled"]  = row["key_enabled"].as<bool>();
+                json["has_password"] = !row["password_hash"].is_null();
+                res.set_content(json.dump(), "application/json");
             }
         );
         if (err)
@@ -302,7 +319,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 
@@ -311,6 +329,10 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        spdlog::info("收到个人信息更新请求。");
+
+        nlohmann::json json;
+
         const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -318,7 +340,6 @@ namespace http
                 res.set_header("Content-Type", "application/json");
 
                 // Session 验证
-                spdlog::debug("收到个人信息更新请求。");
                 std::string token;  // 提取 Bearer token
                 if (req.has_header("Authorization"))
                 {
@@ -328,15 +349,16 @@ namespace http
                     &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
                         token = auth_hdr.substr(PREFIX.size());
                 }
+
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
                     spdlog::debug("更新个人信息失败：未登录或会话已过期。");
+
                     res.status = 401;
 
-                    nlohmann::json err;
-                    err["error"] = "未登录或会话已过期";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "未登录或会话已过期";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -344,11 +366,12 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
+                    spdlog::debug("无效的 JSON。");
+
                     res.status = 400;
 
-                    nlohmann::json err;
-                    err["error"] = "无效的 JSON";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "无效的 JSON";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
                 const bool has_username  = body.contains("username");
@@ -361,11 +384,12 @@ namespace http
                 {
                     if (!body["username"].is_string())
                     {
+                        spdlog::debug("用户名格式无效。");
+
                         res.status = 400;
 
-                        nlohmann::json err;
-                        err["error"] = "用户名格式无效";
-                        res.set_content(err.dump(), "application/json");
+                        json["error"] = "用户名格式无效";
+                        res.set_content(json.dump(), "application/json");
                         return;
                     }
                     username = body["username"].get<std::string>();
@@ -377,30 +401,33 @@ namespace http
                     }
                     if (char_count > 10)
                     {
+                        spdlog::debug("用户名过长。");
+
                         res.status = 400;
 
-                        nlohmann::json err;
-                        err["error"] = "用户名最多 10 个字符";
-                        res.set_content(err.dump(), "application/json");
+                        json["error"] = "用户名最多 10 个字符";
+                        res.set_content(json.dump(), "application/json");
                         return;
                     }
                 }
                 if (has_key_state && !body["key_enabled"].is_boolean())
                 {
+                    spdlog::debug("密钥可用状态格式无效。");
+
                     res.status = 400;
 
-                    nlohmann::json err;
-                    err["error"] = "密钥可用状态格式无效";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "密钥可用状态格式无效";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
                 if (has_password && !body["password"].is_string())
                 {
+                    spdlog::debug("密码格式无效");
+
                     res.status = 400;
 
-                    nlohmann::json err;
-                    err["error"] = "密码格式无效";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "密码格式无效";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -411,11 +438,12 @@ namespace http
                 );
                 if (rows.empty())
                 {
+                    spdlog::debug("用户不存在。");
+
                     res.status = 404;
 
-                    nlohmann::json err;
-                    err["error"] = "用户不存在";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "用户不存在";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
                 const auto& row = rows[0];
@@ -429,11 +457,12 @@ namespace http
                     );
                     if (!dup_rows.empty())
                     {
+                        spdlog::debug("重复的用户名");
+
                         res.status = 400;
 
-                        nlohmann::json err;
-                        err["error"] = "用户名已被占用";
-                        res.set_content(err.dump(), "application/json");
+                        json["error"] = "用户名已被占用";
+                        res.set_content(json.dump(), "application/json");
                         return;
                     }
                 }
@@ -448,12 +477,12 @@ namespace http
                         password_hash = crypto::Argon2id::hash_with_random_salt(password);
                         if (!password_hash)
                         {
-                            res.status = 500;
                             spdlog::error("修改用户信息失败：密码哈希失败。");
 
-                            nlohmann::json err;
-                            err["error"] = "密码哈希失败";
-                            res.set_content(err.dump(), "application/json");
+                            res.status = 500;
+
+                            json["error"] = "密码哈希失败";
+                            res.set_content(json.dump(), "application/json");
                             return;
                         }
                     }
@@ -482,11 +511,10 @@ namespace http
                 );
                 txn.commit();
 
-                spdlog::debug("用户更新自身信息成功（user_id={}）。", session->user_id);
+                spdlog::info("用户更新自身信息成功（user_id={}）。", session->user_id);
 
-                nlohmann::json success;
-                success["ok"] = true;
-                res.set_content(success.dump(), "application/json");
+                json["ok"] = true;
+                res.set_content(json.dump(), "application/json");
             }
         );
         if (err)
@@ -495,7 +523,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 

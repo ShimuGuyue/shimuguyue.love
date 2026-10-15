@@ -25,6 +25,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        nlohmann::json json;
+
         const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
@@ -46,11 +48,11 @@ namespace http
                 if (!session)
                 {
                     spdlog::debug("数据下载失败：未登录或会话已过期。");
+
                     res.status = 401;
 
-                    nlohmann::json err;
-                    err["error"] = "未登录或会话已过期";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "未登录或会话已过期";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -59,24 +61,24 @@ namespace http
                 if (scope != "blogs" && scope != "users")
                 {
                     spdlog::debug("数据下载失败：无效的导出范围 {}", scope);
+
                     res.status = 400;
 
-                    nlohmann::json err;
-                    err["error"] = "无效的导出范围";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "无效的导出范围";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 // 权限检查：manage:download
-                const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "manage:download") == perms.end())
+                const auto& permissions = session->permissions;
+                if (std::find(permissions.begin(), permissions.end(), "manage:download") == permissions.end())
                 {
                     spdlog::debug("数据下载失败：用户 {} 无 manage:download 权限。", session->user_id);
+
                     res.status = 403;
 
-                    nlohmann::json err;
-                    err["error"] = "当前用户无 manage:download 权限";
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = "当前用户无 manage:download 权限";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -90,11 +92,11 @@ namespace http
                 if (!zip)
                 {
                     spdlog::error("数据下载失败：{}", zip.error());
+
                     res.status = 500;
 
-                    nlohmann::json err;
-                    err["error"] = zip.error();
-                    res.set_content(err.dump(), "application/json");
+                    json["error"] = zip.error();
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -107,6 +109,7 @@ namespace http
                     "attachment; filename=\"data-" + scope + "-" + std::string{ date_buf } + ".zip\""
                 );
                 res.set_content(zip->data(), zip->size(), "application/zip");
+
                 spdlog::debug("数据下载成功。");
             }
         );
@@ -116,7 +119,8 @@ namespace http
             res.status = 503;
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+            json["error"] = "数据库繁忙，请稍后重试";
+            res.set_content(json.dump(), "application/json");
         }
     }
 
