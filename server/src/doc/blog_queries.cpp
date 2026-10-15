@@ -199,7 +199,7 @@ namespace
     }
 
     /**
-     * @brief 收集博客关联的全部标签 ID。
+     * @brief 查询博客关联的全部标签 ID。
      * @param txn     当前事务。
      * @param blog_id 博客 ID。
      * @return 标签 ID 列表。
@@ -210,6 +210,7 @@ namespace
             "SELECT tag_id FROM blog_tag_relations WHERE blog_id = $1",
             pqxx::params{ blog_id }
         );
+
         std::vector<int> ids;
         ids.reserve(rows.size());
         for (const auto& row : rows)
@@ -220,7 +221,7 @@ namespace
     }
 
     /**
-     * @brief 收集博客关联的全部分类 ID。
+     * @brief 查询博客关联的全部分类 ID。
      * @param txn     当前事务。
      * @param blog_id 博客 ID。
      * @return 分类 ID 列表。
@@ -231,6 +232,7 @@ namespace
             "SELECT category_id FROM blog_categories_relations WHERE blog_id = $1",
             pqxx::params{ blog_id }
         );
+
         std::vector<int> ids;
         ids.reserve(rows.size());
         for (const auto& row : rows)
