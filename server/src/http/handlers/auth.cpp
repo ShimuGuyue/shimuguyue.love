@@ -26,7 +26,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -80,6 +80,14 @@ namespace http
                 res.set_content(resp.dump(), "application/json");
             }
         );
+        if (err)
+        {
+            spdlog::warn("密钥登录失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
     void handle_login_password(
@@ -87,7 +95,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -143,6 +151,14 @@ namespace http
                 res.set_content(resp.dump(), "application/json");
             }
         );
+        if (err)
+        {
+            spdlog::warn("密码登录失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
     void handle_user_permissions(
@@ -150,7 +166,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -178,6 +194,14 @@ namespace http
                 res.set_content(nlohmann::json{{"permissions", session->permissions}}.dump(), "application/json");
             }
         );
+        if (err)
+        {
+            spdlog::warn("查询用户权限失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
     void handle_user_info(
@@ -185,7 +209,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -228,6 +252,14 @@ namespace http
                 res.set_content(resp.dump(), "application/json");
             }
         );
+        if (err)
+        {
+            spdlog::warn("查询用户信息失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
     void handle_user_update(
@@ -235,7 +267,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -380,6 +412,14 @@ namespace http
                 res.set_content(R"({"ok":true})", "application/json");
             }
         );
+        if (err)
+        {
+            spdlog::warn("更新用户信息失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
 } // namespace http

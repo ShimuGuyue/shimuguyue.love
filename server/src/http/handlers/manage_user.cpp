@@ -24,7 +24,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -125,6 +125,14 @@ namespace http
                 );
             }
         );
+        if (err)
+        {
+            spdlog::warn("获取用户列表失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
     void handle_manage_update_user(
@@ -132,7 +140,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -369,6 +377,14 @@ namespace http
                 res.set_content(R"({"ok":true})", "application/json");
             }
         );
+        if (err)
+        {
+            spdlog::warn("更新用户失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
     void handle_manage_create_user(
@@ -376,7 +392,7 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        db::with_db(
+        const auto err = db::with_db(
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -597,6 +613,14 @@ namespace http
                 res.set_content(nlohmann::json{{"ok", true}, {"id", user_id}}.dump(), "application/json");
             }
         );
+        if (err)
+        {
+            spdlog::warn("新建用户失败：{}", *err);
+            res.status = 503;
+            res.set_header("Access-Control-Allow-Origin", allowed);
+            res.set_header("Content-Type", "application/json");
+            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
+        }
     }
 
 } // namespace http
