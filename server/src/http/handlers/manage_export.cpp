@@ -26,11 +26,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到数据下载请求。");
+        constexpr std::string_view ACTION = "数据下载";
+        spdlog::info("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "数据下载",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -50,7 +51,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("数据下载失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -63,7 +64,7 @@ namespace http
                 const auto scope = req.get_param_value("scope");
                 if (scope != "blogs" && scope != "users")
                 {
-                    spdlog::info("数据下载失败：无效的导出范围 {}", scope);
+                    spdlog::info("{}失败：无效的导出范围 {}", ACTION, scope);
 
                     res.status = 400;
 
@@ -76,7 +77,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "manage:download") == permissions.end())
                 {
-                    spdlog::info("数据下载失败：用户 {} 无 manage:download 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 manage:download 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -94,7 +95,7 @@ namespace http
 
                 if (!zip)
                 {
-                    spdlog::error("数据下载失败：{}", zip.error());
+                    spdlog::error("{}失败：{}", ACTION, zip.error());
 
                     res.status = 500;
 
@@ -113,7 +114,7 @@ namespace http
                 );
                 res.set_content(zip->data(), zip->size(), "application/zip");
 
-                spdlog::info("数据下载成功。");
+                spdlog::info("{}成功。", ACTION);
             }
         );
     }

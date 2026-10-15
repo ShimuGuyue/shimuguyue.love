@@ -104,7 +104,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::debug("收到博客分类列表获取请求。");
+        constexpr std::string_view ACTION = "博客分类列表获取";
+        spdlog::debug("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
@@ -119,7 +120,7 @@ namespace http
             return;
         }
 
-        with_db(res, allowed, "获取分类列表",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -151,7 +152,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::debug("收到博客标签列表获取请求。");
+        constexpr std::string_view ACTION = "博客标签列表获取";
+        spdlog::debug("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
@@ -166,7 +168,7 @@ namespace http
             return;
         }
 
-        with_db(res, allowed, "获取标签列表",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -198,7 +200,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::debug("收到博客列表获取请求。");
+        constexpr std::string_view ACTION = "博客列表获取";
+        spdlog::debug("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
@@ -238,7 +241,7 @@ namespace http
             return;
         }
 
-        with_db(res, allowed, "获取博客列表",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -330,13 +333,14 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::debug("收到博客详情获取请求。");
+        constexpr std::string_view ACTION = "博客详情获取";
+        spdlog::debug("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
         if (!req.has_param("file_path"))
         {
-            spdlog::debug("获取博客详情失败：缺少 file_path 参数。");
+            spdlog::debug("{}失败：缺少 file_path 参数。", ACTION);
 
             res.status = 400;
 
@@ -357,7 +361,7 @@ namespace http
             return;
         }
 
-        with_db(res, allowed, "获取博客详情",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -366,7 +370,7 @@ namespace http
                 auto blog = doc::get_blog_by_file_path(conn, file_path);
                 if (!blog)
                 {
-                    spdlog::debug("获取博客失败：{} 不存在。", file_path);
+                    spdlog::debug("{}失败：{} 不存在。", ACTION, file_path);
 
                     res.status = 404;
 
@@ -384,7 +388,7 @@ namespace http
                 json["file_path"]   = blog->file_path;
                 json["tags"]        = blog->tags;
 
-                spdlog::debug("博客详情获取成功：{}。", file_path);
+                spdlog::debug("{}成功：{}。", ACTION, file_path);
 
                 res.set_content(json.dump(), "application/json");
 
@@ -400,7 +404,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::debug("收到 md 文件解析请求。");
+        constexpr std::string_view ACTION = "markdown 文件解析";
+        spdlog::debug("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
@@ -409,7 +414,7 @@ namespace http
 
         json = md::parse_frontmatter(req.body);
 
-        spdlog::debug("md 文件解析请求完成。");
+        spdlog::debug("{}成功。", ACTION);
 
         res.set_content(json.dump(), "application/json");
     }

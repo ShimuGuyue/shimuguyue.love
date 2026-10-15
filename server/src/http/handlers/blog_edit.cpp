@@ -69,11 +69,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到博客保存请求");
+        constexpr std::string_view ACTION = "博客保存";
+        spdlog::info("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "保存博客",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -82,7 +83,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::info("保存博客失败：无效的 JSON。");
+                    spdlog::info("{}失败：无效的 JSON。", ACTION);
 
                     res.status = 400;
 
@@ -105,7 +106,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("保存博客失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -118,7 +119,7 @@ namespace http
                 const auto& perms = session->permissions;
                 if (std::find(perms.begin(), perms.end(), "blog:create") == perms.end())
                 {
-                    spdlog::info("保存博客失败：用户 {} 无 blog:create 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 blog:create 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -140,7 +141,7 @@ namespace http
                 {
                     if (field.empty())
                     {
-                        spdlog::info("保存博客失败：缺少必填字段。");
+                        spdlog::info("{}失败：缺少必填字段。", ACTION);
 
                         res.status = 400;
 
@@ -161,7 +162,7 @@ namespace http
                 }
                 if (category_list.empty())
                 {
-                    spdlog::info("保存博客失败：缺少分类。");
+                    spdlog::info("{}失败：缺少分类。", ACTION);
 
                     res.status = 400;
 
@@ -183,7 +184,7 @@ namespace http
                 const auto date = doc::valid_blog_date(body.value("update_time", ""));
                 if (date.empty())
                 {
-                    spdlog::info("保存博客失败：缺少或无效的更新时间。");
+                    spdlog::info("{}失败：缺少或无效的更新时间。", ACTION);
 
                     res.status = 400;
 
@@ -200,7 +201,7 @@ namespace http
                     )
                 )
                 {
-                    spdlog::error("保存博客失败：{}", *err);
+                    spdlog::error("{}失败：{}", ACTION, *err);
 
                     res.status = 500;
 
@@ -209,7 +210,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("博客保存成功：{}/{}。", path_categories, path_name);
+                spdlog::info("{}成功：{}/{}。", ACTION, path_categories, path_name);
 
                 json["ok"] = true;
                 res.set_content(json.dump(), "application/json");
@@ -227,11 +228,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到博客修改请求。");
+        constexpr std::string_view ACTION = "博客修改";
+        spdlog::info("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "编辑博客",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -240,7 +242,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::info("更新博客失败：无效的 JSON。");
+                    spdlog::info("{}失败：无效的 JSON。", ACTION);
 
                     res.status = 400;
 
@@ -263,7 +265,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("更新博客失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -280,7 +282,8 @@ namespace http
                                    : std::find(permissions.begin(), permissions.end(), "blog:edit") != permissions.end();
                 if (!allowed)
                 {
-                    spdlog::info("更新博客失败：用户 {} 缺少 {} 权限。",
+                    spdlog::info("{}失败：用户 {} 缺少 {} 权限。",
+                        ACTION,
                         session->user_id,
                         from_manage ? " manage:edit" : " blog:edit"
                     );
@@ -306,7 +309,7 @@ namespace http
                 {
                     if (field.empty())
                     {
-                        spdlog::info("保存博客失败：缺少必填字段。");
+                        spdlog::info("{}失败：缺少必填字段。", ACTION);
 
                         res.status = 400;
 
@@ -327,7 +330,7 @@ namespace http
                 }
                 if (category_list.empty())
                 {
-                    spdlog::info("更新博客失败：缺少分类。");
+                    spdlog::info("{}失败：缺少分类。", ACTION);
 
                     res.status = 400;
 
@@ -349,7 +352,7 @@ namespace http
                 const auto date = doc::valid_blog_date(body.value("update_time", ""));
                 if (date.empty())
                 {
-                    spdlog::info("更新博客失败：缺少或无效的更新时间。");
+                    spdlog::info("{}失败：缺少或无效的更新时间。", ACTION);
 
                     res.status = 400;
 
@@ -365,7 +368,7 @@ namespace http
                     )
                 )
                 {
-                    spdlog::error("更新博客失败：{}", *err);
+                    spdlog::error("{}失败：{}", ACTION, *err);
 
                     res.status = 500;
 
@@ -374,7 +377,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("博客更新成功：{}/{}。", path_categories, path_name);
+                spdlog::info("{}成功：{}/{}。", ACTION, path_categories, path_name);
 
                 json["ok"] = true;
                 res.set_content(json.dump(), "application/json");
@@ -394,11 +397,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到博客删除请求。");
+        constexpr std::string_view ACTION = "博客删除";
+        spdlog::info("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "删除博客",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -418,7 +422,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("删除博客失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -431,7 +435,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "blog:delete") == permissions.end())
                 {
-                    spdlog::info("删除博客失败：用户 {} 无 blog:delete 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 blog:delete 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -443,7 +447,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::info("删除博客失败：无效的 JSON。");
+                    spdlog::info("{}失败：无效的 JSON。", ACTION);
 
                     res.status = 400;
 
@@ -455,7 +459,7 @@ namespace http
                 const auto file_path = body.value("file_path", "");
                 if (file_path.empty())
                 {
-                    spdlog::info("删除博客失败：缺少 file_path 参数。");
+                    spdlog::info("{}失败：缺少 file_path 参数。", ACTION);
 
                     res.status = 400;
 
@@ -467,7 +471,7 @@ namespace http
                 // 调用博客删除逻辑
                 if (auto err = doc::delete_blog(conn, file_path))
                 {
-                    spdlog::error("删除博客失败：{}", *err);
+                    spdlog::error("{}失败：{}", ACTION, *err);
 
                     res.status = 500;
 
@@ -476,7 +480,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("博客删除成功：{}。", file_path);
+                spdlog::info("{}成功：{}。", ACTION, file_path);
 
                 json["ok"] = true;
                 res.set_content(json.dump(), "application/json");
@@ -495,11 +499,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::debug("收到博客下载请求。");
+        constexpr std::string_view ACTION = "博客下载";
+        spdlog::debug("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "下载博客",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -519,7 +524,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::debug("博客下载失败：未登录或会话已过期。");
+                    spdlog::debug("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -532,7 +537,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "blog:download") == permissions.end())
                 {
-                    spdlog::debug("博客下载失败：用户 {} 无 blog:download 权限。", session->user_id);
+                    spdlog::debug("{}失败：用户 {} 无 blog:download 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -543,7 +548,7 @@ namespace http
 
                 if (!req.has_param("file_path"))
                 {
-                    spdlog::debug("博客下载失败：缺少 file_path 参数。");
+                    spdlog::debug("{}失败：缺少 file_path 参数。", ACTION);
 
                     res.status = 400;
 
@@ -556,7 +561,7 @@ namespace http
                 auto blog = doc::get_blog_by_file_path(conn, file_path);
                 if (!blog)
                 {
-                    spdlog::debug("博客下载失败：{} 不存在。", file_path);
+                    spdlog::debug("{}失败：{} 不存在。", ACTION, file_path);
 
                     res.status = 404;
 
@@ -573,7 +578,7 @@ namespace http
                 const auto resolved_root = std::filesystem::weakly_canonical(blogs_root, ec);
                 if (ec)
                 {
-                    spdlog::error("博客下载失败：博客目录不可用（{}）。", ec.message());
+                    spdlog::error("{}失败：博客目录不可用（{}）。", ACTION, ec.message());
 
                     res.status = 500;
 
@@ -586,7 +591,7 @@ namespace http
                 const auto rel         = std::filesystem::relative(resolved_md, resolved_root, ec);
                 if (ec || rel.empty() || rel.string().starts_with("../"))
                 {
-                    spdlog::error("博客下载失败：非法文件路径 {}", file_path);
+                    spdlog::error("{}失败：非法文件路径 {}", ACTION, file_path);
 
                     res.status = 400;
 
@@ -598,7 +603,7 @@ namespace http
                 std::ifstream ifs{ resolved_md, std::ios::binary };
                 if (!ifs)
                 {
-                    spdlog::error("博客下载失败：读取文件 {} 失败。", resolved_md.string());
+                    spdlog::error("{}失败：读取文件 {} 失败。", ACTION, resolved_md.string());
 
                     res.status = 404;
 
@@ -617,7 +622,7 @@ namespace http
                 );
                 res.set_content(oss.str(), "text/markdown");
 
-                spdlog::debug("博客下载成功：{}。", file_path);
+                spdlog::debug("{}成功：{}。", ACTION, file_path);
             }
         );
     }

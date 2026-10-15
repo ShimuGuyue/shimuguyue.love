@@ -25,11 +25,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::debug("收到后台用户列表获取请求。");
+        constexpr std::string_view ACTION = "用户列表获取";
+        spdlog::debug("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "获取用户列表",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -49,7 +50,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::debug("获取用户列表失败：未登录或会话已过期。");
+                    spdlog::debug("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -62,7 +63,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "manage:view") == permissions.end())
                 {
-                    spdlog::debug("获取用户列表失败：用户 {} 无 manage:view 权限。", session->user_id);
+                    spdlog::debug("{}失败：用户 {} 无 manage:view 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -121,7 +122,7 @@ namespace http
                 }
                 txn.commit();
 
-                spdlog::debug("获取用户列表成功。");
+                spdlog::debug("{}成功。", ACTION);
 
                 json["users"]           = std::move(users);
                 json["all_permissions"] = std::move(all_permissions);
@@ -136,11 +137,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到后台更新用户信息请求。");
+        constexpr std::string_view ACTION = "用户信息更新";
+        spdlog::info("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "更新用户",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -160,7 +162,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("更新用户失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -173,7 +175,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "manage:edit") == permissions.end())
                 {
-                    spdlog::info("更新用户失败：用户 {} 无 manage:edit 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 manage:edit 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -186,7 +188,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded() || !body.contains("id") || !body["id"].is_number_integer())
                 {
-                    spdlog::info("更新用户失败：无效的 JSON。");
+                    spdlog::info("{}失败：无效的 JSON。", ACTION);
 
                     res.status = 400;
 
@@ -207,7 +209,7 @@ namespace http
                 {
                     if (!body["username"].is_string())
                     {
-                        spdlog::info("更新用户失败：用户名格式无效。");
+                        spdlog::info("{}失败：用户名格式无效。", ACTION);
 
                         res.status = 400;
 
@@ -226,7 +228,7 @@ namespace http
                     }
                     if (char_count > 10)
                     {
-                        spdlog::info("更新用户失败：用户名过长。");
+                        spdlog::info("{}失败：用户名过长。", ACTION);
 
                         res.status = 400;
 
@@ -237,7 +239,7 @@ namespace http
                 }
                 if (has_key_state && !body["key_enabled"].is_boolean())
                 {
-                    spdlog::info("更新用户失败：密钥可用状态无效。");
+                    spdlog::info("{}失败：密钥可用状态无效。", ACTION);
 
                     res.status = 400;
 
@@ -247,7 +249,7 @@ namespace http
                 }
                 if (has_enabled && !body["enabled"].is_boolean())
                 {
-                    spdlog::info("更新用户失败：用户可用状态无效。");
+                    spdlog::info("{}失败：用户可用状态无效。", ACTION);
 
                     res.status = 400;
 
@@ -257,7 +259,7 @@ namespace http
                 }
                 if (has_key && !body["key"].is_string())
                 {
-                    spdlog::info("更新用户失败：密钥格式无效。");
+                    spdlog::info("{}失败：密钥格式无效。", ACTION);
 
                     res.status = 400;
 
@@ -267,7 +269,7 @@ namespace http
                 }
                 if (has_password && !body["password"].is_string())
                 {
-                    spdlog::info("更新用户失败：密码格式无效。");
+                    spdlog::info("{}失败：密码格式无效。", ACTION);
 
                     res.status = 400;
 
@@ -277,7 +279,7 @@ namespace http
                 }
                 if (has_perms && !body["permissions"].is_array())
                 {
-                    spdlog::info("更新用户失败：权限列表格式无效。");
+                    spdlog::info("{}失败：权限列表格式无效。", ACTION);
 
                     res.status = 400;
 
@@ -295,7 +297,7 @@ namespace http
                 );
                 if (user_rows.empty())
                 {
-                    spdlog::info("更新用户失败：用户不存在。");
+                    spdlog::info("{}失败：用户不存在。", ACTION);
 
                     res.status = 404;
 
@@ -314,7 +316,7 @@ namespace http
                     );
                     if (!dup_rows.empty())
                     {
-                        spdlog::info("更新用户失败：用户名重复。");
+                        spdlog::info("{}失败：用户名重复。", ACTION);
 
                         res.status = 400;
 
@@ -334,7 +336,7 @@ namespace http
                         key_hash = crypto::Argon2id::hash_with_fixed_salt(key);
                         if (!key_hash)
                         {
-                            spdlog::error("更新用户失败：密钥哈希失败（用户 {}）。", user_id);
+                            spdlog::error("{}失败：密钥哈希失败（用户 {}）。", ACTION, user_id);
 
                             res.status = 500;
 
@@ -355,7 +357,7 @@ namespace http
                         password_hash = crypto::Argon2id::hash_with_random_salt(password);
                         if (!password_hash)
                         {
-                            spdlog::error("更新用户失败：密码哈希失败（用户 {}）。", user_id);
+                            spdlog::error("{}失败：密码哈希失败（用户 {}）。", ACTION, user_id);
 
                             res.status = 500;
 
@@ -422,7 +424,7 @@ namespace http
 
                 txn.commit();
 
-                spdlog::info("更新用户成功：用户 {}。", user_id);
+                spdlog::info("{}成功：用户 {}。", ACTION, user_id);
 
                 json["ok"] = true;
                 res.set_content(json.dump(), "application/json");
@@ -435,11 +437,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到后台创建新用户请求。");
+        constexpr std::string_view ACTION = "用户创建";
+        spdlog::info("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "创建用户",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -459,7 +462,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("创建用户失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -472,7 +475,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "manage:edit") == permissions.end())
                 {
-                    spdlog::info("创建用户失败：用户 {} 无 manage:edit 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 manage:edit 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -485,7 +488,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::info("创建用户失败：无效的 JSON。");
+                    spdlog::info("{}失败：无效的 JSON。", ACTION);
 
                     res.status = 400;
 
@@ -497,7 +500,7 @@ namespace http
                 // 密钥必填（key_hash 字段 NOT NULL）
                 if (!body.contains("key") || !body["key"].is_string() || body["key"].get<std::string>().empty())
                 {
-                    spdlog::info("创建用户失败：未设置密钥。");
+                    spdlog::info("{}失败：未设置密钥。", ACTION);
 
                     res.status = 400;
 
@@ -513,7 +516,7 @@ namespace http
                 {
                     if (!body["username"].is_string())
                     {
-                        spdlog::info("创建用户失败：用户名格式无效。");
+                        spdlog::info("{}失败：用户名格式无效。", ACTION);
 
                         res.status = 400;
 
@@ -530,7 +533,7 @@ namespace http
                     }
                     if (char_count > 10)
                     {
-                        spdlog::info("创建用户失败：用户名过长。");
+                        spdlog::info("{}失败：用户名过长。", ACTION);
 
                         res.status = 400;
 
@@ -546,7 +549,7 @@ namespace http
                 {
                     if (!body["key_enabled"].is_boolean())
                     {
-                        spdlog::info("创建用户失败：密钥可用状态无效。");
+                        spdlog::info("{}失败：密钥可用状态无效。", ACTION);
 
                         res.status = 400;
 
@@ -563,7 +566,7 @@ namespace http
                 {
                     if (!body["enabled"].is_boolean())
                     {
-                        spdlog::info("创建用户失败：用户可用状态无效。");
+                        spdlog::info("{}失败：用户可用状态无效。", ACTION);
 
                         res.status = 400;
 
@@ -580,7 +583,7 @@ namespace http
                 {
                     if (!body["password"].is_string())
                     {
-                        spdlog::info("创建用户失败：密码格式无效。");
+                        spdlog::info("{}失败：密码格式无效。", ACTION);
 
                         res.status = 400;
 
@@ -595,7 +598,7 @@ namespace http
                         password_hash = crypto::Argon2id::hash_with_random_salt(password);
                         if (!password_hash)
                         {
-                            spdlog::error("创建用户失败：密码哈希失败。");
+                            spdlog::error("{}失败：密码哈希失败。", ACTION);
 
                             res.status = 500;
 
@@ -610,7 +613,7 @@ namespace http
                 nlohmann::json perm_list = body.value("permissions", nlohmann::json::array());
                 if (!perm_list.is_array())
                 {
-                    spdlog::info("创建用户失败：权限列表格式无效。");
+                    spdlog::info("{}失败：权限列表格式无效。", ACTION);
 
                     res.status = 400;
 
@@ -630,7 +633,7 @@ namespace http
                     );
                     if (!dup_rows.empty())
                     {
-                        spdlog::info("创建用户失败：重复的用户名。");
+                        spdlog::info("{}失败：重复的用户名。", ACTION);
 
                         res.status = 400;
 
@@ -644,7 +647,7 @@ namespace http
                 const auto key_hash = crypto::Argon2id::hash_with_fixed_salt(key);
                 if (!key_hash)
                 {
-                    spdlog::error("创建用户失败：密钥哈希失败。");
+                    spdlog::error("{}失败：密钥哈希失败。", ACTION);
 
                     res.status = 500;
 
@@ -660,7 +663,7 @@ namespace http
                 );
                 if (!key_dup_rows.empty())
                 {
-                    spdlog::info("创建用户失败：重复的密钥。");
+                    spdlog::info("{}失败：重复的密钥。", ACTION);
 
                     res.status = 400;
 
@@ -708,7 +711,7 @@ namespace http
 
                 txn.commit();
 
-                spdlog::info("创建用户成功：用户 {}。", user_id);
+                spdlog::info("{}成功：用户 {}。", ACTION, user_id);
 
                 json["ok"] = true;
                 json["id"] = user_id;

@@ -26,7 +26,8 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::debug("收到照片墙信息获取请求。");
+        constexpr std::string_view ACTION = "照片墙信息获取";
+        spdlog::debug("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
@@ -41,7 +42,7 @@ namespace http
             return;
         }
 
-        with_db(res, allowed, "获取照片墙列表",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -63,11 +64,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到图片元数据保存请求。");
+        constexpr std::string_view ACTION = "图片元数据保存";
+        spdlog::info("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "保存图片元数据",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -87,7 +89,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("保存图片元数据失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -99,7 +101,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "photo_wall:edit") == permissions.end())
                 {
-                    spdlog::info("保存图片元数据失败：用户 {} 无 photo_wall:edit 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 photo_wall:edit 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -111,7 +113,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::info("保存图片元数据失败：无效的 JSON。");
+                    spdlog::info("{}失败：无效的 JSON。", ACTION);
 
                     res.status = 400;
 
@@ -132,7 +134,7 @@ namespace http
                     )
                 )
                 {
-                    spdlog::error("保存图片元数据失败：{}", *err);
+                    spdlog::error("{}失败：{}", ACTION, *err);
 
                     res.status = 500;
 
@@ -141,7 +143,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("图片元数据保存成功：{}", body.value("path", ""));
+                spdlog::info("{}成功：{}", ACTION, body.value("path", ""));
 
                 json["ok"] = true;
                 res.set_content(json.dump(), "application/json");
@@ -157,11 +159,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到图片上传请求。");
+        constexpr std::string_view ACTION = "图片上传";
+        spdlog::info("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "上传图片",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -169,7 +172,7 @@ namespace http
 
                 if (!req.form.has_file("file"))
                 {
-                    spdlog::info("上传图片失败：未选择文件。");
+                    spdlog::info("{}失败：未选择文件。", ACTION);
 
                     res.status = 400;
 
@@ -193,7 +196,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("上传图片失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
 
                     res.status = 401;
 
@@ -205,7 +208,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "photo_wall:upload") == permissions.end())
                 {
-                    spdlog::info("上传图片失败：用户 {} 无 photo_wall:upload 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 photo_wall:upload 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -217,7 +220,7 @@ namespace http
                 auto [err, result] = img::upload_image(conn, file.filename, file.content);
                 if (err)
                 {
-                    spdlog::error("上传图片失败：{}", *err);
+                    spdlog::error("{}失败：{}", ACTION, *err);
                     res.status = 500;
 
                     json["error"] = *err;
@@ -225,7 +228,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("图片上传成功：{}。", file.filename);
+                spdlog::info("{}成功：{}。", ACTION, file.filename);
 
                 json = result;
                 res.set_content(json.dump(), "application/json");
@@ -241,11 +244,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        spdlog::info("收到图片删除请求。");
+        constexpr std::string_view ACTION = "图片删除";
+        spdlog::info("收到 {} 请求。", ACTION);
 
         nlohmann::json json;
 
-        with_db(res, allowed, "删除图片",
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -265,7 +269,7 @@ namespace http
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("删除图片失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
                     res.status = 401;
 
                     json["error"] = "未登录或会话已过期";
@@ -276,7 +280,7 @@ namespace http
                 const auto& permissions = session->permissions;
                 if (std::find(permissions.begin(), permissions.end(), "photo_wall:delete") == permissions.end())
                 {
-                    spdlog::info("删除图片失败：用户 {} 无 photo_wall:delete 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 photo_wall:delete 权限。", ACTION, session->user_id);
 
                     res.status = 403;
 
@@ -288,7 +292,7 @@ namespace http
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::info("删除图片失败：无效的 JSON。");
+                    spdlog::info("{}失败：无效的 JSON。", ACTION);
 
                     res.status = 400;
 
@@ -300,7 +304,7 @@ namespace http
                 const auto path = body.value("path", "");
                 if (auto err = img::delete_image(conn, path))
                 {
-                    spdlog::error("删除图片失败：{}", *err);
+                    spdlog::error("{}失败：{}", ACTION, *err);
 
                     res.status = 500;
 
@@ -309,7 +313,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("图片删除成功：{}。", path);
+                spdlog::info("{}成功：{}。", ACTION, path);
 
                 json["ok"] = true;
                 res.set_content(json.dump(), "application/json");
