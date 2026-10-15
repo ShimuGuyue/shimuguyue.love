@@ -499,8 +499,12 @@ namespace doc
     {
         spdlog::debug("正在从数据库获取分类列表...");
         pqxx::work txn{ conn };
+
+        // 仅返回 count > 0 的分类。
         const auto rows = txn.exec(
-            "SELECT id, name FROM blog_categories ORDER BY id"
+            "SELECT c.id, c.name, c.count FROM blog_categories c "
+            "WHERE c.count > 0 "
+            "ORDER BY c.id"
         );
         txn.commit();
 
@@ -509,22 +513,38 @@ namespace doc
         for (const auto& row : rows)
         {
             result.push_back({
-                row["id"]  .as<int>(),
-                row["name"].as<std::string>()
+                row["id"]   .as<int>(),
+                row["name"] .as<std::string>(),
+                row["count"].as<int>()
             });
         }
         spdlog::debug("从数据库获取分类列表完成。");
         return result;
     }
 
-    auto get_tags(pqxx::connection& conn) -> std::vector<Tag>
+    auto get_tags(
+        pqxx::connection&       conn,
+        const std::vector<int>& category_ids)
+    -> std::vector<Tag>
     {
         spdlog::debug("正在从数据库获取标签列表...");
         pqxx::work txn{ conn };
 
-        const auto rows = txn.exec(
-            "SELECT id, name FROM blog_tags ORDER BY id"
-        );
+        // 仅返回 count > 0 的标签。
+        const std::string sql = category_ids.empty()
+                              ? "SELECT t.id, t.name, t.count FROM blog_tags t "
+                                "WHERE t.count > 0 "
+                                "ORDER BY t.id"
+                              : "SELECT t.id, t.name, t.count FROM blog_tags t "
+                                "WHERE t.count > 0 AND EXISTS ("
+                                "SELECT 1 FROM category_tag_relations ct "
+                                "WHERE ct.tag_id = t.id "
+                                "AND ct.category_id = ANY($1::int[]) AND ct.count > 0) "
+                                "ORDER BY t.id";
+
+        const auto rows = category_ids.empty()
+                        ? txn.exec(sql)
+                        : txn.exec(sql, pqxx::params{ "{" + join_ids(category_ids) + "}" });
         txn.commit();
 
         std::vector<Tag> result;
@@ -532,8 +552,9 @@ namespace doc
         for (const auto& row : rows)
         {
             result.push_back({
-                row["id"]  .as<int>(),
-                row["name"].as<std::string>()
+                row["id"]   .as<int>(),
+                row["name"] .as<std::string>(),
+                row["count"].as<int>()
             });
         }
         spdlog::debug("从数据库获取标签列表完成。");

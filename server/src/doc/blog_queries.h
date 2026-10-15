@@ -69,18 +69,24 @@ namespace doc
     [[nodiscard]] auto valid_blog_date(const std::string& update_time) -> std::string;
 
     /**
-     * @brief 查询所有分类。
+     * @brief 查询分类列表。
+     * @details 仅返回 count > 0 的分类。
      * @param conn 数据库连接。
      * @return 分类列表。
      */
     [[nodiscard]] auto get_categories(pqxx::connection& conn) -> std::vector<Category>;
 
     /**
-     * @brief 查询全部标签。
-     * @param conn 数据库连接。
+     * @brief 查询标签列表，可按分类过滤。
+     * @details 仅返回 count > 0 的标签，可按分类过滤。
+     * @param conn         数据库连接。
+     * @param category_ids 分类 ID 列表；为空表示不过滤。
      * @return 标签列表。
      */
-    [[nodiscard]] auto get_tags(pqxx::connection& conn) -> std::vector<Tag>;
+    [[nodiscard]] auto get_tags(
+        pqxx::connection&       conn,
+        const std::vector<int>& category_ids)
+    -> std::vector<Tag>;
 
     /**
      * @brief 查询博客列表，支持筛选和搜索。
