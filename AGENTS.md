@@ -56,7 +56,8 @@ cmake --build build
   ▼
 服务端 (C++23, httplib, 端口由 SERVER_PORT 决定)
   │  连接池（libcpp-pg-pool / lklibs::PgPool，DB_POOL_SIZE 条常驻连接），
-  │  db::with_db() 并发获取独占连接，无空闲时阻塞等待
+  │  db::with_db() 并发获取独占连接，池满时带超时等待（取用失败由 handler
+  │  统一返回 503），取用即探活、连接失效原地重建
   │  公开 GET 接口 cache-aside 缓存（redis++，REDIS_POOL_SIZE 条连接），
   │  未命中时直查数据库，200 成功响应写缓存；写接口成功后失效相关缓存
   ▼
@@ -214,7 +215,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/http/handlers/image.cpp` / `.h` | 照片墙图片：列表查询、元数据保存、上传、删除（含缓存失效） |
 | `server/src/cache/cache.cpp` / `.h` | Redis 公开接口缓存（基于 redis++ / redis-plus-plus）：初始化（PING 校验）、get / set / del、按前缀 SCAN+DEL 失效、统一键构造 `api-cache:`，get 记录缓存命中/未命中日志、set 记录写缓存日志 |
 | `server/src/db/connection.cpp` / `.h` | 数据库连接池初始化 + 表检查 |
-| `server/src/db/connection_pool.cpp` / `.h` | 连接池实现：基于 `lklibs::PgPool` 的薄封装，`db::with_db()` 并发获取独占连接，无空闲时阻塞等待 |
+| `server/src/db/connection_pool.cpp` / `.h` | 连接池实现：基于 `lklibs::PgPool` 的薄封装，`db::with_db()` 并发获取独占连接；取用连接由信号量带超时（`ACQUIRE_TIMEOUT` 5 秒），连接串固定带 `connect_timeout` / `tcp_user_timeout` / keepalive 与 `statement_timeout`（15 秒）/ `lock_timeout`（5 秒）；取用时 `SELECT 1` 探活，失效连接原地重建，重建失败节流 5 秒 |
 | `server/src/config/config.cpp` / `.h` | 配置统一入口：对外提供 `config::config()` 只读访问 ConfigMap；初始化依次调用 `init_env()`、`init_cache()` 与 `init_page_size()`；约定所有配置文件都在 `conf/` 下，`config::find_conf_dir()` 向上查找并缓存该目录（进程内只查找一次），`config::find_config_file()` 在其内取具体配置文件 |
 | `server/src/config/env.cpp` / `.h` | `conf/.env` 环境变量读取（`init_env()`，缺失则 `exit(1)`） |
 | `server/src/config/config_map.cpp` / `.h` | 配置统一存储封装类 `ConfigMap`：`.env` 环境变量与 `cache.yml` / `page_size.yml` 的配置项都以字符串键值存入同一个 `unordered_map`（`operator[]` 只读、`set` 写入） |

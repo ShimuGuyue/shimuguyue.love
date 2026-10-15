@@ -79,12 +79,16 @@ namespace db
         );
         ConnectionPool::instance().create(pool_size);
 
-        with_db(
-            [](pqxx::connection& conn)
-            {
-                check(conn);
-            }
-        );
+        if (const auto err = with_db(
+                [](pqxx::connection& conn)
+                {
+                    check(conn);
+                }
+            ))
+        {
+            spdlog::error("数据库表检查失败：{}", *err);
+            std::exit(1);
+        }
     }
 
 } // namespace db
