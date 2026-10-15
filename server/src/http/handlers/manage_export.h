@@ -11,13 +11,13 @@
 
 namespace http
 {
-
-/**
- * @brief 处理 GET /api/manage/download 请求（需 manage:download 权限）。
- */
-void handle_manage_download(
-    const httplib::Request& req,
-    httplib::Response&      res,
-    const std::string&      allowed);
+    /**
+     * @brief 处理 GET /api/manage/download 请求（需 manage:download 权限）。
+     * @details 后台数据打包导出。
+     */
+    void handle_manage_download(
+        const httplib::Request& req,
+        httplib::Response&      res,
+        const std::string&      allowed);
 
 } // namespace http

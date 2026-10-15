@@ -17,6 +17,7 @@
 #include "auth/session.h"
 #include "db/connection_pool.h"
 #include "export/export_data.h"
+#include "http/handlers/common.h"
 
 namespace http
 {
@@ -25,7 +26,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        const auto err = db::with_db(
+        constexpr std::string_view ACTION = "数据下载";
+        spdlog::info("收到 {} 请求。", ACTION);
+
+        nlohmann::json json;
+
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -41,12 +47,16 @@ namespace http
                     &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
                         token = auth_hdr.substr(PREFIX.size());
                 }
+
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("数据下载失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
+
                     res.status = 401;
-                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+
+                    json["error"] = "未登录或会话已过期";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -54,39 +64,43 @@ namespace http
                 const auto scope = req.get_param_value("scope");
                 if (scope != "blogs" && scope != "users")
                 {
-                    spdlog::info("数据下载失败：无效的导出范围 {}", scope);
+                    spdlog::info("{}失败：无效的导出范围 {}", ACTION, scope);
+
                     res.status = 400;
-                    res.set_content(R"({"error":"无效的导出范围"})", "application/json");
+
+                    json["error"] = "无效的导出范围";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
-                // 权限检查：数据下载需要 manage:download 权限
-                const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "manage:download") == perms.end())
+                // 权限检查：manage:download
+                const auto& permissions = session->permissions;
+                if (std::find(permissions.begin(), permissions.end(), "manage:download") == permissions.end())
                 {
-                    spdlog::info("数据下载失败：用户 {} 无 manage:download 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 manage:download 权限。", ACTION, session->user_id);
+
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 manage:download 权限"})", "application/json");
+
+                    json["error"] = "当前用户无 manage:download 权限";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
+                // 调用数据打包逻辑
                 std::expected<std::string, std::string> zip;
                 if (scope == "blogs")
-                {
                     zip = export_data::build_blogs_export_zip(conn);
-                }
-                else
-                {
+                else if (scope == "users")
                     zip = export_data::build_users_export_zip(conn);
-                }
+
                 if (!zip)
                 {
-                    spdlog::error("数据下载失败：{}", zip.error());
+                    spdlog::error("{}失败：{}", ACTION, zip.error());
+
                     res.status = 500;
-                    res.set_content(
-                        nlohmann::json{{"error", zip.error()}}.dump(),
-                        "application/json"
-                    );
+
+                    json["error"] = zip.error();
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
@@ -99,17 +113,10 @@ namespace http
                     "attachment; filename=\"data-" + scope + "-" + std::string{ date_buf } + ".zip\""
                 );
                 res.set_content(zip->data(), zip->size(), "application/zip");
-                spdlog::info("数据下载成功。");
+
+                spdlog::info("{}成功。", ACTION);
             }
         );
-        if (err)
-        {
-            spdlog::warn("数据下载失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
-        }
     }
 
 } // namespace http

@@ -26,32 +26,37 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
+        constexpr std::string_view ACTION = "照片墙信息获取";
+        spdlog::debug("收到 {} 请求。", ACTION);
+
+        nlohmann::json json;
+
         const auto key = cache::cache_key("/api/images", {});
         if (const auto cached = cache::get(key); cached.has_value())
         {
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
             res.set_content(*cached, "application/json");
+
+            spdlog::debug("照片墙信息从缓存获取成功。");
             return;
         }
 
-        const auto err = db::with_db(
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
-                res.set_content(img::get_all_images(conn).dump(), "application/json");
+                json = img::get_all_images(conn);
+                res.set_content(json.dump(), "application/json");
+
+                spdlog::debug("照片墙信息从数据库获取成功。");
+
                 cache_set_list(key, res.body, std::stoll(config::config()["CACHE_TTL_IMAGES"]));
+
+                spdlog::info("照片墙信息已加入缓存。");
             }
         );
-        if (err)
-        {
-            spdlog::warn("获取照片墙列表失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
-        }
     }
 
     void handle_save_image(
@@ -59,7 +64,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        const auto err = db::with_db(
+        constexpr std::string_view ACTION = "图片元数据保存";
+        spdlog::info("收到 {} 请求。", ACTION);
+
+        nlohmann::json json;
+
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -75,62 +85,73 @@ namespace http
                     &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
                         token = auth_hdr.substr(PREFIX.size());
                 }
+
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("保存图片元数据失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
+
                     res.status = 401;
-                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+
+                    json["error"] = "未登录或会话已过期";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
-                const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "photo_wall:edit") == perms.end()) {
-                    spdlog::info("保存图片元数据失败：用户 {} 无 photo_wall:edit 权限。", session->user_id);
+
+                const auto& permissions = session->permissions;
+                if (std::find(permissions.begin(), permissions.end(), "photo_wall:edit") == permissions.end())
+                {
+                    spdlog::info("{}失败：用户 {} 无 photo_wall:edit 权限。", ACTION, session->user_id);
+
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 photo_wall:edit 权限"})", "application/json");
+
+                    json["error"] = "当前用户无 photo_wall:edit 权限";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
-                if (body.is_discarded()) {
-                    spdlog::error("保存图片元数据失败：无效的 JSON。");
+                if (body.is_discarded())
+                {
+                    spdlog::info("{}失败：无效的 JSON。", ACTION);
+
                     res.status = 400;
-                    res.set_content(R"({"error":"无效的 JSON"})", "application/json");
+
+                    json["error"] = "无效的 JSON";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
-                const auto err = img::save_image(
-                    conn,
-                    body.value("path", ""),
-                    body.value("description", ""),
-                    body.value("scale", 1.0),
-                    body.value("rotation", 0.0),
-                    body.value("pos_x", 50.0),
-                    body.value("pos_y", 50.0),
-                    body.value("z", 0)
-                );
-                if (err.has_value())
+                if (auto err = img::save_image(
+                        conn,
+                        body.value("path", ""),
+                        body.value("description", ""),
+                        body.value("scale", 1.0),
+                        body.value("rotation", 0.0),
+                        body.value("pos_x", 50.0),
+                        body.value("pos_y", 50.0),
+                        body.value("z", 0)
+                    )
+                )
                 {
-                    spdlog::error("保存图片元数据失败：{}", *err);
+                    spdlog::error("{}失败：{}", ACTION, *err);
+
                     res.status = 500;
-                    nlohmann::json j;
-                    j["error"] = *err;
-                    res.set_content(j.dump(), "application/json");
+
+                    json["error"] = *err;
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
-                spdlog::info("图片元数据保存成功：{}", body.value("path", ""));
-                res.set_content(R"({"ok":true})", "application/json");
+
+                spdlog::info("{}成功：{}", ACTION, body.value("path", ""));
+
+                json["ok"] = true;
+                res.set_content(json.dump(), "application/json");
+
+                // 删除旧缓存
                 cache::invalidate_prefix("api-cache:/api/images");
             }
         );
-        if (err)
-        {
-            spdlog::warn("保存图片元数据失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
-        }
     }
 
     void handle_upload_image(
@@ -138,7 +159,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        const auto err = db::with_db(
+        constexpr std::string_view ACTION = "图片上传";
+        spdlog::info("收到 {} 请求。", ACTION);
+
+        nlohmann::json json;
+
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -146,9 +172,12 @@ namespace http
 
                 if (!req.form.has_file("file"))
                 {
-                    spdlog::error("上传图片失败：未选择文件。");
+                    spdlog::info("{}失败：未选择文件。", ACTION);
+
                     res.status = 400;
-                    res.set_content(R"({"error":"未选择文件"})", "application/json");
+
+                    json["error"] = "未选择文件";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
                 const auto file = req.form.get_file("file");
@@ -163,45 +192,51 @@ namespace http
                     &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
                         token = auth_hdr.substr(PREFIX.size());
                 }
+
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("上传图片失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
+
                     res.status = 401;
-                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+
+                    json["error"] = "未登录或会话已过期";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
-                const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "photo_wall:upload") == perms.end())
+
+                const auto& permissions = session->permissions;
+                if (std::find(permissions.begin(), permissions.end(), "photo_wall:upload") == permissions.end())
                 {
-                    spdlog::info("上传图片失败：用户 {} 无 photo_wall:upload 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 photo_wall:upload 权限。", ACTION, session->user_id);
+
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 photo_wall:upload 权限"})", "application/json");
+
+                    json["error"] = "当前用户无 photo_wall:upload 权限";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 auto [err, result] = img::upload_image(conn, file.filename, file.content);
-                if (err.has_value()) {
-                    spdlog::error("上传图片失败：{}", *err);
+                if (err)
+                {
+                    spdlog::error("{}失败：{}", ACTION, *err);
                     res.status = 500;
-                    nlohmann::json j;
-                    j["error"] = *err;
-                    res.set_content(j.dump(), "application/json");
+
+                    json["error"] = *err;
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
-                spdlog::info("图片上传成功：{}。", file.filename);
-                res.set_content(result.dump(), "application/json");
+
+                spdlog::info("{}成功：{}。", ACTION, file.filename);
+
+                json = result;
+                res.set_content(json.dump(), "application/json");
+
+                // 删除旧缓存
                 cache::invalidate_prefix("api-cache:/api/images");
             }
         );
-        if (err)
-        {
-            spdlog::warn("上传图片失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
-        }
     }
 
     void handle_delete_image(
@@ -209,7 +244,12 @@ namespace http
         httplib::Response&      res,
         const std::string&      allowed)
     {
-        const auto err = db::with_db(
+        constexpr std::string_view ACTION = "图片删除";
+        spdlog::info("收到 {} 请求。", ACTION);
+
+        nlohmann::json json;
+
+        with_db(res, allowed, ACTION,
             [&](pqxx::connection& conn)
             {
                 res.set_header("Access-Control-Allow-Origin", allowed);
@@ -225,56 +265,63 @@ namespace http
                     &&  auth_hdr.compare(0, PREFIX.size(), PREFIX) == 0)
                         token = auth_hdr.substr(PREFIX.size());
                 }
+
                 const auto session = auth::validate_session(conn, token);
                 if (!session)
                 {
-                    spdlog::info("删除图片失败：未登录或会话已过期。");
+                    spdlog::info("{}失败：未登录或会话已过期。", ACTION);
                     res.status = 401;
-                    res.set_content(R"({"error":"未登录或会话已过期"})", "application/json");
+
+                    json["error"] = "未登录或会话已过期";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
-                const auto& perms = session->permissions;
-                if (std::find(perms.begin(), perms.end(), "photo_wall:delete") == perms.end())
+
+                const auto& permissions = session->permissions;
+                if (std::find(permissions.begin(), permissions.end(), "photo_wall:delete") == permissions.end())
                 {
-                    spdlog::info("删除图片失败：用户 {} 无 photo_wall:delete 权限。", session->user_id);
+                    spdlog::info("{}失败：用户 {} 无 photo_wall:delete 权限。", ACTION, session->user_id);
+
                     res.status = 403;
-                    res.set_content(R"({"error":"当前用户无 photo_wall:delete 权限"})", "application/json");
+
+                    json["error"] = "当前用户无 photo_wall:delete 权限";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 const auto body = nlohmann::json::parse(req.body, nullptr, false);
                 if (body.is_discarded())
                 {
-                    spdlog::error("删除图片失败：无效的 JSON。");
+                    spdlog::info("{}失败：无效的 JSON。", ACTION);
+
                     res.status = 400;
-                    res.set_content(R"({"error":"无效的 JSON"})", "application/json");
+
+                    json["error"] = "无效的 JSON";
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 const auto path = body.value("path", "");
-                const auto err = img::delete_image(conn, path);
-                if (err.has_value())
+                if (auto err = img::delete_image(conn, path))
                 {
-                    spdlog::error("删除图片失败：{}", *err);
+                    spdlog::error("{}失败：{}", ACTION, *err);
+
                     res.status = 500;
-                    nlohmann::json j;
-                    j["error"] = *err;
-                    res.set_content(j.dump(), "application/json");
+
+                    json["error"] = *err;
+                    res.set_content(json.dump(), "application/json");
                     return;
                 }
-                spdlog::info("图片删除成功：{}。", path);
-                res.set_content(R"({"ok":true})", "application/json");
+
+                spdlog::info("{}成功：{}。", ACTION, path);
+
+                json["ok"] = true;
+                res.set_content(json.dump(), "application/json");
+
+                // 删除旧缓存
                 cache::invalidate_prefix("api-cache:/api/images");
             }
         );
-        if (err)
-        {
-            spdlog::warn("删除图片失败：{}", *err);
-            res.status = 503;
-            res.set_header("Access-Control-Allow-Origin", allowed);
-            res.set_header("Content-Type", "application/json");
-            res.set_content(R"({"error":"数据库繁忙，请稍后重试"})", "application/json");
-        }
     }
 
 } // namespace http
