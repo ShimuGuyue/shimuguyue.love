@@ -15,6 +15,13 @@
 namespace doc
 {
     /**
+     * @brief 分类信息。
+     */
+    struct Category
+    {
+        int         id;
+        std::string name;
+        int         count;
     };
 
     /**
