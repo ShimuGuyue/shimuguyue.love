@@ -66,7 +66,7 @@ function onDropdownClick(event: MouseEvent): void {
       <RouterLink to="/blogs" class="header__nav-link">博客</RouterLink>
       <RouterLink to="/projects" class="header__nav-link">项目</RouterLink>
       <!-- 收藏夹下拉菜单 -->
-      <div
+      <!-- <div
         class="header__nav-dropdown"
         :class="{ 'header__nav-dropdown--active': favoritesActive }"
       >
@@ -86,7 +86,7 @@ function onDropdownClick(event: MouseEvent): void {
           <RouterLink to="/favorites/anime" class="header__nav-dropdown-item" @click="onDropdownClick">动漫</RouterLink>
           <RouterLink to="/favorites/game" class="header__nav-dropdown-item" @click="onDropdownClick">游戏</RouterLink>
         </div>
-      </div>
+      </div> -->
       <RouterLink to="/about" class="header__nav-link">关于我</RouterLink>
       <RouterLink to="/friends" class="header__nav-link">友链推广</RouterLink>
     </div>
