@@ -145,6 +145,9 @@ namespace doc
 
     /**
      * @brief 保存博客及关联元数据，同时写入 .md 文件。
+     * @details 保存博客信息至数据库，并附带元信息保存文件至磁盘。
+     *          保存后为该博客的每个 (分类, 标签) 组合建立关联并累加计数，
+     *          分类、标签也各自累加计数。
      * @param conn                数据库连接。
      * @param title               标题。
      * @param description         描述。

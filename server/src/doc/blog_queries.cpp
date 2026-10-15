@@ -786,51 +786,42 @@ namespace doc
         std::string_view                date)
     -> std::optional<std::string>
     {
-        spdlog::info("正在保存博客 {}...", title);
         // 校验元信息字段
-        if (auto err = validate_all_fields(title, description, category_names, tag_names, file_path_category, file_path_name); err)
-        {
-            spdlog::error("保存博客失败：{}", *err);
+        if (auto err = validate_all_fields(title, description, category_names, tag_names, file_path_category, file_path_name))
             return err;
-        }
 
         // 拼接博客文件的相对路径："category/name"
         const std::string file_path = std::string{ file_path_category } + "/" + std::string{ file_path_name };
 
         pqxx::work txn{ conn };
+
         // 检查文件路径是否已被占用
         if (is_file_path_taken(txn, file_path))
-        {
-            spdlog::info("保存博客失败：路径 {} 已存在。", file_path);
-            return std::string{ "博客路径已存在" };
-        }
+            return "博客路径已存在";
 
-        // 创建分类；已存在则查找
+        // 新分类创建条目
         std::vector<int> category_ids;
         category_ids.reserve(category_names.size());
         for (const auto& cn : category_names)
         {
-            auto cid = create_category(txn, cn);
+            auto cid = find_category(txn, cn);
             if (!cid)
             {
-                cid = find_category(txn, cn);
+                cid = create_category(txn, cn);
                 if (!cid)
-                {
-                    spdlog::error("保存博客失败：创建分类 {} 失败。", cn);
                     return std::string{ "创建分类失败" };
-                }
             }
             category_ids.push_back(*cid);
         }
 
-        // 创建标签；已存在则查找
+        // 新标签创建条目
         std::vector<int> tag_ids;
         for (const auto& tn : tag_names)
         {
-            auto tid = create_tag(txn, tn);
+            auto tid = find_tag(txn, tn);
             if (!tid)
             {
-                tid = find_tag(txn, tn);
+                tid = create_tag(txn, tn);
                 if (!tid)
                 {
                     spdlog::error("保存博客失败：创建标签 {} 失败。", tn);
@@ -843,30 +834,37 @@ namespace doc
         // 插入博客数据库记录
         std::string dt{ date };
 
-        pqxx::result r = txn.exec(
+        pqxx::result rows = txn.exec(
             "INSERT INTO blogs (title, description, content, file_path, update_time) "
             "VALUES ($1, $2, $3, $4, $5::date) RETURNING id",
-            pqxx::params{ std::string{title}, std::string{description},
-                          std::string{content}, file_path, dt });
-        if (r.empty())
+            pqxx::params{ std::string{title},
+                          std::string{description},
+                          std::string{content},
+                          file_path, dt }
+        );
+        if (rows.empty())
         {
             spdlog::error("保存博客失败：插入数据库记录失败。");
             return std::string{ "创建博客记录失败" };
         }
 
-        const int blog_id = r[0]["id"].as<int>();
+        const auto row = rows[0];
+        const int blog_id = row["id"].as<int>();
 
         // 关联博客与分类、标签
         link_blog_categories(txn, blog_id, category_ids);
         link_blog_tags(txn, blog_id, tag_ids);
-
-        // 生成 Frontmatter 并写入 .md
-        // 文件路径格式：$FILE_PATH/blogs/{category}/{name}.md
-        if (auto err = write_blog_md(file_path, title, description, category_names, tag_names, content, date, "保存博客失败"); err)
-            return err;
+        // 为该博客的每个 (分类, 标签) 组合累加关联计数
+        add_blog_category_tag_counts(txn, category_ids, tag_ids);
+        // 更新分类/标签自身的计数
+        refresh_category_tag_counts(txn, category_ids, tag_ids);
 
         txn.commit();
-        spdlog::info("博客保存成功。");
+
+        // 生成 Frontmatter 并写入 .md
+        if (auto err = write_blog_md(file_path, title, description, category_names, tag_names, content, date, "保存博客失败"))
+            return err;
+
         return std::nullopt;
     }
 
