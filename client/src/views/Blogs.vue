@@ -105,9 +105,36 @@ const tagMulti = ref(false)
 
 const searchQuery = ref('')
 
-// ── 计算：当前可见的标签（标签与分类相互独立，直接展示全部标签） ──
+// ── 计算：当前可见的分类 / 标签（均按自身计数过滤，计数为 0 不显示） ──
 
-const visibleTags = computed<Tag[]>(() => tags.value)
+/**
+ * 服务端按分类过滤后的标签（使用该标签的博客数 > 0，且所选分类下计数不为 0）。
+ * 未选择分类时为空数组，表示标签行展示全量。
+ */
+const filteredTags = ref<Tag[]>([])
+
+/**
+ * 分类行展示的分类：服务端已只返回计数不为 0 的分类。
+ * 分类不随已选标签变化，也不存在“按标签反查分类”的过滤。
+ */
+const visibleCategories = computed<Category[]>(() => categories.value)
+
+/**
+ * 标签行展示的标签集合：计数不为 0 的标签，并额外保留已选中的标签
+ * （避免切换分类后已选标签从筛选器消失、无法取消）。
+ */
+const visibleTags = computed<Tag[]>(() => {
+  if (selectedCategoryIds.value.length === 0) return tags.value
+
+  const selected = new Set(selectedTagIds.value)
+  const merged = [...filteredTags.value]
+  for (const tag of tags.value) {
+    if (selected.has(tag.id) && !merged.some(entry => entry.id === tag.id)) {
+      merged.push(tag)
+    }
+  }
+  return merged
+})
 
 /** 按名称获取标签 ID（标签名全局唯一） */
 function tagIdsByName(name: string): number[] {
@@ -126,7 +153,7 @@ const filterGroups = computed<FilterGroup[]>(() => [
     key: FILTER_GROUP_CATEGORIES,
     label: '分类',
     multi: categoryMulti.value,
-    options: categories.value.map(cat => ({
+    options: visibleCategories.value.map(cat => ({
       key: String(cat.id),
       label: cat.name,
       selected: selectedCategoryIds.value.includes(cat.id),
@@ -190,6 +217,38 @@ async function fetchTags() {
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     tags.value = await resp.json()
   } catch (e) { console.error('获取标签失败:', e) }
+}
+
+/** 当前过滤标签请求的序号，用于丢弃乱序返回的过期响应 */
+let filteredTagsRequestId = 0
+
+/**
+ * 按已选分类拉取可用标签。
+ * 未选择分类时清空过滤结果（此时标签行展示全部标签，无需请求）。
+ */
+async function fetchFilteredTags() {
+  if (selectedCategoryIds.value.length === 0) {
+    filteredTags.value = []
+    return
+  }
+
+  // 与服务端一致：分类 ID 升序去重后再拼接，保证同一筛选对应同一缓存键
+  const ids = [...new Set(selectedCategoryIds.value)].sort((a, b) => a - b)
+  const requestId = ++filteredTagsRequestId
+
+  try {
+    const resp = await fetch('/api/tags?category_ids=' + ids.join(','))
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+    const data = await resp.json() as Tag[]
+    if (requestId === filteredTagsRequestId) {
+      filteredTags.value = data
+    }
+  } catch (e) {
+    console.error('获取分类下的标签失败:', e)
+    if (requestId === filteredTagsRequestId) {
+      filteredTags.value = []
+    }
+  }
 }
 
 /** 按当前筛选条件与页码请求服务端（服务端按需查询该页）。 */
@@ -256,7 +315,7 @@ onBeforeRouteUpdate(async (to, from) => {
 
   // 筛选变化或页码变化（前进后退）时按需查询该页
   if (!filtersSame || requested !== loadedPage) {
-    await loadCurrentPage()
+    await Promise.all([fetchFilteredTags(), loadCurrentPage()])
   }
 })
 
@@ -303,6 +362,7 @@ function toggleCategory(id: number) {
       selectedCategoryIds.value[0] === id ? [] : [id]
   }
   page.value = 1
+  fetchFilteredTags()
   fetchBlogs()
   syncUrl()
 }
@@ -321,6 +381,7 @@ function toggleTag(name: string) {
     selectedTagIds.value = anySelected ? [] : ids
   }
   page.value = 1
+  fetchFilteredTags()
   fetchBlogs()
   syncUrl()
 }
@@ -344,6 +405,8 @@ onMounted(async () => {
     .map(n => categories.value.find(c => c.name === n)?.id).filter(Boolean) as number[]
   selectedTagIds.value = urlTagNames.flatMap(n => tagIdsByName(n))
 
+  // 分类由 URL 还原时，标签行同样只展示这些分类下计数不为 0 的标签
+  await fetchFilteredTags()
   await loadCurrentPage()
 })
 </script>
