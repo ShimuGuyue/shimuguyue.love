@@ -147,10 +147,10 @@ namespace
      * @param description        博客描述
      * @param category_names     分类名称列表
      * @param tag_names          标签名称列表
-     * @param file_path_category 文件目录
-     * @param file_path_name     文件名
+     * @param file_path_category 文件路径分类部分
+     * @param file_path_name     文件路径文件名部分
      * @return std::nullopt 表示全部通过，否则返回第一个失败字段的错误消息。
-    */
+     */
     static auto validate_all_fields(
         std::string_view                title,
         std::string_view                description,
@@ -160,23 +160,23 @@ namespace
         std::string_view                file_path_name)
     -> std::optional<std::string>
     {
-        if (auto err = validate_field("标题", title);                  err)
+        if (auto err = validate_field("标题", title))
             return err;
-        if (auto err = validate_field("描述", description);            err)
+        if (auto err = validate_field("描述", description))
             return err;
         for (const auto& category : category_names)
         {
-            if (auto err = validate_field("分类", category);           err)
+            if (auto err = validate_field("分类", category))
                 return err;
         }
         for (const auto& tag : tag_names)
         {
-            if (auto err = validate_field("标签", tag);                err)
+            if (auto err = validate_field("标签", tag))
                 return err;
         }
-        if (auto err = validate_field("文件路径", file_path_category); err)
+        if (auto err = validate_field("文件路径", file_path_category))
             return err;
-        if (auto err = validate_field("文件路径", file_path_name);     err)
+        if (auto err = validate_field("文件路径", file_path_name))
             return err;
         return std::nullopt;
     }
