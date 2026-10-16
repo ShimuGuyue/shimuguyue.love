@@ -624,54 +624,40 @@ namespace
 
     /**
      * @brief 生成 Frontmatter 并写入博客 .md 文件。
-     * @param file_path      博客文件相对路径。
-     * @param title          标题。
-     * @param description    描述。
-     * @param category_names 分类名列表。
-     * @param tag_names      标签名列表。
-     * @param content        博客正文。
-     * @param date           更新日期（YYYY-MM-DD）。
+     * @param blog 博客内容与元信息（file_path 为完整相对路径）。
      * @return std::nullopt 表示成功；否则返回错误消息。
      */
-    auto write_blog_md(
-        std::string_view                file_path,
-        std::string_view                title,
-        std::string_view                description,
-        const std::vector<std::string>& category_names,
-        const std::vector<std::string>& tag_names,
-        std::string_view                content,
-        std::string_view                date,
-        std::string_view                action)
+    auto write_blog_md(const doc::BlogContent& blog)
     -> std::optional<std::string>
     {
         std::ostringstream fm;
         fm << "---\n";
-        fm << "title: " << title << "\n";
-        fm << "description: " << description << "\n";
+        fm << "title: " << blog.title << "\n";
+        fm << "description: " << blog.description << "\n";
         fm << "categories: [";
-        for (std::size_t i{ 0 }; i < category_names.size(); ++i)
+        for (std::size_t i{ 0 }; i < blog.categories.size(); ++i)
         {
             if (i > 0)
                 fm << ", ";
-            fm << category_names[i];
+            fm << blog.categories[i];
         }
         fm << "]\n";
         fm << "tags: [";
-        for (std::size_t i{ 0 }; i < tag_names.size(); ++i)
+        for (std::size_t i{ 0 }; i < blog.tags.size(); ++i)
         {
             if (i > 0)
                 fm << ", ";
-            fm << tag_names[i];
+            fm << blog.tags[i];
         }
         fm << "]\n";
-        fm << "update_time: " << date << "\n";
-        fm << "file_path: " << file_path << "\n";
+        fm << "update_time: " << blog.date << "\n";
+        fm << "file_path: " << blog.file_path << "\n";
         fm << "---\n\n";
-        fm << content;
+        fm << blog.content;
 
         std::filesystem::path out_path{
             std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs"
-            / (std::string{ file_path } + ".md")
+            / (blog.file_path + ".md")
         };
         std::filesystem::create_directories(out_path.parent_path());
         std::ofstream ofs{ out_path, std::ios::binary };
