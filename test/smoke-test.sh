@@ -88,12 +88,25 @@ INSERT INTO blog_tag_relations (blog_id, tag_id)
 SELECT b.id, t.id FROM blogs b, blog_tags t
 WHERE b.file_path = 'smoke-test-blog' AND t.name = '测试标签'
 ON CONFLICT DO NOTHING;
--- 分类-标签关联计数：保证按分类过滤标签的接口有非空结果（空结果不写缓存）；
--- 直接写表时 blog_categories.count / blog_tags.count 可能落后，但不影响接口只返回 count > 0 的行为
+-- 直接写表不会触发服务端的计数维护，这里按实际关联把三处计数算准：
+-- 分类 / 标签列表接口只返回 count > 0 的项，计数为 0 会返回空数组，
+-- 而空结果不写缓存，冒烟测试的缓存键校验会因此失败。
 INSERT INTO category_tag_relations (category_id, tag_id, count)
-SELECT c.id, t.id, 1 FROM blog_categories c, blog_tags t
-WHERE c.name = '测试分类' AND t.name = '测试标签'
-ON CONFLICT (category_id, tag_id) DO NOTHING;
+SELECT bc.category_id, bt.tag_id, COUNT(*)
+FROM blog_categories_relations bc
+JOIN blog_tag_relations bt ON bt.blog_id = bc.blog_id
+GROUP BY bc.category_id, bt.tag_id
+ON CONFLICT (category_id, tag_id) DO UPDATE SET count = EXCLUDED.count;
+
+UPDATE blog_categories c
+SET count = (
+    SELECT COUNT(*) FROM blog_categories_relations r WHERE r.category_id = c.id
+);
+
+UPDATE blog_tags t
+SET count = (
+    SELECT COUNT(*) FROM blog_tag_relations r WHERE r.tag_id = t.id
+);
 INSERT INTO images (path, description) VALUES ('smoke.jpg', 'smoke')
 ON CONFLICT (path) DO NOTHING;
 SQL
