@@ -84,6 +84,16 @@ INSERT INTO blog_categories_relations (blog_id, category_id)
 SELECT b.id, c.id FROM blogs b, blog_categories c
 WHERE b.file_path = 'smoke-test-blog' AND c.name = '测试分类'
 ON CONFLICT DO NOTHING;
+INSERT INTO blog_tag_relations (blog_id, tag_id)
+SELECT b.id, t.id FROM blogs b, blog_tags t
+WHERE b.file_path = 'smoke-test-blog' AND t.name = '测试标签'
+ON CONFLICT DO NOTHING;
+-- 分类-标签关联计数：保证按分类过滤标签的接口有非空结果（空结果不写缓存）；
+-- 直接写表时 blog_categories.count / blog_tags.count 可能落后，但不影响接口只返回 count > 0 的行为
+INSERT INTO category_tag_relations (category_id, tag_id, count)
+SELECT c.id, t.id, 1 FROM blog_categories c, blog_tags t
+WHERE c.name = '测试分类' AND t.name = '测试标签'
+ON CONFLICT (category_id, tag_id) DO NOTHING;
 INSERT INTO images (path, description) VALUES ('smoke.jpg', 'smoke')
 ON CONFLICT (path) DO NOTHING;
 SQL
@@ -193,6 +203,26 @@ for key in \
 done
 echo "[smoke] 四个公开接口的缓存键均已写入。"
 
+# ---- 按分类过滤标签：返回 200 且写入独立缓存键 ----
+CATEGORY_ID=$(psql "${DB_ARGS[@]}" -tAc "SELECT id FROM blog_categories WHERE name = '测试分类' LIMIT 1")
+if [[ -z "$CATEGORY_ID" ]]; then
+    echo "[smoke] 未找到测试分类，无法验证按分类过滤标签" >&2
+    exit 1
+fi
+code=$(curl -s -o /dev/null -w '%{http_code}' \
+    --connect-timeout 2 --max-time 10 "$BASE_URL/api/tags?category_ids=${CATEGORY_ID}")
+if [[ "$code" != "200" ]]; then
+    echo "[smoke] GET /api/tags?category_ids=${CATEGORY_ID} 失败（HTTP ${code}）" >&2
+    exit 1
+fi
+echo "[smoke] GET /api/tags?category_ids=${CATEGORY_ID} -> 200 OK"
+if redis-cli "${REDIS_ARGS[@]}" exists "api-cache:/api/tags?category_ids=${CATEGORY_ID}" | grep -qx 1; then
+    echo "[smoke] 按分类过滤的标签缓存键已写入。"
+else
+    echo "[smoke] 按分类过滤的标签未写入缓存" >&2
+    exit 1
+fi
+
 # ---- 空结果不缓存验证 ----
 curl -sf "$BASE_URL/api/blogs?q=__smoke_no_match__" > /dev/null
 if redis-cli "${REDIS_ARGS[@]}" exists 'api-cache:/api/blogs?q=__smoke_no_match__' \
@@ -203,4 +233,4 @@ else
     exit 1
 fi
 
-echo "[smoke] 后端冒烟测试全部通过（4 个公开接口、4 个缓存键）。"
+echo "[smoke] 后端冒烟测试全部通过（4 个公开接口、4 个缓存键、按分类过滤标签）。"
