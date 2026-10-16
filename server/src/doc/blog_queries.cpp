@@ -575,36 +575,15 @@ namespace
     }
 
     /**
-     * @brief 清理已无博客引用的孤立标签。
-     * @param txn     当前事务。
-     * @param tag_ids 待检查的标签 ID 列表。
      */
-    void delete_orphan_tags(pqxx::work& txn, const std::vector<int>& tag_ids)
     {
-        for (int tid : tag_ids)
         {
-            const auto ref = txn.exec(
-                "SELECT 1 FROM blog_tag_relations WHERE tag_id = $1 LIMIT 1",
-                pqxx::params{ tid }
-            );
-            if (ref.empty())
-                txn.exec("DELETE FROM blog_tags WHERE id = $1", pqxx::params{ tid });
         }
     }
 
     /**
-     * @brief 清理已无博客引用的孤立分类。
-     * @param txn         当前事务。
-     * @param category_id 分类 ID。
      */
-    void delete_orphan_category(pqxx::work& txn, int category_id)
     {
-        const auto ref = txn.exec(
-            "SELECT 1 FROM blog_categories_relations WHERE category_id = $1 LIMIT 1",
-            pqxx::params{ category_id }
-        );
-        if (ref.empty())
-            txn.exec("DELETE FROM blog_categories WHERE id = $1", pqxx::params{ category_id });
     }
 
     /**
