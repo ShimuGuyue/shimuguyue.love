@@ -128,12 +128,10 @@ namespace doc
 
     /**
      * @brief 删除博客及相关元数据，同时删除 .md 文件。
-     *
-     * 删除博客记录（CASCADE 自动清理 blog_categories_relations / blog_tag_relations 关联）。
-     * 删除已无关联的标签。
-     * 删除已无博客的分类。
-     * 删除服务器上的 .md 文件。
-     *
+     * @details 删除博客记录,
+     *          CASCADE 自动清理 blog_categories_relations / blog_tag_relations 关联，
+     *          递减 category_tag_relations 中该博客涉及的 (分类, 标签) 组合计数及各自计数。
+     *          删除服务器上的 .md 文件。
      * @param conn      数据库连接。
      * @param file_path 博客文件相对路径。
      * @return 错误消息字符串（std::nullopt 表示成功）。

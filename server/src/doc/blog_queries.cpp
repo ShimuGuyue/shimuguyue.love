@@ -304,6 +304,31 @@ namespace
     }
 
     /**
+     * @brief 由分类 ID 列表与标签 ID 列表拼出全部 (分类, 标签) 组合。
+     * @details 用双重循环直接拼出所有分类 ID 和标签 ID 的组合对。
+     * @param category_ids 分类 ID 列表。
+     * @param tag_ids      标签 ID 列表。
+     * @return (分类 ID, 标签 ID) 组合列表。
+     */
+    auto make_category_tag_pairs(
+        const std::vector<int>& category_ids,
+        const std::vector<int>& tag_ids)
+    -> std::vector<std::pair<int, int>>
+    {
+        std::vector<std::pair<int, int>> pairs;
+        pairs.reserve(category_ids.size() * tag_ids.size());
+
+        for (const int category_id : category_ids)
+        {
+            for (const int tag_id : tag_ids)
+            {
+                pairs.emplace_back(category_id, tag_id);
+            }
+        }
+        return pairs;
+    }
+
+    /**
      * @brief 检查博客文件路径是否已被占用。
      * @param txn       当前事务。
      * @param file_path 博客文件相对路径。
@@ -933,46 +958,33 @@ namespace doc
         std::string_view  file_path)
     -> std::optional<std::string>
     {
-        spdlog::info("正在删除博客 {}...", file_path);
-        // 校验 file_path
         if (file_path.empty())
-        {
-            spdlog::error("删除博客失败：缺少 file_path 参数。");
             return "缺少 file_path 参数";
-        }
 
         pqxx::work txn{ conn };
 
         // 查找博客记录
         auto blog = find_blog_row(txn, file_path);
         if (!blog)
-        {
-            spdlog::error("删除博客失败：{} 不存在。", file_path);
             return "博客不存在";
-        }
+
         const int blog_id = *blog;
 
-        // 收集关联的分类 / 标签 ID
+        // 记录该博客的分类和标签，用于删除后重新计数
         const auto category_ids = get_blog_category_ids(txn, blog_id);
         const auto tag_ids      = get_blog_tag_ids(txn, blog_id);
-
         // 删除博客记录（CASCADE 自动清理 blog_categories_relations / blog_tag_relations 关联）
         txn.exec("DELETE FROM blogs WHERE id = $1", pqxx::params{ blog_id });
-        // 清理孤立分类
-        for (int cid : category_ids)
-        {
-            delete_orphan_category(txn, cid);
-        }
-        // 清理孤立标签
-        delete_orphan_tags(txn, tag_ids);
+        // 递减该博客涉及的 (分类, 标签) 关联计数，并重新计算各自计数
+        remove_category_tag_counts(txn, make_category_tag_pairs(category_ids, tag_ids));
+        refresh_category_tag_counts(txn, category_ids, tag_ids);
 
         txn.commit();
 
         // 删除服务器上的 .md 文件及可能为空的父目录
-        if (auto err = delete_blog_md(file_path); err)
+        if (auto err = delete_blog_md(file_path))
             return err;
 
-        spdlog::info("博客删除成功。");
         return std::nullopt;
     }
 
