@@ -359,6 +359,27 @@ namespace
     }
 
     /**
+     * @brief 用数据库行填充博客列表项。
+     * @param item 待填充的博客列表项。
+     * @param row  查询结果行。
+     */
+    void fill_blog_item(doc::BlogItem& item, const pqxx::row_ref& row)
+    {
+        item.id          = row["id"]         .as<int>();
+        item.title       = row["title"]      .as<std::string>();
+        item.update_time = row["update_time"].as<std::string>();
+
+        if (!row["description"].is_null())
+            item.description = row["description"].as<std::string>();
+
+        if (!row["content"].is_null())
+            item.content = row["content"].as<std::string>();
+
+        if (!row["file_path"].is_null())
+            item.file_path = row["file_path"].as<std::string>();
+    }
+
+    /**
      * @brief 检查博客文件路径是否已被占用。
      * @param txn       当前事务。
      * @param file_path 博客文件相对路径。
