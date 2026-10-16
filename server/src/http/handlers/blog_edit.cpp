@@ -194,12 +194,17 @@ namespace http
                 }
 
                 // 调用博客保存逻辑
-                if (auto err = doc::save_blog(
-                        conn, title, description, category_list, tag_list,
-                        path_categories, path_name,
-                        content, date
-                    )
-                )
+                doc::BlogContent blog{
+                    .title       = title,
+                    .description = description,
+                    .categories  = category_list,
+                    .tags        = tag_list,
+                    .content     = content,
+                    .date        = date,
+                    .file_path   = std::string{ path_categories } + "/" + std::string{ path_name }
+                };
+
+                if (auto err = doc::save_blog(conn, blog, path_categories, path_name))
                 {
                     spdlog::error("{}失败：{}", ACTION, *err);
 
@@ -362,11 +367,17 @@ namespace http
                 }
 
                 // 调用更新博客逻辑
-                if (auto err = doc::update_blog(
-                        conn, title, description, category_list, tag_list,
-                        old_file_path, path_categories, path_name, content, date
-                    )
-                )
+                doc::BlogContent blog{
+                    .title       = title,
+                    .description = description,
+                    .categories  = category_list,
+                    .tags        = tag_list,
+                    .content     = content,
+                    .date        = date,
+                    .file_path   = std::string{ path_categories } + "/" + std::string{ path_name }
+                };
+
+                if (auto err = doc::update_blog(conn, blog, old_file_path, path_categories, path_name))
                 {
                     spdlog::error("{}失败：{}", ACTION, *err);
 

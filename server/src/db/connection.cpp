@@ -27,6 +27,7 @@ namespace
             "users", "permissions", "user_permissions",
             "sessions",
             "blogs", "blog_categories", "blog_tags", "blog_tag_relations",
+            "blog_categories_relations", "category_tag_relations",
             "images"
         };
 

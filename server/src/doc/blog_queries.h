@@ -14,51 +14,68 @@
 
 namespace doc
 {
+    /**
+     * @brief 分类信息。
+     */
+    struct Category
+    {
+        int         id;
+        std::string name;
+        int         count;
+    };
 
-/**
- * @brief 分类信息。
- */
-struct Category
-{
-    int         id;
-    std::string name;
-};
+    /**
+     * @brief 标签信息。
+     */
+    struct Tag
+    {
+        int         id;
+        std::string name;
+        int         count;
+    };
 
-/**
- * @brief 标签信息。
- */
-struct Tag
-{
-    int         id;
-    std::string name;
-};
+    /**
+     * @brief 博客列表项。
+     */
+    struct BlogItem
+    {
+        int                        id;
+        std::string                title;
+        std::optional<std::string> description;
+        std::optional<std::string> content;
+        std::optional<std::string> file_path;
+        std::string                update_time;
+        std::vector<std::string>   categories;
+        std::vector<std::string>   tags;
+    };
 
-/**
- * @brief 博客列表项。
- */
-struct BlogItem
-{
-    int                        id;
-    std::string                title;
-    std::optional<std::string> description;
-    std::optional<std::string> content;
-    std::optional<std::string> file_path;
-    std::string                update_time;
-    std::vector<std::string>   categories;
-    std::vector<std::string>   tags;
-};
+    /**
+     * @brief 博客列表查询参数。
+     */
+    struct BlogQuery
+    {
+        std::vector<int>           category_ids;
+        std::vector<int>           tag_ids;
+        std::optional<std::string> search;
+        int                        page      = 1; ///< 页码，从 1 开始
+        int                        page_size = 0; ///< 每页条数，0 表示不分页（返回全部）
+    };
 
-/**
- * @brief 博客列表查询参数。
- */
-struct BlogQuery
-{
-    std::vector<int>           category_ids;
-    std::vector<int>           tag_ids;
-    std::optional<std::string> search;
-    int                        page      = 1; ///< 页码，从 1 开始
-    int                        page_size = 0; ///< 每页条数，0 表示不分页（返回全部）
-};
+    /**
+     * @brief 博客内容与元信息。
+     * @details 保存 / 更新博客共用，把标题、描述、分类、标签、正文、
+     *          日期与文件相对路径打成一个整体，替代冗长的位置参数列表。
+     */
+    struct BlogContent
+    {
+        std::string              title;       ///< 标题
+        std::string              description; ///< 描述
+        std::vector<std::string> categories;  ///< 分类列表
+        std::vector<std::string> tags;        ///< 标签列表
+        std::string              content;     ///< 博客正文（Markdown）
+        std::string              date;        ///< 更新日期（YYYY-MM-DD）
+        std::string              file_path;   ///< 相对路径（不含 .md 后缀），形如 "分类/文件名"
+    };
 
     /**
      * @brief 校验博客更新时间（YYYY-MM-DD）。
@@ -68,18 +85,24 @@ struct BlogQuery
     [[nodiscard]] auto valid_blog_date(const std::string& update_time) -> std::string;
 
     /**
-     * @brief 查询所有分类。
+     * @brief 查询分类列表。
+     * @details 仅返回 count > 0 的分类。
      * @param conn 数据库连接。
      * @return 分类列表。
      */
     [[nodiscard]] auto get_categories(pqxx::connection& conn) -> std::vector<Category>;
 
     /**
-     * @brief 查询全部标签。
-     * @param conn 数据库连接。
+     * @brief 查询标签列表，可按分类过滤。
+     * @details 仅返回 count > 0 的标签，可按分类过滤。
+     * @param conn         数据库连接。
+     * @param category_ids 分类 ID 列表；为空表示不过滤。
      * @return 标签列表。
      */
-    [[nodiscard]] auto get_tags(pqxx::connection& conn) -> std::vector<Tag>;
+    [[nodiscard]] auto get_tags(
+        pqxx::connection&       conn,
+        const std::vector<int>& category_ids)
+    -> std::vector<Tag>;
 
     /**
      * @brief 查询博客列表，支持筛选和搜索。
@@ -121,12 +144,10 @@ struct BlogQuery
 
     /**
      * @brief 删除博客及相关元数据，同时删除 .md 文件。
-     *
-     * 删除博客记录（CASCADE 自动清理 blog_categories_relations / blog_tag_relations 关联）。
-     * 删除已无关联的标签。
-     * 删除已无博客的分类。
-     * 删除服务器上的 .md 文件。
-     *
+     * @details 删除博客记录,
+     *          CASCADE 自动清理 blog_categories_relations / blog_tag_relations 关联，
+     *          递减 category_tag_relations 中该博客涉及的 (分类, 标签) 组合计数及各自计数。
+     *          删除服务器上的 .md 文件。
      * @param conn      数据库连接。
      * @param file_path 博客文件相对路径。
      * @return 错误消息字符串（std::nullopt 表示成功）。
@@ -138,55 +159,38 @@ struct BlogQuery
 
     /**
      * @brief 保存博客及关联元数据，同时写入 .md 文件。
+     * @details 保存博客信息至数据库，并附带元信息保存文件至磁盘。
+     *          保存后为该博客的每个 (分类, 标签) 组合及各自累加计数。
      * @param conn                数据库连接。
-     * @param title               标题。
-     * @param description         描述。
-     * @param category_names      分类名列表（不存在则新建）。
-     * @param tag_names           标签名列表（不存在则新建）。
+     * @param blog                博客内容与元信息。
      * @param file_path_category  文件路径分类目录部分。
      * @param file_path_name      文件路径文件名部分。
-     * @param content             博客正文（Markdown）。
-     * @param date                更新日期（YYYY-MM-DD 格式）。
      * @return 错误消息字符串（std::nullopt 表示成功）。
      */
     [[nodiscard]] auto save_blog(
-        pqxx::connection&               conn,
-        std::string_view                title,
-        std::string_view                description,
-        const std::vector<std::string>& category_names,
-        const std::vector<std::string>& tag_names,
-        std::string_view                file_path_category,
-        std::string_view                file_path_name,
-        std::string_view                content,
-        std::string_view                date)
+        pqxx::connection& conn,
+        BlogContent&      blog,
+        std::string_view  file_path_category,
+        std::string_view  file_path_name)
     -> std::optional<std::string>;
 
     /**
      * @brief 更新已有博客及关联元数据，同时覆盖 .md 文件。
-     *        若 new_file_path 与 old_file_path 不同，会删除旧 md 并写入新路径。
+     * @details 更新分类 / 标签各自计数及对应的组合计数。
+     *          若 new_file_path 与 old_file_path 不同，会删除旧 md 并写入新路径。
      * @param conn                数据库连接。
-     * @param title               标题。
-     * @param description         描述。
-     * @param category_names      分类名列表（不存在则新建）。
-     * @param tag_names           标签名列表（不存在则新建）。
-     * @param old_file_path       查找博客的旧文件路径。
+     * @param blog                博客内容与元信息。
+     * @param old_file_path       查找旧博客记录用的原文件相对路径。
      * @param file_path_category  新文件路径分类目录部分。
      * @param file_path_name      新文件路径文件名部分。
-     * @param content             博客正文（Markdown）。
-     * @param date                更新日期（YYYY-MM-DD 格式）。
      * @return 错误消息字符串（std::nullopt 表示成功）。
      */
     [[nodiscard]] auto update_blog(
-        pqxx::connection&               conn,
-        std::string_view                title,
-        std::string_view                description,
-        const std::vector<std::string>& category_names,
-        const std::vector<std::string>& tag_names,
-        std::string_view                old_file_path,
-        std::string_view                file_path_category,
-        std::string_view                file_path_name,
-        std::string_view                content,
-        std::string_view                date)
+        pqxx::connection& conn,
+        BlogContent&      blog,
+        std::string_view  old_file_path,
+        std::string_view  file_path_category,
+        std::string_view  file_path_name)
     -> std::optional<std::string>;
 
 } // namespace doc

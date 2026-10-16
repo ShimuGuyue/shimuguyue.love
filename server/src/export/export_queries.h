@@ -65,4 +65,11 @@ namespace export_queries
      */
     [[nodiscard]] auto query_blog_categories_relations(pqxx::work& txn) -> nlohmann::json;
 
+    /**
+     * @brief 导出 category_tag_relations 关联表为 JSON 数组。
+     * @param txn 当前事务。
+     * @return JSON 数组。
+     */
+    [[nodiscard]] auto query_category_tag_relations(pqxx::work& txn) -> nlohmann::json;
+
 } // namespace export_queries

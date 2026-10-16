@@ -67,6 +67,14 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 ```
 
 - **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/blogs/` 的相对路径（不含 `.md` 后缀）。
+- **三处博客计数**：三张表各带一个计数，由服务端在博客增删改时随关联一起维护，筛选器按计数 > 0 过滤（计数为 0 的项不展示）：
+    - `blog_categories.count`：属于该分类的博客数；
+    - `blog_tags.count`：使用该标签的博客数；
+    - `category_tag_relations.count`：同时属于该分类与该标签的博客数（新建加 1、修改撤下旧组合减 1 再为新组合加 1、删除减 1）。
+    - `blog_categories.count` / `blog_tags.count` 由 `refresh_category_tag_counts()` 在关联变化后**按实际关联重算**（而非累加），只重算本次涉及的分类 / 标签，避免多次增减产生漂移。
+    - 查询：`GET /api/categories` 只返回 `count > 0` 的分类，**不支持按标签反查分类**（分类的展示只取决于自身计数，与已选标签无关）；`GET /api/tags?category_ids=...` 只返回 `count > 0` 的标签，传入分类时进一步只返回这些分类下 `category_tag_relations.count > 0` 的标签。`category_ids` 可不传，参数为空串按不传处理；前后端都按 ID 升序去重后拼接，保证同一筛选对应同一缓存键。
+    - 响应：分类 / 标签列表项均为 `{ id, name, count }`，前端只用服务端过滤后的结果，不重复计算。
+- **分类 / 标签的增删口径**：分类与标签按名称取用——已存在则直接关联，不存在则创建，**从不删除**（原有的孤儿清理已移除）。因此 `count` 减到 0 时关联行与分类 / 标签记录都保留在库中，只是不再出现在筛选器里；重新有博客使用时计数回升、重新出现在筛选器中。
 - **照片墙**：文件存于 `FILE_PATH/photo_wall/`，元数据存于数据库，文件名与对应 `id` 同名。
 - **关于我**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-readme.sh` 从 GitHub 拉取 README 仓库到 `$FILE_PATH/README`；前端构建时由 `client/vite.config.ts` 直接读取 `README.md`（缺失则构建报错）并以构建常量注入 `About.vue`。
 - **友链**：`tools/rebuild.sh` 在每次 `npm run build` 前调用 `tools/pull-friend-links.sh` 从 Github 拉取数据仓库到 `FILE_PATH/friend_links/`；前端构建时读取 `meta.yaml`（id / title / url / description）并匹配 `${id}.*` 头像，经 `virtual:friend-links` 虚拟模块注入 `Friends.vue`。头像是纯静态产物：构建期交由 Vite 资源管线按内容哈希命名并复制进产物目录 `assets/<id>-<hash>.<ext>`，dev 时由 Vite 以 `/@fs/` 读取源文件。`meta.yaml` 内部格式约定参考 [shimuguyue.love-friend_links/meta.yaml](https://github.com/ShimuGuyue/shimuguyue.love-friend_links/blob/main/meta.yaml)。
@@ -170,7 +178,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/components/FilterBar.vue` | 公共筛选器组件：按 `groups`（维度 + 条目 + 单选/多选）渲染筛选行，条目超过三行折叠并显示「更多...」，附搜索框（输入防抖后 `emit('update:search')`）；通过 `toggle` / `update:multi` / `update:search` 回调，选中态由使用方维护 |
 | `client/src/lib/md-editor-setup.ts` | md-editor-v3 全局配置：注入本地 highlight.js / katex 实例、`typographer: true` / `breaks: false`，并导出标题 slug 函数 |
 | `client/src/views/Home.vue` | 主页：照片墙浏览、编辑、上传；右侧个人简介静态硬编码展示 |
-| `client/src/views/Blogs.vue` | 博客列表页（分类/标签筛选、搜索；筛选 UI 由公共组件 `FilterBar` 提供，本页负责选中态、URL 同步与分页） |
+| `client/src/views/Blogs.vue` | 博客列表页（分类/标签筛选、搜索；筛选 UI 由公共组件 `FilterBar` 提供，本页负责选中态、URL 同步与分页；选中分类后标签行只展示该分类下计数不为 0 的标签，分类行不随标签变化，已选中的筛选项始终保留在选项中以便取消） |
 | `client/src/views/BlogDetail.vue` | 博客详情页（`MarkdownPreview` 渲染，目录来自 `getCatalog` 事件，保留滚动高亮与点击标题滚动） |
 | `client/src/views/BlogEdit.vue` | 博客新建/编辑页（`MdEditor` 编辑器，图片/mermaid/echarts/prettier/全屏按钮禁用） |
 | `client/src/views/About.vue` | 关于我页面（使用 `vite.config.ts` 构建期注入的 README 内容，`MarkdownPreview` 预览） |
@@ -217,7 +225,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/http/handlers/auth.cpp` / `.h` | 认证：密钥 / 密码登录（限流、会话签发），当前用户权限 / 信息查询与自助更新 |
 | `server/src/http/handlers/manage_user.cpp` / `.h` | 后台用户管理：用户列表、更新用户、新建用户（manage:view / manage:edit 权限） |
 | `server/src/http/handlers/manage_export.cpp` / `.h` | 后台数据导出：`GET /api/manage/download` 打包数据表 zip（manage:download 权限） |
-| `server/src/http/handlers/blog.cpp` / `.h` | 博客公开查询：分类 / 标签 / 列表 / 详情 / frontmatter 解析（含 Redis cache-aside 缓存） |
+| `server/src/http/handlers/blog.cpp` / `.h` | 博客公开查询：分类（只返回计数不为 0 的分类）/ 标签（`?category_ids=` 按分类过滤）/ 列表 / 详情 / frontmatter 解析（含 Redis cache-aside 缓存） |
 | `server/src/http/handlers/blog_edit.cpp` / `.h` | 博客写操作：新建 / 编辑 / 删除 / 下载 `.md`（含相关缓存失效） |
 | `server/src/http/handlers/image.cpp` / `.h` | 照片墙图片：列表查询、元数据保存、上传、删除（含缓存失效） |
 | `server/src/cache/cache.cpp` / `.h` | Redis 公开接口缓存（基于 redis++ / redis-plus-plus）：初始化（PING 校验）、get / set / del、按前缀 SCAN+DEL 失效、统一键构造 `api-cache:`，get 记录缓存命中/未命中日志、set 记录写缓存日志 |
@@ -232,7 +240,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/auth/session.cpp` / `.h` | 会话 token 创建、验证、过期清理 |
 | `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |
 | `server/src/crypto/argon2id.cpp` / `.h` | Argon2id 密码哈希，随机盐 / 固定盐两种模式 |
-| `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询（博客文件路径来自 `FILE_PATH/blogs`） |
+| `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询：增删改博客时同步维护 `blog_categories.count` / `blog_tags.count` / `category_tag_relations.count`（前两者按实际关联重算）；分类按自身计数过滤，标签可按分类过滤（博客文件路径来自 `FILE_PATH/blogs`） |
 | `server/src/export/export_data.cpp` / `.h` | 后台数据导出 |
 | `server/src/export/export_queries.cpp` / `.h` | 数据导出查询：各数据表读取为 JSON 数组 |
 | `server/src/export/zip_writer.cpp` / `.h` | zip 打包工具（store 方式，无压缩） |
@@ -244,7 +252,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | 路径 | 说明 |
 |---|---|
 | `sql/create_users.sql` | 用户表（users、permissions、user_permissions）+ 会话表（sessions） |
-| `sql/create_blogs.sql` | 博客表（blog_categories、blog_tags、blogs、blog_tag_relations、blog_categories_relations） |
+| `sql/create_blogs.sql` | 博客表（blog_categories、blog_tags、blogs、blog_tag_relations、blog_categories_relations、category_tag_relations）；blog_categories / blog_tags 各带 count 字段 |
 | `sql/create_images.sql` | 照片墙图片表（images） |
 
 ### **tools/** 自动化工具目录

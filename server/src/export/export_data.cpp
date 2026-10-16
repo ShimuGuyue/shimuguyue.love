@@ -83,6 +83,8 @@ namespace export_data
         const auto  blog_tags_json = export_queries::query_blog_tags (txn);
         const auto blog_categories_relations_json =
             export_queries::query_blog_categories_relations(txn);
+        const auto category_tag_relations_json =
+            export_queries::query_category_tag_relations(txn);
         txn.commit();
 
         const std::vector<std::pair<std::string, std::string>> files = {
@@ -90,7 +92,8 @@ namespace export_data
             {                "categories.json",                categories_json.dump(2) },
             {                      "tags.json",                      tags_json.dump(2) },
             {                 "blog_tags.json",                 blog_tags_json.dump(2) },
-            { "blog_categories_relations.json", blog_categories_relations_json.dump(2) }
+            { "blog_categories_relations.json", blog_categories_relations_json.dump(2) },
+            {     "category_tag_relations.json",   category_tag_relations_json.dump(2) }
         };
 
         auto blog_files = collect_blog_files();
