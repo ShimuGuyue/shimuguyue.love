@@ -914,19 +914,15 @@ namespace doc
     }
 
     auto save_blog(
-        pqxx::connection&               conn,
-        std::string_view                title,
-        std::string_view                description,
-        const std::vector<std::string>& category_names,
-        const std::vector<std::string>& tag_names,
-        std::string_view                file_path_category,
-        std::string_view                file_path_name,
-        std::string_view                content,
-        std::string_view                date)
+        pqxx::connection& conn,
+        BlogContent&      blog,
+        std::string_view  file_path_category,
+        std::string_view  file_path_name)
     -> std::optional<std::string>
     {
         // 校验元信息字段
-        if (auto err = validate_all_fields(title, description, category_names, tag_names, file_path_category, file_path_name))
+        if (auto err = validate_all_fields(blog.title, blog.description, blog.categories, blog.tags,
+                                           file_path_category, file_path_name))
             return err;
 
         // 拼接博客文件的相对路径："category/name"
@@ -938,44 +934,24 @@ namespace doc
         if (is_file_path_taken(txn, file_path))
             return "博客路径已存在";
 
-        // 新分类创建条目
-        std::vector<int> category_ids;
-        category_ids.reserve(category_names.size());
-        for (const auto& cn : category_names)
-        {
-            auto cid = find_category(txn, cn);
-            if (!cid)
-            {
-                cid = create_category(txn, cn);
-                if (!cid)
-                    return "创建分类失败";
-            }
-            category_ids.push_back(*cid);
-        }
+        // 解析分类与标签：不存在的随即创建
+        const auto category_ids = resolve_category_ids(txn, blog.categories);
+        if (!category_ids)
+            return "创建分类失败";
 
-        // 新标签创建条目
-        std::vector<int> tag_ids;
-        for (const auto& tn : tag_names)
-        {
-            auto tid = find_tag(txn, tn);
-            if (!tid)
-            {
-                tid = create_tag(txn, tn);
-                if (!tid)
-                    return "创建标签失败";
-            }
-            tag_ids.push_back(*tid);
-        }
+        const auto tag_ids = resolve_tag_ids(txn, blog.tags);
+        if (!tag_ids)
+            return "创建标签失败";
 
         // 插入博客数据库记录
-        std::string dt{ date };
+        std::string dt{ blog.date };
 
         pqxx::result rows = txn.exec(
             "INSERT INTO blogs (title, description, content, file_path, update_time) "
             "VALUES ($1, $2, $3, $4, $5::date) RETURNING id",
-            pqxx::params{ std::string{title},
-                          std::string{description},
-                          std::string{content},
+            pqxx::params{ blog.title,
+                          blog.description,
+                          blog.content,
                           file_path, dt }
         );
         if (rows.empty())
@@ -988,17 +964,17 @@ namespace doc
         const int blog_id = row["id"].as<int>();
 
         // 关联博客与分类、标签
-        link_blog_categories(txn, blog_id, category_ids);
-        link_blog_tags(txn, blog_id, tag_ids);
+        link_blog_categories(txn, blog_id, *category_ids);
+        link_blog_tags(txn, blog_id, *tag_ids);
         // 为该博客的每个 (分类, 标签) 组合累加关联计数
-        add_blog_category_tag_counts(txn, category_ids, tag_ids);
+        add_blog_category_tag_counts(txn, *category_ids, *tag_ids);
         // 更新分类 / 标签自身的计数
-        refresh_category_tag_counts(txn, category_ids, tag_ids);
+        refresh_category_tag_counts(txn, *category_ids, *tag_ids);
 
         txn.commit();
 
         // 生成 Frontmatter 并写入 .md
-        if (auto err = write_blog_md(file_path, title, description, category_names, tag_names, content, date, "保存博客失败"))
+        if (auto err = write_blog_md(blog))
             return err;
 
         return std::nullopt;
@@ -1027,7 +1003,7 @@ namespace doc
         // 删除博客记录（CASCADE 自动清理 blog_categories_relations / blog_tag_relations 关联）
         txn.exec("DELETE FROM blogs WHERE id = $1", pqxx::params{ blog_id });
         // 递减该博客涉及的 (分类, 标签) 关联计数，并重新计算各自计数
-        remove_category_tag_counts(txn, make_category_tag_pairs(category_ids, tag_ids));
+        remove_category_tag_counts(txn, category_ids, tag_ids);
         refresh_category_tag_counts(txn, category_ids, tag_ids);
 
         txn.commit();

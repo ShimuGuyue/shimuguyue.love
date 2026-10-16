@@ -160,29 +160,18 @@ namespace doc
     /**
      * @brief 保存博客及关联元数据，同时写入 .md 文件。
      * @details 保存博客信息至数据库，并附带元信息保存文件至磁盘。
-     *          保存后为该博客的每个 (分类, 标签) 组合建立关联并累加计数，
-     *          分类、标签也各自累加计数。
+     *          保存后为该博客的每个 (分类, 标签) 组合及各自累加计数。
      * @param conn                数据库连接。
-     * @param title               标题。
-     * @param description         描述。
-     * @param category_names      分类名列表（不存在则新建）。
-     * @param tag_names           标签名列表（不存在则新建）。
+     * @param blog                博客内容与元信息。
      * @param file_path_category  文件路径分类目录部分。
      * @param file_path_name      文件路径文件名部分。
-     * @param content             博客正文（Markdown）。
-     * @param date                更新日期（YYYY-MM-DD 格式）。
      * @return 错误消息字符串（std::nullopt 表示成功）。
      */
     [[nodiscard]] auto save_blog(
-        pqxx::connection&               conn,
-        std::string_view                title,
-        std::string_view                description,
-        const std::vector<std::string>& category_names,
-        const std::vector<std::string>& tag_names,
-        std::string_view                file_path_category,
-        std::string_view                file_path_name,
-        std::string_view                content,
-        std::string_view                date)
+        pqxx::connection& conn,
+        BlogContent&      blog,
+        std::string_view  file_path_category,
+        std::string_view  file_path_name)
     -> std::optional<std::string>;
 
     /**
