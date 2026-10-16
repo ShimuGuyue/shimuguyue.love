@@ -575,15 +575,51 @@ namespace
     }
 
     /**
+     * @brief 把分类名解析为分类 ID，不存在的分类随即创建。
+     * @param txn   当前事务。
+     * @param names 分类名列表。
+     * @return 与输入顺序一致的分类 ID 列表；
+     *         解析失败返回 std::nullopt。
      */
+    auto resolve_category_ids(pqxx::work& txn, const std::vector<std::string>& names)
+    -> std::optional<std::vector<int>>
     {
+        std::vector<int> ids;
+        ids.reserve(names.size());
+        for (const auto& name : names)
         {
+            auto id = create_category(txn, name);
+            if (!id)
+                id = find_category(txn, name);
+            if (!id)
+                return std::nullopt;
+            ids.push_back(*id);
         }
+        return ids;
     }
 
     /**
+     * @brief 把标签名解析为标签 ID，不存在的标签随即创建。
+     * @param txn   当前事务。
+     * @param names 标签名列表。
+     * @return 与输入顺序一致的标签 ID 列表；
+     *         解析失败返回 std::nullopt。
      */
+    auto resolve_tag_ids(pqxx::work& txn, const std::vector<std::string>& names)
+    -> std::optional<std::vector<int>>
     {
+        std::vector<int> ids;
+        ids.reserve(names.size());
+        for (const auto& name : names)
+        {
+            auto id = create_tag(txn, name);
+            if (!id)
+                id = find_tag(txn, name);
+            if (!id)
+                return std::nullopt;
+            ids.push_back(*id);
+        }
+        return ids;
     }
 
     /**
