@@ -380,6 +380,84 @@ namespace
     }
 
     /**
+     * @brief 批量把标签名挂到对应博客列表项上。
+     * @details 按 blog_id 建索引后再拼接，避免逐行线性查找。
+     * @param txn      当前事务。
+     * @param blog_ids 博客 ID 列表；为空时不查询。
+     * @param items    待填充的博客列表项。
+     */
+    void attach_tag_names(
+        pqxx::work&                 txn,
+        const std::vector<int>&     blog_ids,
+        std::vector<doc::BlogItem>& items)
+    {
+        if (blog_ids.empty())
+            return;
+
+        std::unordered_map<int, std::size_t> index;
+        index.reserve(items.size());
+        for (std::size_t i{ 0 }; i < items.size(); ++i)
+        {
+            index[items[i].id] = i;
+        }
+
+        const auto rows = txn.exec(
+            "SELECT bt.blog_id, t.name "
+            "FROM blog_tag_relations bt "
+            "JOIN blog_tags t ON t.id = bt.tag_id "
+            "WHERE bt.blog_id = ANY($1) "
+            "ORDER BY t.name",
+            pqxx::params{ "{" + join_ids(blog_ids) + "}" }
+        );
+
+        for (const auto& row : rows)
+        {
+            const auto it = index.find(row["blog_id"].as<int>());
+            if (it != index.end())
+                items[it->second].tags.push_back(row["name"].as<std::string>());
+        }
+    }
+
+    /**
+     * @brief 批量把分类名挂到对应博客列表项上。
+     * @details 按 blog_id 建索引后再拼接，避免逐行线性查找。
+     * @param txn      当前事务。
+     * @param blog_ids 博客 ID 列表；为空时不查询。
+     * @param items    待填充的博客列表项。
+     */
+    void attach_category_names(
+        pqxx::work&                 txn,
+        const std::vector<int>&     blog_ids,
+        std::vector<doc::BlogItem>& items)
+    {
+        if (blog_ids.empty())
+            return;
+
+        std::unordered_map<int, std::size_t> index;
+        index.reserve(items.size());
+        for (std::size_t i{ 0 }; i < items.size(); ++i)
+        {
+            index[items[i].id] = i;
+        }
+
+        const auto rows = txn.exec(
+            "SELECT bc.blog_id, c.name "
+            "FROM blog_categories_relations bc "
+            "JOIN blog_categories c ON c.id = bc.category_id "
+            "WHERE bc.blog_id = ANY($1) "
+            "ORDER BY c.name",
+            pqxx::params{ "{" + join_ids(blog_ids) + "}" }
+        );
+
+        for (const auto& row : rows)
+        {
+            const auto it = index.find(row["blog_id"].as<int>());
+            if (it != index.end())
+                items[it->second].categories.push_back(row["name"].as<std::string>());
+        }
+    }
+
+    /**
      * @brief 检查博客文件路径是否已被占用。
      * @param txn       当前事务。
      * @param file_path 博客文件相对路径。
@@ -759,58 +837,10 @@ namespace doc
         }
 
         // 批量查询标签
-        if (!blog_ids.empty())
-        {
-            const auto tag_rows = txn.exec(
-                "SELECT bt.blog_id, t.name "
-                "FROM blog_tag_relations bt "
-                "JOIN blog_tags t ON t.id = bt.tag_id "
-                "WHERE bt.blog_id = ANY($1) "
-                "ORDER BY t.name",
-                pqxx::params{ "{" + join_ids(blog_ids) + "}" }
-            );
-
-            for (const auto& tr : tag_rows)
-            {
-                const auto bid  = tr["blog_id"].as<int>();
-                const auto name = tr["name"]   .as<std::string>();
-                for (auto& item : result)
-                {
-                    if (item.id == bid)
-                    {
-                        item.tags.push_back(name);
-                        break;
-                    }
-                }
-            }
-        }
+        attach_tag_names(txn, blog_ids, result);
 
         // 批量查询分类
-        if (!blog_ids.empty())
-        {
-            const auto cat_rows = txn.exec(
-                "SELECT bc.blog_id, c.name "
-                "FROM blog_categories_relations bc "
-                "JOIN blog_categories c ON c.id = bc.category_id "
-                "WHERE bc.blog_id = ANY($1) "
-                "ORDER BY c.name",
-                pqxx::params{ "{" + join_ids(blog_ids) + "}" }
-            );
-
-            for (const auto& cr : cat_rows)
-            {
-                const auto bid  = cr["blog_id"].as<int>();
-                const auto name = cr["name"]   .as<std::string>();
-                for (auto& item : result)
-                {
-                    if (item.id == bid)
-                    {
-                        item.categories.push_back(name);
-                        break;
-                    }
-                }
-            }
-        }
+        attach_category_names(txn, blog_ids, result);
 
         txn.commit();
         spdlog::debug("从数据库获取博客列表完成。");
@@ -864,49 +894,16 @@ namespace doc
             return std::nullopt;
         }
 
-        BlogItem item;
-        item.id          = row[0]["id"]         .as<int>();
-        item.title       = row[0]["title"]      .as<std::string>();
-        item.update_time = row[0]["update_time"].as<std::string>();
+        BlogItem item{};
+        fill_blog_item(item, row[0]);
 
-        if (!row[0]["description"]  .is_null())
-            item.description = row[0]["description"]  .as<std::string>();
+        // 查询分类与标签（items 拷贝 item，供下方日志继续使用 item.title）
+        const std::vector<int> ids{ item.id };
+        std::vector<BlogItem>  items{ item };
 
-        if (!row[0]["content"]      .is_null())
-            item.content     = row[0]["content"]      .as<std::string>();
-
-        if (!row[0]["file_path"]    .is_null())
-            item.file_path   = row[0]["file_path"]    .as<std::string>();
-
-        // 查询分类
-        const auto cat_rows = txn.exec(
-            "SELECT c.name "
-            "FROM blog_categories_relations bc "
-            "JOIN blog_categories c ON c.id = bc.category_id "
-            "WHERE bc.blog_id = $1 "
-            "ORDER BY c.name",
-            pqxx::params{ item.id }
-        );
-
-        for (const auto& cr : cat_rows)
-        {
-            item.categories.push_back(cr["name"].as<std::string>());
-        }
-
-        // 查询标签
-        const auto tag_rows = txn.exec(
-            "SELECT t.name "
-            "FROM blog_tag_relations bt "
-            "JOIN blog_tags t ON t.id = bt.tag_id "
-            "WHERE bt.blog_id = $1 "
-            "ORDER BY t.name",
-            pqxx::params{ item.id }
-        );
-
-        for (const auto& tr : tag_rows)
-        {
-            item.tags.push_back(tr["name"].as<std::string>());
-        }
+        attach_category_names(txn, ids, items);
+        attach_tag_names(txn, ids, items);
+        item = std::move(items.front());
 
         txn.commit();
         spdlog::debug("博客获取成功：{}", item.title);
@@ -927,6 +924,7 @@ namespace doc
 
         // 拼接博客文件的相对路径："category/name"
         const std::string file_path = std::string{ file_path_category } + "/" + std::string{ file_path_name };
+        blog.file_path = file_path;
 
         pqxx::work txn{ conn };
 
