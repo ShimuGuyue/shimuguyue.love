@@ -131,8 +131,9 @@ namespace http
                 for (const auto& c : categories)
                 {
                     nlohmann::json item;
-                    item["id"]   = c.id;
-                    item["name"] = c.name;
+                    item["id"]    = c.id;
+                    item["name"]  = c.name;
+                    item["count"] = c.count;
                     json.push_back(std::move(item));
                 }
 
@@ -157,7 +158,28 @@ namespace http
 
         nlohmann::json json;
 
-        const auto key = cache::cache_key("/api/tags", {});
+        // 可选的分类过滤：传入后只返回与这些分类关联的标签
+        std::vector<int> category_ids;
+        std::unordered_map<std::string, std::string> params;
+        if (req.has_param("category_ids"))
+        {
+            const auto raw = normalize_id_list(req.get_param_value("category_ids"));
+
+            std::istringstream iss{ raw };
+            std::string token;
+            while (std::getline(iss, token, ','))
+            {
+                if (!token.empty())
+                    category_ids.push_back(std::stoi(token));
+            }
+
+            // 参数为空（无有效分类）时不作为过滤条件，避免与全量结果共用不同缓存键
+            if (!category_ids.empty())
+                params["category_ids"] = raw;
+        }
+
+        // 过滤结果单独缓存（键含分类参数）
+        const auto key = cache::cache_key("/api/tags", params);
         if (const auto cached = cache::get(key); cached.has_value())
         {
             spdlog::debug("博客标签列表从缓存获取成功。");
@@ -174,13 +196,14 @@ namespace http
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
 
-                auto tags = doc::get_tags(conn);
+                auto tags = doc::get_tags(conn, category_ids);
                 json = nlohmann::json::array();
                 for (const auto& t : tags)
                 {
                     nlohmann::json item;
-                    item["id"]   = t.id;
-                    item["name"] = t.name;
+                    item["id"]    = t.id;
+                    item["name"]  = t.name;
+                    item["count"] = t.count;
                     json.push_back(std::move(item));
                 }
 
