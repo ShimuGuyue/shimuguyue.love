@@ -93,7 +93,7 @@ namespace export_data
             {                      "tags.json",                      tags_json.dump(2) },
             {                 "blog_tags.json",                 blog_tags_json.dump(2) },
             { "blog_categories_relations.json", blog_categories_relations_json.dump(2) },
-            {     "category_tag_relations.json",     category_tag_relations_json.dump(2) }
+            {     "category_tag_relations.json",   category_tag_relations_json.dump(2) }
         };
 
         auto blog_files = collect_blog_files();

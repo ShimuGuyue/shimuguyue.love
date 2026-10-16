@@ -87,13 +87,14 @@ namespace export_queries
 
     auto query_categories(pqxx::work& txn) -> nlohmann::json
     {
-        const auto rows = txn.exec("SELECT id, name FROM blog_categories ORDER BY id");
+        const auto rows = txn.exec("SELECT id, name, count FROM blog_categories ORDER BY id");
         nlohmann::json arr = nlohmann::json::array();
         for (const auto& row : rows)
         {
             arr.push_back({
-                { "id",   row["id"]  .as<int>() },
-                { "name", row["name"].as<std::string>() },
+                { "id",    row["id"]   .as<int>() },
+                { "name",  row["name"] .as<std::string>() },
+                { "count", row["count"].as<int>() },
             });
         }
         return arr;
@@ -101,13 +102,14 @@ namespace export_queries
 
     auto query_tags(pqxx::work& txn) -> nlohmann::json
     {
-        const auto rows = txn.exec("SELECT id, name FROM blog_tags ORDER BY id");
+        const auto rows = txn.exec("SELECT id, name, count FROM blog_tags ORDER BY id");
         nlohmann::json arr = nlohmann::json::array();
         for (const auto& row : rows)
         {
             arr.push_back({
-                { "id",   row["id"]  .as<int>() },
-                { "name", row["name"].as<std::string>() },
+                { "id",    row["id"]   .as<int>() },
+                { "name",  row["name"] .as<std::string>() },
+                { "count", row["count"].as<int>() },
             });
         }
         return arr;
@@ -141,6 +143,24 @@ namespace export_queries
             arr.push_back({
                 { "blog_id",     row["blog_id"]    .as<int>() },
                 { "category_id", row["category_id"].as<int>() },
+            });
+        }
+        return arr;
+    }
+
+    auto query_category_tag_relations(pqxx::work& txn) -> nlohmann::json
+    {
+        const auto rows = txn.exec(
+            "SELECT category_id, tag_id, count FROM category_tag_relations "
+            "ORDER BY category_id, tag_id"
+        );
+        nlohmann::json arr = nlohmann::json::array();
+        for (const auto& row : rows)
+        {
+            arr.push_back({
+                { "category_id", row["category_id"].as<int>() },
+                { "tag_id",      row["tag_id"]     .as<int>() },
+                { "count",       row["count"]      .as<int>() },
             });
         }
         return arr;
