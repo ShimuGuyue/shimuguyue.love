@@ -329,6 +329,36 @@ namespace
     }
 
     /**
+     * @brief 维护“博客新增归属”带来的分类-标签计数（+1）。
+     * @details 由传入的分类 / 标签 ID 双重循环拼出组合，每个组合累加 1。
+     * @param txn          当前事务。
+     * @param category_ids 该博客的分类 ID 列表。
+     * @param tag_ids      该博客的标签 ID 列表。
+     */
+    void add_blog_category_tag_counts(
+        pqxx::work&             txn,
+        const std::vector<int>& category_ids,
+        const std::vector<int>& tag_ids)
+    {
+        apply_category_tag_deltas(txn, make_category_tag_pairs(category_ids, tag_ids), 1);
+    }
+
+    /**
+     * @brief 维护“博客移除归属”带来的分类-标签计数（-1）。
+     * @details 由传入的分类 / 标签 ID 双重循环拼出组合，每个组合累减 1。
+     * @param txn          当前事务。
+     * @param category_ids 该博客此前的分类 ID 列表。
+     * @param tag_ids      该博客此前的标签 ID 列表。
+     */
+    void remove_category_tag_counts(
+        pqxx::work&             txn,
+        const std::vector<int>& category_ids,
+        const std::vector<int>& tag_ids)
+    {
+        apply_category_tag_deltas(txn, make_category_tag_pairs(category_ids, tag_ids), -1);
+    }
+
+    /**
      * @brief 检查博客文件路径是否已被占用。
      * @param txn       当前事务。
      * @param file_path 博客文件相对路径。
