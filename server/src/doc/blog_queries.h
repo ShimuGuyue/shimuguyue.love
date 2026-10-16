@@ -62,6 +62,22 @@ namespace doc
     };
 
     /**
+     * @brief 博客内容与元信息。
+     * @details 保存 / 更新博客共用，把标题、描述、分类、标签、正文、
+     *          日期与文件相对路径打成一个整体，替代冗长的位置参数列表。
+     */
+    struct BlogContent
+    {
+        std::string              title;       ///< 标题
+        std::string              description; ///< 描述
+        std::vector<std::string> categories;  ///< 分类列表
+        std::vector<std::string> tags;        ///< 标签列表
+        std::string              content;     ///< 博客正文（Markdown）
+        std::string              date;        ///< 更新日期（YYYY-MM-DD）
+        std::string              file_path;   ///< 相对路径（不含 .md 后缀），形如 "分类/文件名"
+    };
+
+    /**
      * @brief 校验博客更新时间（YYYY-MM-DD）。
      * @param update_time 更新时间（YYYY-MM-DD）。
      * @return 合法时返回原字符串；缺失或格式无效时返回空字符串。
