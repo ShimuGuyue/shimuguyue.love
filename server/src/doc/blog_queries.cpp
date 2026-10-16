@@ -7,10 +7,10 @@
 
 #include <ctime>
 #include <filesystem>
-#include <format>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <unordered_map>
 #include <utility>
 
 #include <spdlog/spdlog.h>
@@ -1015,111 +1015,88 @@ namespace doc
     }
 
     auto update_blog(
-        pqxx::connection&               conn,
-        std::string_view                title,
-        std::string_view                description,
-        const std::vector<std::string>& category_names,
-        const std::vector<std::string>& tag_names,
-        std::string_view                old_file_path,
-        std::string_view                file_path_category,
-        std::string_view                file_path_name,
-        std::string_view                content,
-        std::string_view                date)
+        pqxx::connection& conn,
+        BlogContent&      blog,
+        std::string_view  old_file_path,
+        std::string_view  file_path_category,
+        std::string_view  file_path_name)
     -> std::optional<std::string>
     {
-        spdlog::info("正在更新博客 {}...", title);
         // 校验元信息字段
-        if (auto err = validate_all_fields(title, description, category_names, tag_names, file_path_category, file_path_name); err)
-        {
-            spdlog::error("更新博客失败：{}", *err);
+        if (auto err = validate_all_fields(blog.title, blog.description, blog.categories, blog.tags,
+                                           file_path_category, file_path_name))
             return err;
-        }
 
-        const std::string new_file_path{ std::format("{}/{}", file_path_category, file_path_name) };
-        const bool path_changed = (old_file_path != new_file_path);
+        const std::string file_path = std::string{ file_path_category } + "/" + std::string{ file_path_name };
+        blog.file_path = file_path;
+
+        const bool path_changed = (old_file_path != blog.file_path);
 
         pqxx::work txn{ conn };
 
-        // 查找旧博客记录
-        auto blog = find_blog_row(txn, old_file_path);
-        if (!blog)
-        {
-            spdlog::error("更新博客失败：{} 不存在。", old_file_path);
+        // 查找旧博客记录（blog_opt 为可选的博客 ID，避免与参数 blog 同名）
+        auto blog_opt = find_blog_row(txn, old_file_path);
+        if (!blog_opt)
             return "旧博客不存在";
-        }
-        const int blog_id = *blog;
 
-        // 收集旧分类 / 标签 ID
+        const int blog_id = *blog_opt;
+
+        // 更新前记录旧的分类 / 标签，用于递减计数
         const auto old_category_ids = get_blog_category_ids(txn, blog_id);
         const auto old_tag_ids      = get_blog_tag_ids(txn, blog_id);
 
-        // 创建新分类；已存在则查找
-        std::vector<int> new_category_ids;
-        new_category_ids.reserve(category_names.size());
-        for (const auto& cn : category_names)
+        // 解析新分类与新标签：不存在的随即创建
+        const auto new_category_ids = resolve_category_ids(txn, blog.categories);
+        if (!new_category_ids)
         {
-            auto cid = create_category(txn, cn);
-            if (!cid)
-            {
-                cid = find_category(txn, cn);
-                if (!cid)
-                {
-                    spdlog::error("更新博客失败：创建分类 {} 失败。", cn);
-                    return "创建分类失败";
-                }
-            }
-            new_category_ids.push_back(*cid);
+            spdlog::error("更新博客失败：解析分类失败。");
+            return "创建分类失败";
         }
 
-        // 创建新标签；已存在则查找
-        std::vector<int> new_tag_ids;
-        for (const auto& tn : tag_names)
+        const auto new_tag_ids = resolve_tag_ids(txn, blog.tags);
+        if (!new_tag_ids)
         {
-            auto tid = create_tag(txn, tn);
-            if (!tid)
-            {
-                tid = find_tag(txn, tn);
-                if (!tid)
-                {
-                    spdlog::error("更新博客失败：创建标签 {} 失败。", tn);
-                    return "创建标签失败";
-                }
-            }
-            new_tag_ids.push_back(*tid);
+            spdlog::error("更新博客失败：解析标签失败。");
+            return "创建标签失败";
         }
 
         // 路径变更时检查新路径是否已被占用
-        if (path_changed && is_file_path_taken(txn, new_file_path))
+        if (path_changed && is_file_path_taken(txn, file_path))
         {
-            spdlog::error("更新博客失败：新路径 {} 已被占用。", new_file_path);
+            spdlog::error("更新博客失败：新路径 {} 已被占用。", file_path);
             return "新文件路径已被其他博客占用";
         }
 
         // 更新博客数据库记录
-        std::string dt{ date };
+        std::string dt{ blog.date };
         txn.exec(
             "UPDATE blogs SET title = $1, description = $2, content = $3, "
             "update_time = $4::date, file_path = $5 WHERE id = $6",
-            pqxx::params{ std::string{ title }, std::string{ description },
-                          std::string{ content }, dt,
-                          std::string{ new_file_path }, blog_id });
+            pqxx::params{ blog.title, blog.description,
+                          blog.content, dt,
+                          file_path, blog_id });
 
         // 重建博客-分类关联（先删后插）
         txn.exec("DELETE FROM blog_categories_relations WHERE blog_id = $1", pqxx::params{ blog_id });
-        link_blog_categories(txn, blog_id, new_category_ids);
+        link_blog_categories(txn, blog_id, *new_category_ids);
 
         // 重建博客-标签关联（先删后插）
         txn.exec("DELETE FROM blog_tag_relations WHERE blog_id = $1", pqxx::params{ blog_id });
-        link_blog_tags(txn, blog_id, new_tag_ids);
+        link_blog_tags(txn, blog_id, *new_tag_ids);
 
-        // 清理不再被任何博客引用的旧分类
-        for (int cid : old_category_ids)
-        {
-            delete_orphan_category(txn, cid);
-        }
+        // 撤下旧组合的计数，再为新组合建立关联并累加计数
+        // 分类 / 标签本身不删除：无博客使用时保留在库中，只是不再出现在筛选器里
+        remove_category_tag_counts(txn, old_category_ids, old_tag_ids);
+        add_blog_category_tag_counts(txn, *new_category_ids, *new_tag_ids);
 
-        // 清理孤立标签
-        delete_orphan_tags(txn, old_tag_ids);
+        // 刷新新旧分类 / 标签的博客计数（新旧 ID 合并后一次重算）
+        auto refresh_category_ids = old_category_ids;
+        refresh_category_ids.insert(refresh_category_ids.end(), new_category_ids->begin(), new_category_ids->end());
+
+        auto refresh_tag_ids = old_tag_ids;
+        refresh_tag_ids.insert(refresh_tag_ids.end(), new_tag_ids->begin(), new_tag_ids->end());
+
+        refresh_category_tag_counts(txn, refresh_category_ids, refresh_tag_ids);
 
         txn.commit();
 
@@ -1131,7 +1108,7 @@ namespace doc
         }
 
         // 生成 Frontmatter 并写入新 .md 文件
-        if (auto err = write_blog_md(new_file_path, title, description, category_names, tag_names, content, date, "更新博客失败"); err)
+        if (auto err = write_blog_md(blog); err)
             return err;
 
         spdlog::info("博客更新成功。");
