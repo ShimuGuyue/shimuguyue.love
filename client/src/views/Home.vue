@@ -198,6 +198,8 @@ function bringToFront(imgId: number) {
 }
 
 function onWallClick(e: MouseEvent) {
+  // 放大预览打开期间不处理照片墙点击，避免误触退出预览或退出编辑模式
+  if (previewId.value !== null) return
   // 点击预览遮罩时不处理
   if ((e.target as HTMLElement).closest('.home__preview')) return
   const inPhoto = !!(e.target as HTMLElement).closest('.home__photo')
@@ -477,13 +479,10 @@ async function savePreviewEdit() {
   closePreview()
 }
 
-/** 预览遮罩点击：编辑模式下视为取消编辑，否则仅关闭预览。 */
+/** 预览遮罩点击：非编辑模式下关闭预览；编辑模式下仅允许通过便签上的按钮退出放大。 */
 function onPreviewOverlayClick() {
-  if (editMode.value) {
-    cancelPreviewEdit()
-  } else {
-    closePreview()
-  }
+  if (editMode.value) return
+  closePreview()
 }
 
 function imgStyle(img: ImageItem) {
@@ -566,6 +565,7 @@ function imgStyle(img: ImageItem) {
       <div
         v-if="previewImage"
         class="home__preview"
+        :class="{ 'home__preview--edit': editMode }"
         :style="{ background: theme.isDark ? 'rgba(0,0,0,0.01)' : 'rgba(255,255,255,0.01)' }"
         @click="onPreviewOverlayClick"
       >
@@ -837,6 +837,11 @@ function imgStyle(img: ImageItem) {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+}
+
+/* 编辑模式下放大预览不能点击遮罩退出，光标不再暗示可点击 */
+.home__preview--edit {
+  cursor: default;
 }
 
 .home__preview-img {
