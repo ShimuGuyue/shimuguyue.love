@@ -925,7 +925,7 @@ function imgStyle(img: ImageItem) {
 /* 编辑模式便签下方的操作按钮行：绝对定位到便签卡片底部并居中，不参与居中布局 */
 .home__preview-desc-toolbar {
   position: absolute;
-  bottom: -16px;
+  bottom: -32px;
   left: 0;
   right: 0;
   display: flex;
@@ -937,7 +937,7 @@ function imgStyle(img: ImageItem) {
 .home__preview-textarea {
   width: 80%;
   height: 80%;
-  transform: translateY(12px);
+  transform: translateY(28px);
   background: transparent;
   border: none;
   color: #000000;
@@ -956,7 +956,7 @@ function imgStyle(img: ImageItem) {
   display: block;
   width: 80%;
   height: 80%;
-  transform: translateY(12px);
+  transform: translateY(28px);
   font-family: "仿宋", FangSong, serif;
   font-weight: bold;
   font-size: 1rem;
