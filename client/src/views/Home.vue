@@ -183,8 +183,10 @@ function loadImageSize(path: string): Promise<{ w: number; h: number }> {
 const editMode = ref(false)
 const draggingId = ref<number | null>(null)
 const dragStart = ref({ x: 0, y: 0 })
-/// 进入编辑模式时保存的快照
-const editSnapshot = ref<string>('')
+/// 布局快照项：位置 / 缩放 / 旋转 / 层级（不含便签）
+type ImageLayout = Pick<ImageItem, 'id' | 'pos_x' | 'pos_y' | 'scale' | 'rotation' | 'z'>
+/// 进入编辑模式时保存的布局快照，便签保存时用它作为基线，避免把未保存的布局一起提交
+const editSnapshot = ref<ImageLayout[]>([])
 /// 待删除的图片 id 集合（完成编辑时统一删除）
 const pendingDeletes = ref<Set<number>>(new Set())
 /// 本次编辑期间上传的图片 id 集合（取消编辑时统一删除）
@@ -198,6 +200,8 @@ function bringToFront(imgId: number) {
 }
 
 function onWallClick(e: MouseEvent) {
+  // 放大预览打开期间不处理照片墙点击，避免误触退出预览或退出编辑模式
+  if (previewId.value !== null) return
   // 点击预览遮罩时不处理
   if ((e.target as HTMLElement).closest('.home__preview')) return
   const inPhoto = !!(e.target as HTMLElement).closest('.home__photo')
@@ -213,9 +217,10 @@ function onWallClick(e: MouseEvent) {
   if (inPhoto && !onImg) {
     editMode.value = true
     pendingUploads.value = new Set()
-    editSnapshot.value = JSON.stringify(images.value.map(i => ({
-      id: i.id, pos_x: i.pos_x, pos_y: i.pos_y, scale: i.scale, rotation: i.rotation, description: i.description,
-    })))
+    // 便签不参与布局快照：便签在放大预览中独立保存，不参与布局编辑的变更判断与回滚
+    editSnapshot.value = images.value.map(i => ({
+      id: i.id, pos_x: i.pos_x, pos_y: i.pos_y, scale: i.scale, rotation: i.rotation, z: i.z,
+    }))
   }
 }
 
@@ -278,33 +283,27 @@ async function cancelEdit() {
 }
 
 function hasChanges(): boolean {
-  try {
-    const snap = JSON.parse(editSnapshot.value) as Pick<ImageItem, 'id' | 'pos_x' | 'pos_y' | 'scale' | 'rotation' | 'description'>[]
-    for (const img of images.value) {
-      const s = snap.find(s => s.id === img.id)
-      if (!s) continue
-      if (s.pos_x !== img.pos_x || s.pos_y !== img.pos_y || s.scale !== img.scale || s.rotation !== img.rotation || s.description !== img.description) return true
-    }
-    return false
-  } catch { return false }
+  for (const img of images.value) {
+    const s = editSnapshot.value.find(s => s.id === img.id)
+    if (!s) continue
+    if (s.pos_x !== img.pos_x || s.pos_y !== img.pos_y || s.scale !== img.scale || s.rotation !== img.rotation) return true
+  }
+  return false
 }
 
 function revertChanges() {
-  try {
-    const snap = JSON.parse(editSnapshot.value) as Pick<ImageItem, 'id' | 'pos_x' | 'pos_y' | 'scale' | 'rotation' | 'description'>[]
-    for (const s of snap) {
-      const img = images.value.find(i => i.id === s.id)
-      if (img) {
-        img.pos_x = s.pos_x
-        img.pos_y = s.pos_y
-        img.scale = s.scale
-        img.rotation = s.rotation
-        img.description = s.description ?? ''
-      }
+  for (const s of editSnapshot.value) {
+    const img = images.value.find(i => i.id === s.id)
+    if (img) {
+      img.pos_x = s.pos_x
+      img.pos_y = s.pos_y
+      img.scale = s.scale
+      img.rotation = s.rotation
     }
-  } catch { /* 静默 */ }
+  }
 }
 
+/** 保存图片元数据（当前布局 + 当前便签），用于完成布局编辑。 */
 async function saveMeta(img: ImageItem) {
   await fetch('/api/image/save', {
     method: 'POST',
@@ -322,6 +321,42 @@ async function saveMeta(img: ImageItem) {
       z: img.z,
     }),
   })
+}
+
+/** 仅提交便签：携带本次编辑开始时的布局作为基线，避免把未保存的布局一起提交。 */
+async function saveImageDescription(img: ImageItem, description: string): Promise<boolean> {
+  const base = editSnapshot.value.find(s => s.id === img.id)
+  if (!base) {
+    alert('保存失败：未找到图片的原始布局')
+    return false
+  }
+  try {
+    const resp = await fetch('/api/image/save', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${auth.token}`,
+      },
+      body: JSON.stringify({
+        path: img.path,
+        description,
+        scale: base.scale,
+        rotation: base.rotation,
+        pos_x: base.pos_x,
+        pos_y: base.pos_y,
+        z: base.z,
+      }),
+    })
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: '保存失败' }))
+      alert(err.error || '保存失败')
+      return false
+    }
+    return true
+  } catch {
+    alert('保存失败：网络异常')
+    return false
+  }
 }
 
 // ── 拖拽 ──
@@ -408,6 +443,8 @@ async function uploadImage() {
       w: size.w,
       h: size.h,
     })
+    // 数据库中按默认布局创建，记录为便签保存时的布局基线
+    editSnapshot.value.push({ id: uploaded.id, pos_x: 50, pos_y: 50, scale: 1.0, rotation: 0, z: 0 })
     pendingUploads.value = new Set(pendingUploads.value).add(uploaded.id)
   }
   input.click()
@@ -463,27 +500,24 @@ function cancelPreviewEdit() {
   closePreview()
 }
 
-/** 保存编辑：需 photo_wall:edit 权限；将便签写回并落库后关闭预览。 */
+/** 保存便签：需 photo_wall:edit 权限；立即落库后关闭预览，不影响布局编辑状态。 */
 async function savePreviewEdit() {
   if (!permissions.value.includes('photo_wall:edit')) {
     alert('操作失败：该操作需要 photo_wall:edit 权限')
     return
   }
   const img = images.value.find(i => i.id === previewId.value)
-  if (img) {
-    img.description = editDesc.value
-    await saveMeta(img)
-  }
+  if (!img) return
+  const description = editDesc.value
+  if (!await saveImageDescription(img, description)) return
+  img.description = description
   closePreview()
 }
 
-/** 预览遮罩点击：编辑模式下视为取消编辑，否则仅关闭预览。 */
+/** 预览遮罩点击：非编辑模式下关闭预览；编辑模式下仅允许通过便签上的按钮退出放大。 */
 function onPreviewOverlayClick() {
-  if (editMode.value) {
-    cancelPreviewEdit()
-  } else {
-    closePreview()
-  }
+  if (editMode.value) return
+  closePreview()
 }
 
 function imgStyle(img: ImageItem) {
@@ -566,12 +600,14 @@ function imgStyle(img: ImageItem) {
       <div
         v-if="previewImage"
         class="home__preview"
+        :class="{ 'home__preview--edit': editMode }"
         :style="{ background: theme.isDark ? 'rgba(0,0,0,0.01)' : 'rgba(255,255,255,0.01)' }"
         @click="onPreviewOverlayClick"
       >
         <img
           :src="`/photo_wall/${previewImage.path}`"
           class="home__preview-img"
+          draggable="false"
         />
       </div>
     </Transition>
@@ -839,11 +875,20 @@ function imgStyle(img: ImageItem) {
   cursor: pointer;
 }
 
+/* 编辑模式下放大预览不能点击遮罩退出，光标不再暗示可点击 */
+.home__preview--edit {
+  cursor: default;
+}
+
 .home__preview-img {
   max-height: 90vh;
   max-width: 65vw;
   object-fit: contain;
   border-radius: 8px;
+  /* 放大预览的图片始终不可被选中 / 拖拽 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 /* Vue Transition 类 */
@@ -880,7 +925,7 @@ function imgStyle(img: ImageItem) {
 /* 编辑模式便签下方的操作按钮行：绝对定位到便签卡片底部并居中，不参与居中布局 */
 .home__preview-desc-toolbar {
   position: absolute;
-  bottom: -16px;
+  bottom: -32px;
   left: 0;
   right: 0;
   display: flex;
@@ -892,7 +937,7 @@ function imgStyle(img: ImageItem) {
 .home__preview-textarea {
   width: 80%;
   height: 80%;
-  transform: translateY(12px);
+  transform: translateY(28px);
   background: transparent;
   border: none;
   color: #000000;
@@ -911,7 +956,7 @@ function imgStyle(img: ImageItem) {
   display: block;
   width: 80%;
   height: 80%;
-  transform: translateY(12px);
+  transform: translateY(28px);
   font-family: "仿宋", FangSong, serif;
   font-weight: bold;
   font-size: 1rem;
