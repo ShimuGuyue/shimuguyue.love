@@ -14,22 +14,20 @@
 
 namespace auth
 {
-/**
- * @brief 登录成功后的返回结果。
- */
-struct LoginResult
-{
-    int                        id;
-    std::optional<std::string> username;
-    std::vector<std::string>   permissions;
-};
+    /**
+     * @brief 登录成功后的返回结果。
+     */
+    struct LoginResult
+    {
+        int                        id;
+        std::optional<std::string> username;
+        std::vector<std::string>   permissions;
+    };
 
     /**
      * @brief 通过 Key 登录。
-     *
-     * 使用固定盐值 Argon2id 对 key 做一次哈希，然后数据库精确匹配。
-     * 区分“密钥不存在”和“密钥已废弃”两种失败情况。
-     *
+     * @details 使用固定盐值 Argon2id 对 key 做一次哈希，然后数据库精确匹配。
+     *          仅匹配存在且启用的密钥。
      * @param conn 数据库连接。
      * @param key  用户输入的原始 key。
      * @return 成功返回 LoginResult；失败返回错误消息字符串。
