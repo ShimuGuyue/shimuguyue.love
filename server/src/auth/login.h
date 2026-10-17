@@ -25,11 +25,11 @@ namespace auth
     };
 
     /**
-     * @brief 通过 Key 登录。
-     * @details 使用固定盐值 Argon2id 对 key 做一次哈希，然后数据库精确匹配。
+     * @brief 通过密钥登录。
+     * @details 使用固定盐值 Argon2id 对密钥做一次哈希，然后数据库精确匹配。
      *          仅匹配存在且启用的密钥。
      * @param conn 数据库连接。
-     * @param key  用户输入的原始 key。
+     * @param key  明文密钥。
      * @return 成功返回 LoginResult；失败返回错误消息字符串。
      */
     [[nodiscard]] auto login_by_key(
@@ -38,9 +38,7 @@ namespace auth
 
     /**
      * @brief 通过用户名密码登录。
-     *
-     * 通过 username 精确定位用户行，用 Argon2id 验证密码。
-     *
+     * @details 通过 username 精确定位用户行，用 Argon2id 验证密码。
      * @param conn     数据库连接。
      * @param username 用户名。
      * @param password 明文密码。
