@@ -572,6 +572,7 @@ function imgStyle(img: ImageItem) {
         <img
           :src="`/photo_wall/${previewImage.path}`"
           class="home__preview-img"
+          draggable="false"
         />
       </div>
     </Transition>
@@ -849,6 +850,10 @@ function imgStyle(img: ImageItem) {
   max-width: 65vw;
   object-fit: contain;
   border-radius: 8px;
+  /* 放大预览的图片始终不可被选中 / 拖拽 */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
 
 /* Vue Transition 类 */
