@@ -61,8 +61,8 @@ const router = createRouter({
       ],
     },
     { path: '/blog-edit/new', name: 'blog-edit-new', component: () => import('@/views/BlogEdit.vue') },
-    { path: '/blog-edit/:file_path(.*)', name: 'blog-edit', component: () => import('@/views/BlogEdit.vue') },
-    { path: '/blogs/:file_path(.*)', name: 'blog-detail', component: () => import('@/views/BlogDetail.vue') },
+    { path: '/blog-edit/:file_name', name: 'blog-edit', component: () => import('@/views/BlogEdit.vue') },
+    { path: '/blogs/:file_name', name: 'blog-detail', component: () => import('@/views/BlogDetail.vue') },
   ],
 })
 
