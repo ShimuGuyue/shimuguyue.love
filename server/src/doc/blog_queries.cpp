@@ -618,8 +618,8 @@ namespace
 
     /**
      * @brief 生成 Frontmatter 并写入博客 .md 文件。
-     * @param blog 博客内容与元信息（file_path 为完整相对路径）。
-     * @return std::nullopt 表示成功；否则返回错误消息。
+     * @param blog 博客内容与元信息。
+     * @return 任务执行成功返回 std::nullopt；否则返回错误消息。
      */
     auto write_blog_md(const doc::BlogContent& blog)
     -> std::optional<std::string>
@@ -645,13 +645,13 @@ namespace
         }
         fm << "]\n";
         fm << "update_time: " << blog.date << "\n";
-        fm << "file_path: " << blog.file_path << "\n";
+        fm << "file_name: " << blog.file_name << "\n";
         fm << "---\n\n";
         fm << blog.content;
 
-        std::filesystem::path out_path{
+        const std::filesystem::path out_path{
             std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs"
-            / (blog.file_path + ".md")
+            / (blog.file_name + ".md")
         };
         std::filesystem::create_directories(out_path.parent_path());
         std::ofstream ofs{ out_path, std::ios::binary };
