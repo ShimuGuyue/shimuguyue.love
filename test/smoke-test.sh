@@ -77,16 +77,16 @@ INSERT INTO blog_categories (name) VALUES ('测试分类')
 ON CONFLICT (name) DO NOTHING;
 INSERT INTO blog_tags (name) VALUES ('测试标签')
 ON CONFLICT (name) DO NOTHING;
-INSERT INTO blogs (title, description, content, file_path)
-VALUES ('测试博客', '', 'smoke content', 'smoke-test-blog')
-ON CONFLICT (file_path) DO NOTHING;
+INSERT INTO blogs (title, description, content, file_name)
+VALUES ('测试博客', '', 'smoke content', 'smoketestblog')
+ON CONFLICT (file_name) DO NOTHING;
 INSERT INTO blog_categories_relations (blog_id, category_id)
 SELECT b.id, c.id FROM blogs b, blog_categories c
-WHERE b.file_path = 'smoke-test-blog' AND c.name = '测试分类'
+WHERE b.file_name = 'smoketestblog' AND c.name = '测试分类'
 ON CONFLICT DO NOTHING;
 INSERT INTO blog_tag_relations (blog_id, tag_id)
 SELECT b.id, t.id FROM blogs b, blog_tags t
-WHERE b.file_path = 'smoke-test-blog' AND t.name = '测试标签'
+WHERE b.file_name = 'smoketestblog' AND t.name = '测试标签'
 ON CONFLICT DO NOTHING;
 -- 直接写表不会触发服务端的计数维护，这里按实际关联把三处计数算准：
 -- 分类 / 标签列表接口只返回 count > 0 的项，计数为 0 会返回空数组，
