@@ -66,7 +66,7 @@ PostgreSQL
 Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据库）
 ```
 
-- **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/blogs/<file_name>.md` 文件（带 YAML frontmatter：标题、分类、标签、描述、存储文件名等）。数据库中只存 `file_name`（不含 `.md` 后缀，仅允许大小写字母与数字），所有博客文件平铺在博客存储目录根目录下。
+- **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/blogs/<file_name>.md` 文件（带 YAML frontmatter：标题、分类、标签、描述、存储文件名等）。数据库中只存 `file_name`（不含 `.md` 后缀，仅允许英文字母、数字、下划线与连字符），所有博客文件平铺在博客存储目录根目录下。
 - **三处博客计数**：三张表各带一个计数，由服务端在博客增删改时随关联一起维护，筛选器按计数 > 0 过滤（计数为 0 的项不展示）：
     - `blog_categories.count`：属于该分类的博客数；
     - `blog_tags.count`：使用该标签的博客数；

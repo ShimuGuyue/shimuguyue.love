@@ -45,8 +45,8 @@ const drafts = ref<BlogDraft[]>([])
 /** 分页：每页固定 15 条（与用户管理页保持一致） */
 const PAGE_SIZE = 15
 
-/// 存储文件名只允许大小写字母与数字
-const FILE_NAME_RE = /^[A-Za-z0-9]+$/
+/// 存储文件名只允许英文字母、数字、下划线与连字符
+const FILE_NAME_RE = /^[A-Za-z0-9_-]+$/
 const page = ref(1)
 
 const pageCount = computed(() =>
@@ -195,7 +195,7 @@ async function saveChanges() {
       }
     }
     if (!FILE_NAME_RE.test(draft.file_name)) {
-      window.alert('博客文件名只能包含英文字母和数字')
+      window.alert('博客文件名只能包含英文字母、数字、下划线和连字符')
       return
     }
     for (const tag of listToArray(draft.tags)) {
@@ -389,7 +389,7 @@ async function saveChanges() {
                   v-if="editing && row.draft"
                   v-model="row.draft.file_name"
                   class="blogs-table__input"
-                  placeholder="仅限英文字母和数字"
+                  placeholder="仅限英文字母、数字、_、-"
                 />
                 <span v-else-if="row.blog?.file_name" :title="row.blog.file_name">
                   {{ row.blog.file_name }}
