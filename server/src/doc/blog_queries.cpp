@@ -804,7 +804,7 @@ namespace doc
 
         // 动态构建 SQL
         std::ostringstream sql;
-        sql << "SELECT b.id, b.title, b.description, b.file_path, "
+        sql << "SELECT b.id, b.title, b.description, b.file_name, "
                "TO_CHAR(b.update_time, 'YYYY-MM-DD') AS update_time "
                "FROM blogs b "
             << filter.where;
@@ -840,13 +840,10 @@ namespace doc
             item.id          = id;
             item.title       = row["title"]      .as<std::string>();
             item.update_time = row["update_time"].as<std::string>();
-
             if (!row["description"].is_null())
-                item.description = row["description"]  .as<std::string>();
-
-            if (!row["file_path"].is_null())
-                item.file_path   = row["file_path"]    .as<std::string>();
-
+                item.description = row["description"].as<std::string>();
+            if (!row["file_name"].is_null())
+                item.file_name   = row["file_name"].as<std::string>();
             result.push_back(std::move(item));
         }
 
