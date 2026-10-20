@@ -149,8 +149,8 @@ let scrollHandler: (() => void) | null = null
 
 onMounted(async () => {
   try {
-    const fp = route.params.file_path as string
-    const resp = await fetch('/api/blog?file_path=' + encodeURIComponent(fp))
+    const fp = route.params.file_name as string
+    const resp = await fetch('/api/blog?file_name=' + encodeURIComponent(fp))
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
     blog.value = await resp.json()
   } catch (e) {
@@ -208,8 +208,8 @@ onUnmounted(() => {
 
 /// 跳转到编辑页面
 function editBlog() {
-  const fp = route.params.file_path as string
-  router.push({ name: 'blog-edit', params: { file_path: fp } })
+  const fp = route.params.file_name as string
+  router.push({ name: 'blog-edit', params: { file_name: fp } })
 }
 
 /// 删除当前博客
@@ -219,14 +219,14 @@ async function deleteBlog() {
     return
   }
   if (!window.confirm('确定要删除这篇博客吗？此操作不可撤销。')) return
-  const fp = route.params.file_path as string
+  const fp = route.params.file_name as string
   const resp = await fetch('/api/blog/delete', {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${auth.token}`,
     },
-    body: JSON.stringify({ file_path: fp }),
+    body: JSON.stringify({ file_name: fp }),
   })
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: '删除失败' }))
@@ -242,9 +242,9 @@ async function downloadBlog() {
     alert('操作失败：该操作需要 blog:download 权限')
     return
   }
-  const fp = route.params.file_path as string
+  const fp = route.params.file_name as string
   try {
-    const resp = await fetch('/api/blog/download?file_path=' + encodeURIComponent(fp), {
+    const resp = await fetch('/api/blog/download?file_name=' + encodeURIComponent(fp), {
       headers: { 'Authorization': `Bearer ${auth.token}` },
     })
     if (!resp.ok) {
@@ -256,8 +256,7 @@ async function downloadBlog() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    const name = fp.split('/').pop() || 'blog'
-    link.download = name + '.md'
+    link.download = (fp || 'blog') + '.md'
     document.body.appendChild(link)
     link.click()
     link.remove()
