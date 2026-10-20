@@ -666,30 +666,20 @@ namespace
     }
 
     /**
-     * @brief 删除博客 .md 文件及删除完成后为空的父目录。
-     * @param file_path 博客文件相对路径。
+     * @brief 删除博客 .md 文件。
+     * @param file_name 博客存储文件名（不含 .md 后缀）。
      * @return std::nullopt 表示成功；否则返回错误消息。
      */
-    auto delete_blog_md(std::string_view file_path) -> std::optional<std::string>
+    auto delete_blog_md(std::string_view file_name) -> std::optional<std::string>
     {
         std::error_code ec;
         const std::filesystem::path blogs_root{ std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs" };
-        const std::filesystem::path md_path{ blogs_root / (std::string{ file_path } + ".md") };
+        const std::filesystem::path md_path{ blogs_root / (std::string{ file_name } + ".md") };
         std::filesystem::remove(md_path, ec);
         if (ec)
         {
             spdlog::error("删除博客失败：{} - {}", md_path.string(), ec.message());
             return std::string{ "删除博客失败" };
-        }
-
-        // 父目录为空时清理目录
-        const std::filesystem::path parent{ md_path.parent_path() };
-        if (parent != blogs_root)
-        {
-            ec.clear();
-            std::filesystem::remove(parent, ec);
-            if (ec)
-                spdlog::debug("保留博客父目录 {}：{}", parent.string(), ec.message());
         }
         return std::nullopt;
     }
