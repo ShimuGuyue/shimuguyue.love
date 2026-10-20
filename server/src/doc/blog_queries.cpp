@@ -452,16 +452,16 @@ namespace
     }
 
     /**
-     * @brief 检查博客文件路径是否已被占用。
+     * @brief 检查博客文件名是否已被占用。
      * @param txn       当前事务。
-     * @param file_path 博客文件相对路径。
+     * @param file_name 博客文件名（不含 .md 后缀）。
      * @return true 表示已占用。
      */
-    auto is_file_path_taken(pqxx::work& txn, std::string_view file_path) -> bool
+    auto is_file_name_taken(pqxx::work& txn, std::string_view file_name) -> bool
     {
         const auto r = txn.exec(
-            "SELECT 1 FROM blogs WHERE file_path = $1",
-            pqxx::params{ std::string{ file_path } }
+            "SELECT 1 FROM blogs WHERE file_name = $1",
+            pqxx::params{ std::string{ file_name } }
         );
         return !r.empty();
     }
