@@ -974,16 +974,16 @@ namespace doc
 
     auto delete_blog(
         pqxx::connection& conn,
-        std::string_view  file_path)
+        std::string_view  file_name)
     -> std::optional<std::string>
     {
-        if (file_path.empty())
-            return "缺少 file_path 参数";
+        if (file_name.empty())
+            return "缺少 file_name 参数";
 
         pqxx::work txn{ conn };
 
         // 查找博客记录
-        auto blog = find_blog_row(txn, file_path);
+        auto blog = find_blog_row(txn, file_name);
         if (!blog)
             return "博客不存在";
 
@@ -1000,8 +1000,8 @@ namespace doc
 
         txn.commit();
 
-        // 删除服务器上的 .md 文件及可能为空的父目录
-        if (auto err = delete_blog_md(file_path))
+        // 删除服务器上的 .md 文件
+        if (auto err = delete_blog_md(file_name))
             return err;
 
         return std::nullopt;
