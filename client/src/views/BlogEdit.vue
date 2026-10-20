@@ -22,8 +22,8 @@ const description       = ref('')
 const categories        = ref('')
 const tags              = ref('')
 const fileName          = ref('')
-/// 存储文件名只允许大小写字母与数字
-const FILE_NAME_RE      = /^[A-Za-z0-9]+$/
+/// 存储文件名只允许英文字母、数字、下划线与连字符
+const FILE_NAME_RE      = /^[A-Za-z0-9_-]+$/
 /// 导入文件 frontmatter 中的更新时间（YYYY-MM-DD，未导入则为空）
 const updateTime        = ref('')
 /// 编辑模式下的原始存储文件名（新建时为 null）
@@ -222,7 +222,7 @@ async function saveBlog() {
     return true;
   })) return;
   if (!FILE_NAME_RE.test(fileName.value)) {
-    alert('存储文件名只能包含大小写字母和数字')
+    alert('存储文件名只能包含英文字母、数字、下划线和连字符')
     return
   }
   if (!tagList.every(tag => {
@@ -301,7 +301,7 @@ async function saveBlog() {
           <div class="blog-edit__field">
             <label class="blog-edit__label">博客文件名</label>
             <input v-model="fileName" class="blog-edit__input"
-              placeholder="仅限英文字母和数字" />
+              placeholder="仅限英文字母、数字、_、-" />
           </div>
           <div class="blog-edit__field">
             <label class="blog-edit__label">更新时间</label>

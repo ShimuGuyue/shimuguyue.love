@@ -711,7 +711,9 @@ namespace doc
                 continue;
             if (c >= '0' && c <= '9')
                 continue;
-            return "文件名只可包含字母和数字";
+            if (c == '_' || c == '-')
+                continue;
+            return "文件名只可包含英文字母、数字、下划线和连字符";
         }
 
         return std::nullopt;
