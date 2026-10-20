@@ -14,19 +14,20 @@ const mdProps = useMdProps()
 const route = useRoute()
 const router = useRouter()
 
-/// 是否为编辑模式（路由含 file_path 参数）
-const isEditing = computed(() => !!route.params.file_path)
+/// 是否为编辑模式（路由含 file_name 参数）
+const isEditing = computed(() => !!route.params.file_name)
 
 const title             = ref('')
 const description       = ref('')
 const categories        = ref('')
 const tags              = ref('')
-const pathCategory      = ref('')
-const pathName          = ref('')
+const fileName          = ref('')
+/// 存储文件名只允许大小写字母与数字
+const FILE_NAME_RE      = /^[A-Za-z0-9]+$/
 /// 导入文件 frontmatter 中的更新时间（YYYY-MM-DD，未导入则为空）
 const updateTime        = ref('')
-/// 编辑模式下的原始 file_path（新建时为 null）
-const editFilePath      = ref<string | null>(isEditing.value ? String(route.params.file_path) : null)
+/// 编辑模式下的原始存储文件名（新建时为 null）
+const editFileName      = ref<string | null>(isEditing.value ? String(route.params.file_name) : null)
 /// 博客 Markdown 正文
 const content           = ref('')
 /// 编辑模式加载时的原始正文与更新时间（用于判断正文是否被修改）
@@ -38,8 +39,7 @@ const permissions       = ref<string[]>([])
 /// 判断是否有任何字段非空（有内容就拦截离开）
 function hasContent(): boolean {
   if (savedSuccessfully.value) return false
-  if (title.value || description.value || categories.value || tags.value ||
-      pathCategory.value || pathName.value) return true
+  if (title.value || description.value || categories.value || tags.value || fileName.value) return true
   if (content.value.trim()) return true
   return false
 }
@@ -73,17 +73,16 @@ onMounted(async () => {
   }
 
   // 编辑模式：加载已有博客数据
-  if (isEditing.value && editFilePath.value) {
+  if (isEditing.value && editFileName.value) {
     try {
-      const resp = await fetch('/api/blog?file_path=' + encodeURIComponent(editFilePath.value))
+      const resp = await fetch('/api/blog?file_name=' + encodeURIComponent(editFileName.value))
       if (resp.ok) {
         const data = await resp.json()
         title.value = data.title || ''
         description.value = data.description || ''
         categories.value = Array.isArray(data.categories) ? data.categories.join(', ') : ''
         tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : ''
-        pathCategory.value = data.file_path?.split('/').slice(0, -1).join('/') || ''
-        pathName.value = data.file_path?.split('/').pop() || ''
+        fileName.value = data.file_name || ''
         originalContent.value = data.content || ''
         originalUpdateTime.value = isValidDateString(data.update_time) ? data.update_time : ''
         updateTime.value = originalUpdateTime.value
@@ -138,8 +137,7 @@ async function importFile() {
       tags.value = Array.isArray(data.tags) ? data.tags.join(', ') : (data.tags || '')
       const importedUpdateTime = data.update_time || ''
       updateTime.value = isValidDateString(importedUpdateTime) ? importedUpdateTime : todayString()
-      pathCategory.value = data.file_path_category || ''
-      pathName.value = data.file_path_name || ''
+      fileName.value = data.file_name || ''
 
       content.value = data.content || ''
     } catch (e) {
@@ -200,7 +198,7 @@ async function saveBlog() {
   const contentText = content.value
 
   if (!title.value || !description.value || !categoryList.length ||
-      !pathCategory.value || !pathName.value || !contentText) {
+      !fileName.value || !contentText) {
     alert('请填写所有字段后再保存')
     return
   }
@@ -223,9 +221,9 @@ async function saveBlog() {
     }
     return true;
   })) return;
-  if (META_RE.test(pathCategory.value) || META_RE.test(pathName.value)) {
-    alert('文件路径 含有特殊字符');
-    return;
+  if (!FILE_NAME_RE.test(fileName.value)) {
+    alert('存储文件名只能包含大小写字母和数字')
+    return
   }
   if (!tagList.every(tag => {
     if (META_RE.test(tag)) {
@@ -234,8 +232,8 @@ async function saveBlog() {
     }
     return true;
   })) return;
-  const isEdit = isEditing.value && editFilePath.value != null
-  const newFilePath = `${pathCategory.value}/${pathName.value}`
+  const isEdit = isEditing.value && editFileName.value != null
+  const newFilePath = fileName.value
   // 编辑模式：正文未修改时保留原更新时间，修改后更新为今天；新建时使用当前显示值
   const dateToSend = isEdit && content.value === originalContent.value
     ? originalUpdateTime.value
@@ -253,9 +251,8 @@ async function saveBlog() {
       categories: categoryList,
       tags: tagList,
       update_time: dateToSend,
-      file_path_category: pathCategory.value,
-      file_path_name: pathName.value,
-      old_file_path: editFilePath.value,
+      file_name: fileName.value,
+      old_file_name: editFileName.value,
       content: contentText,
     } : {
       title: title.value,
@@ -263,8 +260,7 @@ async function saveBlog() {
       categories: categoryList,
       tags: tagList,
       update_time: dateToSend,
-      file_path_category: pathCategory.value,
-      file_path_name: pathName.value,
+      file_name: fileName.value,
       content: contentText,
     }),
   })
@@ -276,7 +272,7 @@ async function saveBlog() {
   }
   savedSuccessfully.value = true
   if (window.confirm('保存成功！是否立即跳转到博客页面？')) {
-    router.push({ name: 'blog-detail', params: { file_path: newFilePath } })
+    router.push({ name: 'blog-detail', params: { file_name: newFilePath } })
   }
 }
 </script>
@@ -303,14 +299,9 @@ async function saveBlog() {
             <input v-model="tags" class="blog-edit__input" placeholder="用英文逗号分隔" />
           </div>
           <div class="blog-edit__field">
-            <label class="blog-edit__label">文件路径</label>
-            <div class="blog-edit__path-row">
-              <input v-model="pathCategory" class="blog-edit__input blog-edit__path-input"
-                placeholder="分类目录" />
-              <span class="blog-edit__path-sep">/</span>
-              <input v-model="pathName" class="blog-edit__input blog-edit__path-input"
-                placeholder="文件名" />
-            </div>
+            <label class="blog-edit__label">博客文件名</label>
+            <input v-model="fileName" class="blog-edit__input"
+              placeholder="仅限英文字母和数字" />
           </div>
           <div class="blog-edit__field">
             <label class="blog-edit__label">更新时间</label>
@@ -402,20 +393,6 @@ async function saveBlog() {
 }
 .blog-edit__input--readonly:focus {
   border-color: var(--color-border);
-}
-
-.blog-edit__path-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.blog-edit__path-input {
-  flex: 1;
-  min-width: 0;
-}
-.blog-edit__path-sep {
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
 }
 
 .blog-edit__actions {
