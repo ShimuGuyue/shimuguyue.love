@@ -85,6 +85,14 @@ namespace doc
     [[nodiscard]] auto valid_blog_date(const std::string& update_time) -> std::string;
 
     /**
+     * @brief 校验博客存储文件名是否合法。
+     * @details 只允许大小写字母与数字，且不能为空。
+     * @param file_name 存储文件名（不含 .md 后缀）。
+     * @return 合法返回 true，否则返回 false。
+     */
+    [[nodiscard]] auto valid_blog_file_name(std::string_view file_name) -> bool;
+
+    /**
      * @brief 查询分类列表。
      * @details 仅返回 count > 0 的分类。
      * @param conn 数据库连接。

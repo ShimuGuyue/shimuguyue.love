@@ -713,6 +713,21 @@ namespace doc
         return "";
     }
 
+    auto valid_blog_file_name(std::string_view file_name) -> bool
+    {
+        if (file_name.empty())
+            return false;
+
+        return std::all_of(file_name.begin(), file_name.end(),
+            [](char c)
+            {
+                return (c >= 'A' && c <= 'Z')
+                    || (c >= 'a' && c <= 'z')
+                    || (c >= '0' && c <= '9');
+            }
+        );
+    }
+
     auto get_categories(pqxx::connection& conn) -> std::vector<Category>
     {
         spdlog::debug("正在从数据库获取分类列表...");
