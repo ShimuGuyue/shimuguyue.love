@@ -880,28 +880,28 @@ namespace doc
         return total;
     }
 
-    auto get_blog_by_file_path(
+    auto get_blog_by_file_name(
         pqxx::connection& conn,
-        std::string_view  file_path)
+        std::string_view  file_name)
     -> std::optional<BlogItem>
     {
-        if (file_path.empty())
+        if (file_name.empty())
             return std::nullopt;
 
-        spdlog::debug("正在从数据库按文件路径获取博客：{}", file_path);
+        spdlog::debug("正在从数据库按博客文件名获取博客：{}", file_name);
         pqxx::work txn{ conn };
 
         const auto row = txn.exec(
-            "SELECT b.id, b.title, b.description, b.content, b.file_path, "
+            "SELECT b.id, b.title, b.description, b.content, b.file_name, "
             "TO_CHAR(b.update_time, 'YYYY-MM-DD') AS update_time "
             "FROM blogs b "
-            "WHERE b.file_path = $1",
-            pqxx::params{ std::string{ file_path } }
+            "WHERE b.file_name = $1",
+            pqxx::params{ std::string{ file_name } }
         );
 
         if (row.empty())
         {
-            spdlog::info("博客不存在：{}", file_path);
+            spdlog::info("博客不存在：{}", file_name);
             return std::nullopt;
         }
 
