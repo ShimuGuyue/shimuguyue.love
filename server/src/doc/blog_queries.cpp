@@ -923,25 +923,18 @@ namespace doc
 
     auto save_blog(
         pqxx::connection& conn,
-        BlogContent&      blog,
-        std::string_view  file_path_category,
-        std::string_view  file_path_name)
+        BlogContent&      blog)
     -> std::optional<std::string>
     {
         // 校验元信息字段
-        if (auto err = validate_all_fields(blog.title, blog.description, blog.categories, blog.tags,
-                                           file_path_category, file_path_name))
+        if (auto err = validate_all_fields(blog.title, blog.description, blog.categories, blog.tags,blog.file_name))
             return err;
-
-        // 拼接博客文件的相对路径："category/name"
-        const std::string file_path = std::string{ file_path_category } + "/" + std::string{ file_path_name };
-        blog.file_path = file_path;
 
         pqxx::work txn{ conn };
 
-        // 检查文件路径是否已被占用
-        if (is_file_path_taken(txn, file_path))
-            return "博客路径已存在";
+        // 检查博客文件名是否已被占用
+        if (is_file_name_taken(txn, blog.file_name))
+            return "博客文件名已被占用";
 
         // 解析分类与标签：不存在的随即创建
         const auto category_ids = resolve_category_ids(txn, blog.categories);
@@ -956,12 +949,12 @@ namespace doc
         std::string dt{ blog.date };
 
         pqxx::result rows = txn.exec(
-            "INSERT INTO blogs (title, description, content, file_path, update_time) "
+            "INSERT INTO blogs (title, description, content, file_name, update_time) "
             "VALUES ($1, $2, $3, $4, $5::date) RETURNING id",
             pqxx::params{ blog.title,
                           blog.description,
                           blog.content,
-                          file_path, dt }
+                          blog.file_name, dt }
         );
         if (rows.empty())
         {
