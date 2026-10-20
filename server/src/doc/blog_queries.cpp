@@ -176,16 +176,16 @@ namespace
     }
 
     /**
-     * @brief 按文件路径查找博客 ID。
+     * @brief 按博客文件名查找博客 ID。
      * @param txn       当前事务。
-     * @param file_path 博客文件相对路径。
-     * @return 找到返回博客 ID；未找到返回 std::nullopt。
+     * @param file_name 博客文件名（不含 .md 后缀）。
+     * @return 查找成功返回博客 ID；否则返回 std::nullopt。
      */
-    auto find_blog_row(pqxx::work& txn, std::string_view file_path) -> std::optional<int>
+    auto find_blog_row(pqxx::work& txn, std::string_view file_name) -> std::optional<int>
     {
         const auto row = txn.exec(
-            "SELECT id FROM blogs WHERE file_path = $1",
-            pqxx::params{ std::string{ file_path } }
+            "SELECT id FROM blogs WHERE file_name = $1",
+            pqxx::params{ std::string{ file_name } }
         );
         if (row.empty())
             return std::nullopt;
@@ -369,8 +369,8 @@ namespace
         if (!row["content"].is_null())
             item.content = row["content"].as<std::string>();
 
-        if (!row["file_path"].is_null())
-            item.file_path = row["file_path"].as<std::string>();
+        if (!row["file_name"].is_null())
+            item.file_name = row["file_name"].as<std::string>();
     }
 
     /**
