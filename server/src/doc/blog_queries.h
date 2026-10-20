@@ -43,7 +43,7 @@ namespace doc
         std::string                title;
         std::optional<std::string> description;
         std::optional<std::string> content;
-        std::optional<std::string> file_path;
+        std::optional<std::string> file_name;
         std::string                update_time;
         std::vector<std::string>   categories;
         std::vector<std::string>   tags;
@@ -74,7 +74,7 @@ namespace doc
         std::vector<std::string> tags;        ///< 标签列表
         std::string              content;     ///< 博客正文（Markdown）
         std::string              date;        ///< 更新日期（YYYY-MM-DD）
-        std::string              file_path;   ///< 相对路径（不含 .md 后缀），形如 "分类/文件名"
+        std::string              file_name;   ///< 存储文件名（不含 .md 后缀）
     };
 
     /**
@@ -139,15 +139,15 @@ namespace doc
     -> int;
 
     /**
-     * @brief 根据文件路径查询单篇博客。
+     * @brief 根据博客文件名查询单篇博客。
      * @param conn      数据库连接。
-     * @param file_path 博客文件相对路径。
+     * @param file_name 博客文件名（不含 .md 后缀）。
      * @return 成功返回 BlogItem，
      *         失败返回 std::nullopt。
      */
-    [[nodiscard]] auto get_blog_by_file_path(
+    [[nodiscard]] auto get_blog_by_file_name(
         pqxx::connection& conn,
-        std::string_view  file_path)
+        std::string_view  file_name)
      -> std::optional<BlogItem>;
 
     /**
@@ -157,48 +157,40 @@ namespace doc
      *          递减 category_tag_relations 中该博客涉及的 (分类, 标签) 组合计数及各自计数。
      *          删除服务器上的 .md 文件。
      * @param conn      数据库连接。
-     * @param file_path 博客文件相对路径。
+     * @param file_name 博客存储文件名（不含 .md 后缀）。
      * @return 错误消息字符串（std::nullopt 表示成功）。
      */
     [[nodiscard]] auto delete_blog(
         pqxx::connection& conn,
-        std::string_view  file_path)
+        std::string_view  file_name)
     -> std::optional<std::string>;
 
     /**
      * @brief 保存博客及关联元数据，同时写入 .md 文件。
      * @details 保存博客信息至数据库，并附带元信息保存文件至磁盘。
      *          保存后为该博客的每个 (分类, 标签) 组合及各自累加计数。
-     * @param conn                数据库连接。
-     * @param blog                博客内容与元信息。
-     * @param file_path_category  文件路径分类目录部分。
-     * @param file_path_name      文件路径文件名部分。
+     * @param conn 数据库连接。
+     * @param blog 博客内容与元信息（含存储文件名）。
      * @return 错误消息字符串（std::nullopt 表示成功）。
      */
     [[nodiscard]] auto save_blog(
         pqxx::connection& conn,
-        BlogContent&      blog,
-        std::string_view  file_path_category,
-        std::string_view  file_path_name)
+        BlogContent&      blog)
     -> std::optional<std::string>;
 
     /**
      * @brief 更新已有博客及关联元数据，同时覆盖 .md 文件。
      * @details 更新分类 / 标签各自计数及对应的组合计数。
-     *          若 new_file_path 与 old_file_path 不同，会删除旧 md 并写入新路径。
-     * @param conn                数据库连接。
-     * @param blog                博客内容与元信息。
-     * @param old_file_path       查找旧博客记录用的原文件相对路径。
-     * @param file_path_category  新文件路径分类目录部分。
-     * @param file_path_name      新文件路径文件名部分。
+     *          若存储文件名发生变化，会删除旧 md 并写入新文件。
+     * @param conn          数据库连接。
+     * @param blog          博客内容与元信息（含新的存储文件名）。
+     * @param old_file_name 查找旧博客记录用的原存储文件名。
      * @return 错误消息字符串（std::nullopt 表示成功）。
      */
     [[nodiscard]] auto update_blog(
         pqxx::connection& conn,
         BlogContent&      blog,
-        std::string_view  old_file_path,
-        std::string_view  file_path_category,
-        std::string_view  file_path_name)
+        std::string_view  old_file_name)
     -> std::optional<std::string>;
 
 } // namespace doc
