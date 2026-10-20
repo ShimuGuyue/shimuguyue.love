@@ -40,7 +40,7 @@ namespace http
 
     /**
      * @brief 处理 GET /api/blog 请求。
-     * @details 根据路径获取指定博客信息。
+     * @details 根据存储文件名获取指定博客信息。
      */
     void handle_get_blog(
         const httplib::Request& req,

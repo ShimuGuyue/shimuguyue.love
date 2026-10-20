@@ -331,8 +331,8 @@ namespace http
                     item["update_time"] = b.update_time;
                     item["categories"]  = b.categories;
                     item["tags"]        = b.tags;
-                    item["file_path"]   = b.file_path.has_value()
-                                        ? nlohmann::json(*b.file_path)
+                    item["file_name"]   = b.file_name.has_value()
+                                        ? nlohmann::json(*b.file_name)
                                         : nlohmann::json(nullptr);
                     items.push_back(std::move(item));
                 }
@@ -361,22 +361,22 @@ namespace http
 
         nlohmann::json json;
 
-        if (!req.has_param("file_path"))
+        if (!req.has_param("file_name"))
         {
-            spdlog::debug("{}失败：缺少 file_path 参数。", ACTION);
+            spdlog::debug("{}失败：缺少 file_name 参数。", ACTION);
 
             res.status = 400;
 
-            json["error"] = "缺少 file_path 参数";
+            json["error"] = "缺少 file_name 参数";
             res.set_content(json.dump(), "application/json");
             return;
         }
 
-        const auto file_path = req.get_param_value("file_path");
-        const auto key = cache::cache_key("/api/blog", { { "file_path", file_path } });
+        const auto file_name = req.get_param_value("file_name");
+        const auto key = cache::cache_key("/api/blog", { { "file_name", file_name } });
         if (const auto cached = cache::get(key); cached.has_value())
         {
-            spdlog::debug("博客详情从缓存获取成功：{}。", file_path);
+            spdlog::debug("博客详情从缓存获取成功：{}。", file_name);
 
             res.set_header("Access-Control-Allow-Origin", allowed);
             res.set_header("Content-Type", "application/json");
@@ -390,10 +390,10 @@ namespace http
                 res.set_header("Access-Control-Allow-Origin", allowed);
                 res.set_header("Content-Type", "application/json");
 
-                auto blog = doc::get_blog_by_file_path(conn, file_path);
+                auto blog = doc::get_blog_by_file_name(conn, file_name);
                 if (!blog)
                 {
-                    spdlog::debug("{}失败：{} 不存在。", ACTION, file_path);
+                    spdlog::debug("{}失败：{} 不存在。", ACTION, file_name);
 
                     res.status = 404;
 
@@ -408,16 +408,16 @@ namespace http
                 json["content"]     = blog->content;
                 json["update_time"] = blog->update_time;
                 json["categories"]  = blog->categories;
-                json["file_path"]   = blog->file_path;
+                json["file_name"]   = blog->file_name;
                 json["tags"]        = blog->tags;
 
-                spdlog::debug("{}成功：{}。", ACTION, file_path);
+                spdlog::debug("{}成功：{}。", ACTION, file_name);
 
                 res.set_content(json.dump(), "application/json");
 
                 cache::set(key, res.body, std::stoll(config::config()["CACHE_TTL_BLOG"]));
 
-                spdlog::info("博客详情已写入缓存：{}。", file_path);
+                spdlog::info("博客详情已写入缓存：{}。", file_name);
             }
         );
     }
