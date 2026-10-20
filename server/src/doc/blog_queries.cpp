@@ -141,23 +141,19 @@ namespace
 
     /**
      * @brief 批量校验所有博客元信息字段。
-     *        依次校验 title, description, category_names, tag_names 中的每个条目、
-     *        file_path_category, file_path_name。
-     * @param title              博客标题
-     * @param description        博客描述
-     * @param category_names     分类名称列表
-     * @param tag_names          标签名称列表
-     * @param file_path_category 文件路径分类部分
-     * @param file_path_name     文件路径文件名部分
-     * @return std::nullopt 表示全部通过，否则返回第一个失败字段的错误消息。
+     * @param title          博客标题
+     * @param description    博客描述
+     * @param category_names 分类名称列表
+     * @param tag_names      标签名称列表
+     * @param file_name      文件名（不含 .md 后缀）
+     * @return 校验成功 返回 std::nullopt，否则返回第一个失败字段的错误消息。
      */
     static auto validate_all_fields(
         std::string_view                title,
         std::string_view                description,
         const std::vector<std::string>& category_names,
         const std::vector<std::string>& tag_names,
-        std::string_view                file_path_category,
-        std::string_view                file_path_name)
+        std::string_view                file_name)
     -> std::optional<std::string>
     {
         if (auto err = validate_field("标题", title))
@@ -174,9 +170,7 @@ namespace
             if (auto err = validate_field("标签", tag))
                 return err;
         }
-        if (auto err = validate_field("文件路径", file_path_category))
-            return err;
-        if (auto err = validate_field("文件路径", file_path_name))
+        if (auto err = doc::valid_blog_file_name(file_name))
             return err;
         return std::nullopt;
     }
