@@ -29,7 +29,7 @@ interface BlogItem {
   description: string | null
   update_time: string
   categories: string[]
-  file_path: string | null
+  file_name: string | null
   tags: string[]
 }
 
@@ -434,7 +434,7 @@ onMounted(async () => {
         v-for="blog in blogs"
         :key="blog.id"
         class="blog-card"
-        :to="`/blogs/${(blog.file_path ?? '').replace(/^\/+/, '')}`"
+        :to="`/blogs/${blog.file_name ?? ''}`"
       >
         <h3 class="blog-card__title">{{ blog.title }}</h3>
         <p class="blog-card__desc">{{ blog.description }}</p>
