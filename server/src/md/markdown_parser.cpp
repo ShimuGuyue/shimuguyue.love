@@ -39,8 +39,7 @@ namespace md
         json["categories"]         = nlohmann::json::array();
         json["tags"]               = nlohmann::json::array();
         json["update_time"]        = "";
-        json["file_path_category"] = "";
-        json["file_path_name"]     = "";
+        json["file_name"]          = "";
         json["content"]            = text;
 
 
@@ -94,20 +93,16 @@ namespace md
         }
         if (fm["update_time"] && fm["update_time"].IsScalar())
             json["update_time"] = fm["update_time"].Scalar();
-        if (fm["file_path"])
+        // 新格式直接读取 file_name；兼容旧格式 file_path（取最后一级文件名）
+        if (fm["file_name"] && fm["file_name"].IsScalar())
         {
-            std::string fp = fm["file_path"].as<std::string>();
-            auto slash = fp.find('/');
-            if (slash != std::string::npos)
-            {
-                json["file_path_category"] = fp.substr(0, slash);
-                json["file_path_name"] = fp.substr(slash + 1);
-            }
-            else
-            {
-                json["file_path_category"] = "";
-                json["file_path_name"] = fp;
-            }
+            json["file_name"] = fm["file_name"].as<std::string>();
+        }
+        else if (fm["file_path"])
+        {
+            const std::string fp = fm["file_path"].as<std::string>();
+            const auto slash = fp.find_last_of('/');
+            json["file_name"] = slash == std::string::npos ? fp : fp.substr(slash + 1);
         }
 
         spdlog::info("md 文本的 fromtmatter 信息解析完成。");
