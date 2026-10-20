@@ -68,7 +68,7 @@ namespace export_queries
     {
         const auto rows = txn.exec(
             "SELECT id, title, description, TO_CHAR(update_time, 'YYYY-MM-DD') AS update_time, "
-            "content, file_path FROM blogs ORDER BY id"
+            "content, file_name FROM blogs ORDER BY id"
         );
         nlohmann::json arr = nlohmann::json::array();
         for (const auto& row : rows)
@@ -79,7 +79,7 @@ namespace export_queries
                 { "description", row["description"].as<std::string>() },
                 { "update_time", row["update_time"].as<std::string>() },
                 { "content",     row["content"]    .as<std::string>() },
-                { "file_path",   row["file_path"]  .as<std::string>() },
+                { "file_name",   row["file_name"]  .as<std::string>() },
             });
         }
         return arr;

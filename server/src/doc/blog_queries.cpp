@@ -5,6 +5,7 @@
 
 #include "doc/blog_queries.h"
 
+#include <algorithm>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -141,23 +142,19 @@ namespace
 
     /**
      * @brief 批量校验所有博客元信息字段。
-     *        依次校验 title, description, category_names, tag_names 中的每个条目、
-     *        file_path_category, file_path_name。
-     * @param title              博客标题
-     * @param description        博客描述
-     * @param category_names     分类名称列表
-     * @param tag_names          标签名称列表
-     * @param file_path_category 文件路径分类部分
-     * @param file_path_name     文件路径文件名部分
-     * @return std::nullopt 表示全部通过，否则返回第一个失败字段的错误消息。
+     * @param title          博客标题
+     * @param description    博客描述
+     * @param category_names 分类名称列表
+     * @param tag_names      标签名称列表
+     * @param file_name      文件名（不含 .md 后缀）
+     * @return 校验成功 返回 std::nullopt，否则返回第一个失败字段的错误消息。
      */
     static auto validate_all_fields(
         std::string_view                title,
         std::string_view                description,
         const std::vector<std::string>& category_names,
         const std::vector<std::string>& tag_names,
-        std::string_view                file_path_category,
-        std::string_view                file_path_name)
+        std::string_view                file_name)
     -> std::optional<std::string>
     {
         if (auto err = validate_field("标题", title))
@@ -174,24 +171,22 @@ namespace
             if (auto err = validate_field("标签", tag))
                 return err;
         }
-        if (auto err = validate_field("文件路径", file_path_category))
-            return err;
-        if (auto err = validate_field("文件路径", file_path_name))
+        if (auto err = doc::valid_blog_file_name(file_name))
             return err;
         return std::nullopt;
     }
 
     /**
-     * @brief 按文件路径查找博客 ID。
+     * @brief 按博客文件名查找博客 ID。
      * @param txn       当前事务。
-     * @param file_path 博客文件相对路径。
-     * @return 找到返回博客 ID；未找到返回 std::nullopt。
+     * @param file_name 博客文件名（不含 .md 后缀）。
+     * @return 查找成功返回博客 ID；否则返回 std::nullopt。
      */
-    auto find_blog_row(pqxx::work& txn, std::string_view file_path) -> std::optional<int>
+    auto find_blog_row(pqxx::work& txn, std::string_view file_name) -> std::optional<int>
     {
         const auto row = txn.exec(
-            "SELECT id FROM blogs WHERE file_path = $1",
-            pqxx::params{ std::string{ file_path } }
+            "SELECT id FROM blogs WHERE file_name = $1",
+            pqxx::params{ std::string{ file_name } }
         );
         if (row.empty())
             return std::nullopt;
@@ -375,8 +370,8 @@ namespace
         if (!row["content"].is_null())
             item.content = row["content"].as<std::string>();
 
-        if (!row["file_path"].is_null())
-            item.file_path = row["file_path"].as<std::string>();
+        if (!row["file_name"].is_null())
+            item.file_name = row["file_name"].as<std::string>();
     }
 
     /**
@@ -458,16 +453,16 @@ namespace
     }
 
     /**
-     * @brief 检查博客文件路径是否已被占用。
+     * @brief 检查博客文件名是否已被占用。
      * @param txn       当前事务。
-     * @param file_path 博客文件相对路径。
+     * @param file_name 博客文件名（不含 .md 后缀）。
      * @return true 表示已占用。
      */
-    auto is_file_path_taken(pqxx::work& txn, std::string_view file_path) -> bool
+    auto is_file_name_taken(pqxx::work& txn, std::string_view file_name) -> bool
     {
         const auto r = txn.exec(
-            "SELECT 1 FROM blogs WHERE file_path = $1",
-            pqxx::params{ std::string{ file_path } }
+            "SELECT 1 FROM blogs WHERE file_name = $1",
+            pqxx::params{ std::string{ file_name } }
         );
         return !r.empty();
     }
@@ -624,8 +619,8 @@ namespace
 
     /**
      * @brief 生成 Frontmatter 并写入博客 .md 文件。
-     * @param blog 博客内容与元信息（file_path 为完整相对路径）。
-     * @return std::nullopt 表示成功；否则返回错误消息。
+     * @param blog 博客内容与元信息。
+     * @return 任务执行成功返回 std::nullopt；否则返回错误消息。
      */
     auto write_blog_md(const doc::BlogContent& blog)
     -> std::optional<std::string>
@@ -651,13 +646,13 @@ namespace
         }
         fm << "]\n";
         fm << "update_time: " << blog.date << "\n";
-        fm << "file_path: " << blog.file_path << "\n";
+        fm << "file_name: " << blog.file_name << "\n";
         fm << "---\n\n";
         fm << blog.content;
 
-        std::filesystem::path out_path{
+        const std::filesystem::path out_path{
             std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs"
-            / (blog.file_path + ".md")
+            / (blog.file_name + ".md")
         };
         std::filesystem::create_directories(out_path.parent_path());
         std::ofstream ofs{ out_path, std::ios::binary };
@@ -672,30 +667,20 @@ namespace
     }
 
     /**
-     * @brief 删除博客 .md 文件及删除完成后为空的父目录。
-     * @param file_path 博客文件相对路径。
+     * @brief 删除博客 .md 文件。
+     * @param file_name 博客存储文件名（不含 .md 后缀）。
      * @return std::nullopt 表示成功；否则返回错误消息。
      */
-    auto delete_blog_md(std::string_view file_path) -> std::optional<std::string>
+    auto delete_blog_md(std::string_view file_name) -> std::optional<std::string>
     {
         std::error_code ec;
         const std::filesystem::path blogs_root{ std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs" };
-        const std::filesystem::path md_path{ blogs_root / (std::string{ file_path } + ".md") };
+        const std::filesystem::path md_path{ blogs_root / (std::string{ file_name } + ".md") };
         std::filesystem::remove(md_path, ec);
         if (ec)
         {
             spdlog::error("删除博客失败：{} - {}", md_path.string(), ec.message());
             return std::string{ "删除博客失败" };
-        }
-
-        // 父目录为空时清理目录
-        const std::filesystem::path parent{ md_path.parent_path() };
-        if (parent != blogs_root)
-        {
-            ec.clear();
-            std::filesystem::remove(parent, ec);
-            if (ec)
-                spdlog::debug("保留博客父目录 {}：{}", parent.string(), ec.message());
         }
         return std::nullopt;
     }
@@ -711,6 +696,25 @@ namespace doc
         if (is_valid_date(update_time))
             return update_time;
         return "";
+    }
+
+    auto valid_blog_file_name(std::string_view file_name) -> std::optional<std::string>
+    {
+        if (file_name.empty())
+            return "文件名不能为空";
+
+        for (char c : file_name)
+        {
+            if (c >= 'A' && c <= 'Z')
+                continue;
+            if (c >= 'a' && c <= 'z')
+                continue;
+            if (c >= '0' && c <= '9')
+                continue;
+            return "文件名只可包含字母和数字";
+        }
+
+        return std::nullopt;
     }
 
     auto get_categories(pqxx::connection& conn) -> std::vector<Category>
@@ -791,7 +795,7 @@ namespace doc
 
         // 动态构建 SQL
         std::ostringstream sql;
-        sql << "SELECT b.id, b.title, b.description, b.file_path, "
+        sql << "SELECT b.id, b.title, b.description, b.file_name, "
                "TO_CHAR(b.update_time, 'YYYY-MM-DD') AS update_time "
                "FROM blogs b "
             << filter.where;
@@ -827,13 +831,10 @@ namespace doc
             item.id          = id;
             item.title       = row["title"]      .as<std::string>();
             item.update_time = row["update_time"].as<std::string>();
-
             if (!row["description"].is_null())
-                item.description = row["description"]  .as<std::string>();
-
-            if (!row["file_path"].is_null())
-                item.file_path   = row["file_path"]    .as<std::string>();
-
+                item.description = row["description"].as<std::string>();
+            if (!row["file_name"].is_null())
+                item.file_name   = row["file_name"].as<std::string>();
             result.push_back(std::move(item));
         }
 
@@ -870,28 +871,28 @@ namespace doc
         return total;
     }
 
-    auto get_blog_by_file_path(
+    auto get_blog_by_file_name(
         pqxx::connection& conn,
-        std::string_view  file_path)
+        std::string_view  file_name)
     -> std::optional<BlogItem>
     {
-        if (file_path.empty())
+        if (file_name.empty())
             return std::nullopt;
 
-        spdlog::debug("正在从数据库按文件路径获取博客：{}", file_path);
+        spdlog::debug("正在从数据库按博客文件名获取博客：{}", file_name);
         pqxx::work txn{ conn };
 
         const auto row = txn.exec(
-            "SELECT b.id, b.title, b.description, b.content, b.file_path, "
+            "SELECT b.id, b.title, b.description, b.content, b.file_name, "
             "TO_CHAR(b.update_time, 'YYYY-MM-DD') AS update_time "
             "FROM blogs b "
-            "WHERE b.file_path = $1",
-            pqxx::params{ std::string{ file_path } }
+            "WHERE b.file_name = $1",
+            pqxx::params{ std::string{ file_name } }
         );
 
         if (row.empty())
         {
-            spdlog::info("博客不存在：{}", file_path);
+            spdlog::info("博客不存在：{}", file_name);
             return std::nullopt;
         }
 
@@ -913,25 +914,18 @@ namespace doc
 
     auto save_blog(
         pqxx::connection& conn,
-        BlogContent&      blog,
-        std::string_view  file_path_category,
-        std::string_view  file_path_name)
+        BlogContent&      blog)
     -> std::optional<std::string>
     {
         // 校验元信息字段
-        if (auto err = validate_all_fields(blog.title, blog.description, blog.categories, blog.tags,
-                                           file_path_category, file_path_name))
+        if (auto err = validate_all_fields(blog.title, blog.description, blog.categories, blog.tags,blog.file_name))
             return err;
-
-        // 拼接博客文件的相对路径："category/name"
-        const std::string file_path = std::string{ file_path_category } + "/" + std::string{ file_path_name };
-        blog.file_path = file_path;
 
         pqxx::work txn{ conn };
 
-        // 检查文件路径是否已被占用
-        if (is_file_path_taken(txn, file_path))
-            return "博客路径已存在";
+        // 检查博客文件名是否已被占用
+        if (is_file_name_taken(txn, blog.file_name))
+            return "博客文件名已被占用";
 
         // 解析分类与标签：不存在的随即创建
         const auto category_ids = resolve_category_ids(txn, blog.categories);
@@ -946,12 +940,12 @@ namespace doc
         std::string dt{ blog.date };
 
         pqxx::result rows = txn.exec(
-            "INSERT INTO blogs (title, description, content, file_path, update_time) "
+            "INSERT INTO blogs (title, description, content, file_name, update_time) "
             "VALUES ($1, $2, $3, $4, $5::date) RETURNING id",
             pqxx::params{ blog.title,
                           blog.description,
                           blog.content,
-                          file_path, dt }
+                          blog.file_name, dt }
         );
         if (rows.empty())
         {
@@ -981,16 +975,16 @@ namespace doc
 
     auto delete_blog(
         pqxx::connection& conn,
-        std::string_view  file_path)
+        std::string_view  file_name)
     -> std::optional<std::string>
     {
-        if (file_path.empty())
-            return "缺少 file_path 参数";
+        if (file_name.empty())
+            return "缺少 file_name 参数";
 
         pqxx::work txn{ conn };
 
         // 查找博客记录
-        auto blog = find_blog_row(txn, file_path);
+        auto blog = find_blog_row(txn, file_name);
         if (!blog)
             return "博客不存在";
 
@@ -1007,8 +1001,8 @@ namespace doc
 
         txn.commit();
 
-        // 删除服务器上的 .md 文件及可能为空的父目录
-        if (auto err = delete_blog_md(file_path))
+        // 删除服务器上的 .md 文件
+        if (auto err = delete_blog_md(file_name))
             return err;
 
         return std::nullopt;
@@ -1017,25 +1011,20 @@ namespace doc
     auto update_blog(
         pqxx::connection& conn,
         BlogContent&      blog,
-        std::string_view  old_file_path,
-        std::string_view  file_path_category,
-        std::string_view  file_path_name)
+        std::string_view  old_file_name)
     -> std::optional<std::string>
     {
         // 校验元信息字段
         if (auto err = validate_all_fields(blog.title, blog.description, blog.categories, blog.tags,
-                                           file_path_category, file_path_name))
+                                           blog.file_name))
             return err;
 
-        const std::string file_path = std::string{ file_path_category } + "/" + std::string{ file_path_name };
-        blog.file_path = file_path;
-
-        const bool path_changed = (old_file_path != blog.file_path);
+        const bool name_changed = (old_file_name != blog.file_name);
 
         pqxx::work txn{ conn };
 
         // 查找旧博客记录（blog_opt 为可选的博客 ID，避免与参数 blog 同名）
-        auto blog_opt = find_blog_row(txn, old_file_path);
+        auto blog_opt = find_blog_row(txn, old_file_name);
         if (!blog_opt)
             return "旧博客不存在";
 
@@ -1060,21 +1049,21 @@ namespace doc
             return "创建标签失败";
         }
 
-        // 路径变更时检查新路径是否已被占用
-        if (path_changed && is_file_path_taken(txn, file_path))
+        // 博客文件名变更时检查新文件名是否已被占用
+        if (name_changed && is_file_name_taken(txn, blog.file_name))
         {
-            spdlog::error("更新博客失败：新路径 {} 已被占用。", file_path);
-            return "新文件路径已被其他博客占用";
+            spdlog::error("更新博客失败：新存储文件名 {} 已被占用。", blog.file_name);
+            return "新博客文件名已被其他博客占用";
         }
 
         // 更新博客数据库记录
         std::string dt{ blog.date };
         txn.exec(
             "UPDATE blogs SET title = $1, description = $2, content = $3, "
-            "update_time = $4::date, file_path = $5 WHERE id = $6",
+            "update_time = $4::date, file_name = $5 WHERE id = $6",
             pqxx::params{ blog.title, blog.description,
                           blog.content, dt,
-                          file_path, blog_id });
+                          blog.file_name, blog_id });
 
         // 重建博客-分类关联（先删后插）
         txn.exec("DELETE FROM blog_categories_relations WHERE blog_id = $1", pqxx::params{ blog_id });
@@ -1100,10 +1089,10 @@ namespace doc
 
         txn.commit();
 
-        // 如果文件路径变更，删除旧 .md 文件
-        if (path_changed)
+        // 如果博客文件名变更，删除旧 .md 文件
+        if (name_changed)
         {
-            if (auto err = delete_blog_md(old_file_path); err)
+            if (auto err = delete_blog_md(old_file_name); err)
                 return err;
         }
 

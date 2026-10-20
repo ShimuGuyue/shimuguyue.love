@@ -66,7 +66,7 @@ PostgreSQL
 Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据库）
 ```
 
-- **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/blogs/*/*.md` 文件（带 YAML frontmatter：标题、分类、标签、描述等），数据库中存储相对于 `FILE_PATH/blogs/` 的相对路径（不含 `.md` 后缀）。
+- **博客**：双重存储 —— PostgreSQL 行 + `FILE_PATH/blogs/<file_name>.md` 文件（带 YAML frontmatter：标题、分类、标签、描述、存储文件名等）。数据库中只存 `file_name`（不含 `.md` 后缀，仅允许大小写字母与数字），所有博客文件平铺在博客存储目录根目录下。
 - **三处博客计数**：三张表各带一个计数，由服务端在博客增删改时随关联一起维护，筛选器按计数 > 0 过滤（计数为 0 的项不展示）：
     - `blog_categories.count`：属于该分类的博客数；
     - `blog_tags.count`：使用该标签的博客数；
@@ -170,7 +170,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/public/assets/note-background.png` | 博客背景图 |
 | `client/src/main.ts` | 前端入口：挂载 App、注册 Pinia 与路由 |
 | `client/src/App.vue` | 根组件：全局 CSS 变量（`:root` / `html.dark`），含导航栏高度 `--navbar-height` 与页面可用高度 `--page-height`（= 视口 − 导航栏），二者为各页面高度计算的单一来源 |
-| `client/src/router/index.ts` | 18 条路由，`createWebHistory`，catch-all 参数用于博客路径 |
+| `client/src/router/index.ts` | 18 条路由，`createWebHistory`，博客路由使用 `file_name` 参数 |
 | `client/src/stores/auth.ts` | 认证状态（token、username），localStorage 持久化 |
 | `client/src/stores/theme.ts` | 深色/浅色主题，toggle `html.dark` |
 | `client/src/components/NavBar.vue` | 公共组件：导航栏（收藏夹为下拉菜单）、主题切换、用户入口；高度取全局变量 `--navbar-height`，各页面按视口计算高度 / sticky 偏移时同样引用该变量或 `--page-height` |
@@ -185,7 +185,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `client/src/views/Manage.vue` | 后台管理页 |
 | `client/src/views/ProfileSection.vue` | 个人信息栏目页（路由 /manage/profile） |
 | `client/src/views/UserManageSection.vue` | 用户管理栏目页（路由 /manage/users，需 manage:view 权限，保存编辑/创建用户需 manage:edit 权限） |
-| `client/src/views/BlogManageSection.vue` | 博客管理栏目页（路由 /manage/blogs，需 manage:view 权限，表格展示全部博客的 file_path / title / category / tags） |
+| `client/src/views/BlogManageSection.vue` | 博客管理栏目页（路由 /manage/blogs，需 manage:view 权限，表格展示全部博客的 file_name / title / category / tags，编辑时可直接修改存储文件名） |
 | `client/src/views/LoginKey.vue` | 密钥登录页 |
 | `client/src/views/LoginPassword.vue` | 密码登录页 |
 | `client/src/views/Projects.vue` | 项目页 |
@@ -240,7 +240,7 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 | `server/src/auth/session.cpp` / `.h` | 会话 token 创建、验证、过期清理 |
 | `server/src/auth/rate_limit.cpp` / `.h` | 登录频率限制 |
 | `server/src/crypto/argon2id.cpp` / `.h` | Argon2id 密码哈希，随机盐 / 固定盐两种模式 |
-| `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询：增删改博客时同步维护 `blog_categories.count` / `blog_tags.count` / `category_tag_relations.count`（前两者按实际关联重算）；分类按自身计数过滤，标签可按分类过滤（博客文件路径来自 `FILE_PATH/blogs`） |
+| `server/src/doc/blog_queries.cpp` / `.h` | 博客（文档）数据库查询：增删改博客时同步维护 `blog_categories.count` / `blog_tags.count` / `category_tag_relations.count`（前两者按实际关联重算）；分类按自身计数过滤，标签可按分类过滤；博客文件平铺于 `FILE_PATH/blogs`，数据库中只存 `file_name` |
 | `server/src/export/export_data.cpp` / `.h` | 后台数据导出 |
 | `server/src/export/export_queries.cpp` / `.h` | 数据导出查询：各数据表读取为 JSON 数组 |
 | `server/src/export/zip_writer.cpp` / `.h` | zip 打包工具（store 方式，无压缩） |
@@ -274,4 +274,4 @@ Redis（缓存层，可随时丢弃；故障时仅记日志并降级直查数据
 ## 注意事项
 
 - `npm run build` 用 `run-p`（并行）执行 type-check 和 vite build，类型错误会导致构建不执行。
-- 博客 URL 使用 `file_path` 作为 catch-all：`/blogs/:file_path(.*)`，`/blog-edit/:file_path(.*)`。
+- 博客 URL 使用 `file_name`：`/blogs/:file_name`，`/blog-edit/:file_name`。

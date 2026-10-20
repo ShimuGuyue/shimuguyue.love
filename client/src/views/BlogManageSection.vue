@@ -9,17 +9,16 @@ interface BlogRow {
   id: number
   title: string
   categories: string[]
-  file_path: string | null
+  file_name: string | null
   tags: string[]
   update_time: string
 }
 
-/** 编辑模式下的行草稿：可编辑博客路径、标题、分类、标签 */
+/** 编辑模式下的行草稿：可编辑存储文件名、标题、分类、标签 */
 interface BlogDraft {
   id: number
-  old_file_path: string
-  file_path_category: string
-  file_path_name: string
+  old_file_name: string
+  file_name: string
   title: string
   categories: string
   tags: string
@@ -45,6 +44,9 @@ const drafts = ref<BlogDraft[]>([])
 
 /** 分页：每页固定 15 条（与用户管理页保持一致） */
 const PAGE_SIZE = 15
+
+/// 存储文件名只允许大小写字母与数字
+const FILE_NAME_RE = /^[A-Za-z0-9]+$/
 const page = ref(1)
 
 const pageCount = computed(() =>
@@ -150,12 +152,10 @@ async function downloadData() {
 /** 进入编辑模式：为所有博客生成草稿。 */
 function startEdit() {
   drafts.value = blogs.value.map((blog) => {
-    const slash = blog.file_path ? blog.file_path.lastIndexOf('/') : -1
     return {
       id: blog.id,
-      old_file_path: blog.file_path ?? '',
-      file_path_category: slash >= 0 ? blog.file_path!.slice(0, slash) : '',
-      file_path_name: slash >= 0 ? blog.file_path!.slice(slash + 1) : (blog.file_path ?? ''),
+      old_file_name: blog.file_name ?? '',
+      file_name: blog.file_name ?? '',
       title: blog.title,
       categories: blog.categories.join(', '),
       tags: blog.tags.join(', '),
@@ -194,8 +194,8 @@ async function saveChanges() {
         return
       }
     }
-    if (META_RE.test(draft.file_path_category) || META_RE.test(draft.file_path_name)) {
-      window.alert('博客路径 含有特殊字符')
+    if (!FILE_NAME_RE.test(draft.file_name)) {
+      window.alert('博客文件名只能包含英文字母和数字')
       return
     }
     for (const tag of listToArray(draft.tags)) {
@@ -206,15 +206,14 @@ async function saveChanges() {
     }
   }
 
-  // 保存前先校验：编辑后的博客路径不允许重复，避免“先改第一个、其余报错”
+  // 保存前先校验：编辑后的存储文件名不允许重复，避免“先改第一个、其余报错”
   const pathSeen = new Set<string>()
   for (const draft of drafts.value) {
-    const targetPath = `${draft.file_path_category}/${draft.file_path_name}`
-    if (pathSeen.has(targetPath)) {
-      window.alert(`存在重复的博客路径：${targetPath}`)
+    if (pathSeen.has(draft.file_name)) {
+      window.alert(`存在重复的博客文件名：${draft.file_name}`)
       return
     }
-    pathSeen.add(targetPath)
+    pathSeen.add(draft.file_name)
   }
 
   saving.value = true
@@ -225,16 +224,15 @@ async function saveChanges() {
 
       const categoryList = listToArray(draft.categories)
       const tagList = listToArray(draft.tags)
-      const newFilePath = `${draft.file_path_category}/${draft.file_path_name}`
       const changed =
         draft.title !== original.title ||
         categoryList.join(',') !== original.categories.join(',') ||
         tagList.join(',') !== original.tags.join(',') ||
-        newFilePath !== (original.file_path ?? '')
+        draft.file_name !== (original.file_name ?? '')
       if (!changed) continue
 
       // 更新接口需要 description 与 content，先从详情接口取回
-      const getResp = await fetch('/api/blog?file_path=' + encodeURIComponent(draft.old_file_path))
+      const getResp = await fetch('/api/blog?file_name=' + encodeURIComponent(draft.old_file_name))
       const existing = await getResp.json().catch(() => ({}))
       if (!getResp.ok) {
         window.alert(existing.error ?? '获取博客内容失败')
@@ -253,9 +251,8 @@ async function saveChanges() {
           categories: categoryList,
           tags: tagList,
           update_time: existing.update_time ?? '',
-          file_path_category: draft.file_path_category,
-          file_path_name: draft.file_path_name,
-          old_file_path: draft.old_file_path,
+          file_name: draft.file_name,
+          old_file_name: draft.old_file_name,
           content: existing.content ?? '',
           from_manage: true,
         }),
@@ -341,7 +338,7 @@ async function saveChanges() {
               <th class="blogs-table__title">标题</th>
               <th class="blogs-table__category">关联分类</th>
               <th class="blogs-table__tags">关联标签</th>
-              <th class="blogs-table__file-path">博客路径</th>
+              <th class="blogs-table__file-path">博客文件名</th>
               <th class="blogs-table__content">博客详情</th>
               <th class="blogs-table__update-time">更新时间</th>
             </tr>
@@ -388,28 +385,21 @@ async function saveChanges() {
                 </template>
               </td>
               <td class="blogs-table__file-path">
-                <div v-if="editing && row.draft" class="blogs-table__path-row">
-                  <input
-                    v-model="row.draft.file_path_category"
-                    class="blogs-table__input"
-                    placeholder="分类目录"
-                  />
-                  <span class="blogs-table__path-sep">/</span>
-                  <input
-                    v-model="row.draft.file_path_name"
-                    class="blogs-table__input"
-                    placeholder="文件名"
-                  />
-                </div>
-                <span v-else-if="row.blog?.file_path" :title="row.blog.file_path">
-                  {{ row.blog.file_path }}
+                <input
+                  v-if="editing && row.draft"
+                  v-model="row.draft.file_name"
+                  class="blogs-table__input"
+                  placeholder="仅限英文字母和数字"
+                />
+                <span v-else-if="row.blog?.file_name" :title="row.blog.file_name">
+                  {{ row.blog.file_name }}
                 </span>
                 <span v-else-if="row.blog" class="blogs-hint">无</span>
               </td>
               <td class="blogs-table__content">
-                <div v-if="row.blog?.file_path" class="blogs-table__content-view">
+                <div v-if="row.blog?.file_name" class="blogs-table__content-view">
                   <RouterLink
-                    :to="{ name: 'blog-detail', params: { file_path: row.blog.file_path } }"
+                    :to="{ name: 'blog-detail', params: { file_name: row.blog.file_name } }"
                     target="_blank"
                     rel="noopener"
                     class="manage-btn manage-btn--primary blogs-table__link"
@@ -417,7 +407,7 @@ async function saveChanges() {
                     博客详情
                   </RouterLink>
                   <RouterLink
-                    :to="{ name: 'blog-edit', params: { file_path: row.blog.file_path } }"
+                    :to="{ name: 'blog-edit', params: { file_name: row.blog.file_name } }"
                     target="_blank"
                     rel="noopener"
                     class="manage-btn manage-btn--primary blogs-table__link"
@@ -532,18 +522,6 @@ async function saveChanges() {
   min-width: 0;
   padding: 2px 10px;
   font-size: 0.85rem;
-}
-
-/* ── 编辑模式：路径拆分输入 ── */
-
-.blogs-table__path-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.blogs-table__path-sep {
-  color: var(--color-text-secondary);
 }
 
 /* ── 关联分类 / 标签：内容过长时可在单元格内横向滚动（隐藏滚动条） ── */

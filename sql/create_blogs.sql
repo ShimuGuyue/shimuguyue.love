@@ -8,16 +8,16 @@ CREATE TABLE blogs (
     description  TEXT    NOT NULL,
     update_time  DATE    NOT NULL DEFAULT CURRENT_DATE,
     content      TEXT    NOT NULL,
-    file_path    TEXT    NOT NULL UNIQUE
+    file_name    TEXT    NOT NULL UNIQUE
 );
 
 COMMENT ON TABLE  blogs IS '博客表';
-COMMENT ON COLUMN blogs.id           IS '主键，自增';
-COMMENT ON COLUMN blogs.title        IS '博客标题';
-COMMENT ON COLUMN blogs.description  IS '描述';
-COMMENT ON COLUMN blogs.update_time  IS '更新时间（精确到日）';
-COMMENT ON COLUMN blogs.content      IS '博客正文';
-COMMENT ON COLUMN blogs.file_path    IS '关联文件相对路径（$BLOG_PATH/file_path）';
+COMMENT ON COLUMN blogs.id          IS '主键，自增';
+COMMENT ON COLUMN blogs.title       IS '博客标题';
+COMMENT ON COLUMN blogs.description IS '描述';
+COMMENT ON COLUMN blogs.update_time IS '更新时间（精确到日）';
+COMMENT ON COLUMN blogs.content     IS '博客正文';
+COMMENT ON COLUMN blogs.file_name   IS '博客文件名（不含 .md 后缀，置于 $FILE_PATH/blogs 根目录）';
 
 
 

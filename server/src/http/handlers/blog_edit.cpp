@@ -128,16 +128,15 @@ namespace http
                     return;
                 }
 
-                const auto title           = body.value("title", "");
-                const auto description     = body.value("description", "");
-                const auto categories      = body.value("categories", nlohmann::json::array());
-                const auto tags            = body.value("tags", nlohmann::json::array());
-                const auto path_categories = body.value("file_path_category", "");
-                const auto path_name       = body.value("file_path_name", "");
-                const auto content         = body.value("content", "");
+                const auto title       = body.value("title", "");
+                const auto description = body.value("description", "");
+                const auto categories  = body.value("categories", nlohmann::json::array());
+                const auto tags        = body.value("tags", nlohmann::json::array());
+                const auto file_name   = body.value("file_name", "");
+                const auto content     = body.value("content", "");
 
                 // 字段校验
-                for (auto field : nlohmann::json{ title, description, categories, tags, path_categories, path_name, content })
+                for (auto field : nlohmann::json{ title, description, categories, tags, file_name, content })
                 {
                     if (field.empty())
                     {
@@ -193,6 +192,17 @@ namespace http
                     return;
                 }
 
+                if (auto err = doc::valid_blog_file_name(file_name))
+                {
+                    spdlog::info("{}失败：{}。", ACTION, *err);
+
+                    res.status = 400;
+
+                    json["error"] = *err;
+                    res.set_content(json.dump(), "application/json");
+                    return;
+                }
+
                 // 调用博客保存逻辑
                 doc::BlogContent blog{
                     .title       = title,
@@ -201,10 +211,10 @@ namespace http
                     .tags        = tag_list,
                     .content     = content,
                     .date        = date,
-                    .file_path   = std::string{ path_categories } + "/" + std::string{ path_name }
+                    .file_name   = file_name
                 };
 
-                if (auto err = doc::save_blog(conn, blog, path_categories, path_name))
+                if (auto err = doc::save_blog(conn, blog))
                 {
                     spdlog::error("{}失败：{}", ACTION, *err);
 
@@ -215,7 +225,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("{}成功：{}/{}。", ACTION, path_categories, path_name);
+                spdlog::info("{}成功：{}。", ACTION, file_name);
 
                 json["ok"] = true;
                 res.set_content(json.dump(), "application/json");
@@ -300,17 +310,16 @@ namespace http
                     return;
                 }
 
-                const auto title           = body.value("title", "");
-                const auto description     = body.value("description", "");
-                const auto content         = body.value("content", "");
-                const auto path_categories = body.value("file_path_category", "");
-                const auto path_name       = body.value("file_path_name", "");
-                const auto old_file_path   = body.value("old_file_path", "");
-                const auto categories      = body.value("categories", nlohmann::json::array());
-                const auto tags            = body.value("tags", nlohmann::json::array());
+                const auto title         = body.value("title", "");
+                const auto description   = body.value("description", "");
+                const auto content       = body.value("content", "");
+                const auto file_name     = body.value("file_name", "");
+                const auto old_file_name = body.value("old_file_name", "");
+                const auto categories    = body.value("categories", nlohmann::json::array());
+                const auto tags          = body.value("tags", nlohmann::json::array());
 
                 // 字段校验
-                for (auto field : nlohmann::json{ title, description, categories, tags, path_categories, path_name, content })
+                for (auto field : nlohmann::json{ title, description, categories, tags, file_name, content })
                 {
                     if (field.empty())
                     {
@@ -366,6 +375,17 @@ namespace http
                     return;
                 }
 
+                if (auto err = doc::valid_blog_file_name(file_name))
+                {
+                    spdlog::info("{}失败：{}。", ACTION, *err);
+
+                    res.status = 400;
+
+                    json["error"] = *err;
+                    res.set_content(json.dump(), "application/json");
+                    return;
+                }
+
                 // 调用更新博客逻辑
                 doc::BlogContent blog{
                     .title       = title,
@@ -374,10 +394,10 @@ namespace http
                     .tags        = tag_list,
                     .content     = content,
                     .date        = date,
-                    .file_path   = std::string{ path_categories } + "/" + std::string{ path_name }
+                    .file_name   = file_name
                 };
 
-                if (auto err = doc::update_blog(conn, blog, old_file_path, path_categories, path_name))
+                if (auto err = doc::update_blog(conn, blog, old_file_name))
                 {
                     spdlog::error("{}失败：{}", ACTION, *err);
 
@@ -388,7 +408,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("{}成功：{}/{}。", ACTION, path_categories, path_name);
+                spdlog::info("{}成功：{}。", ACTION, file_name);
 
                 json["ok"] = true;
                 res.set_content(json.dump(), "application/json");
@@ -397,8 +417,8 @@ namespace http
                 cache::invalidate_prefix("api-cache:/api/blogs");
                 cache::invalidate_prefix("api-cache:/api/categories");
                 cache::invalidate_prefix("api-cache:/api/tags");
-                cache::del(cache::cache_key("/api/blog", { { "file_path", old_file_path } }));
-                cache::del(cache::cache_key("/api/blog", { { "file_path", path_categories + "/" + path_name } }));
+                cache::del(cache::cache_key("/api/blog", { { "file_name", old_file_name } }));
+                cache::del(cache::cache_key("/api/blog", { { "file_name", file_name } }));
             }
         );
     }
@@ -467,20 +487,20 @@ namespace http
                     return;
                 }
 
-                const auto file_path = body.value("file_path", "");
-                if (file_path.empty())
+                const auto file_name = body.value("file_name", "");
+                if (file_name.empty())
                 {
-                    spdlog::info("{}失败：缺少 file_path 参数。", ACTION);
+                    spdlog::info("{}失败：缺少 file_name 参数。", ACTION);
 
                     res.status = 400;
 
-                    json["error"] = "缺少 file_path 参数";
+                    json["error"] = "缺少 file_name 参数";
                     res.set_content(json.dump(), "application/json");
                     return;
                 }
 
                 // 调用博客删除逻辑
-                if (auto err = doc::delete_blog(conn, file_path))
+                if (auto err = doc::delete_blog(conn, file_name))
                 {
                     spdlog::error("{}失败：{}", ACTION, *err);
 
@@ -491,7 +511,7 @@ namespace http
                     return;
                 }
 
-                spdlog::info("{}成功：{}。", ACTION, file_path);
+                spdlog::info("{}成功：{}。", ACTION, file_name);
 
                 json["ok"] = true;
                 res.set_content(json.dump(), "application/json");
@@ -500,7 +520,7 @@ namespace http
                 cache::invalidate_prefix("api-cache:/api/blogs");
                 cache::invalidate_prefix("api-cache:/api/categories");
                 cache::invalidate_prefix("api-cache:/api/tags");
-                cache::del(cache::cache_key("/api/blog", { { "file_path", file_path } }));
+                cache::del(cache::cache_key("/api/blog", { { "file_name", file_name } }));
             }
         );
     }
@@ -557,22 +577,22 @@ namespace http
                     return;
                 }
 
-                if (!req.has_param("file_path"))
+                if (!req.has_param("file_name"))
                 {
-                    spdlog::debug("{}失败：缺少 file_path 参数。", ACTION);
+                    spdlog::debug("{}失败：缺少 file_name 参数。", ACTION);
 
                     res.status = 400;
 
-                    json["error"] = "缺少 file_path 参数";
+                    json["error"] = "缺少 file_name 参数";
                     res.set_content(json.dump(), "application/json");
                     return;
                 }
 
-                const std::string& file_path = req.get_param_value("file_path");
-                auto blog = doc::get_blog_by_file_path(conn, file_path);
+                const std::string& file_name = req.get_param_value("file_name");
+                auto blog = doc::get_blog_by_file_name(conn, file_name);
                 if (!blog)
                 {
-                    spdlog::debug("{}失败：{} 不存在。", ACTION, file_path);
+                    spdlog::debug("{}失败：{} 不存在。", ACTION, file_name);
 
                     res.status = 404;
 
@@ -582,7 +602,7 @@ namespace http
                 }
 
                 const auto blogs_root = std::filesystem::path{ config::config()["FILE_PATH"] } / "blogs";
-                const auto md_path = blogs_root / (file_path + ".md");
+                const auto md_path = blogs_root / (file_name + ".md");
 
                 // 文件存在及权限检查
                 std::error_code ec;
@@ -602,7 +622,7 @@ namespace http
                 const auto rel         = std::filesystem::relative(resolved_md, resolved_root, ec);
                 if (ec || rel.empty() || rel.string().starts_with("../"))
                 {
-                    spdlog::error("{}失败：非法文件路径 {}", ACTION, file_path);
+                    spdlog::error("{}失败：非法文件路径 {}", ACTION, file_name);
 
                     res.status = 400;
 
@@ -625,15 +645,14 @@ namespace http
                 std::ostringstream oss;
                 oss << ifs.rdbuf();
 
-                // 附件文件名：博客文件相对路径的末级文件名（含 .md）
-                const auto file_name = std::filesystem::path{ file_path + ".md" }.filename().string();
+                // 附件文件名：存储文件名 + .md
                 res.set_header(
                     "Content-Disposition",
-                    "attachment; filename=\"blog.md\"; filename*=UTF-8''" + percent_encode(file_name)
+                    "attachment; filename=\"blog.md\"; filename*=UTF-8''" + percent_encode(file_name + ".md")
                 );
                 res.set_content(oss.str(), "text/markdown");
 
-                spdlog::debug("{}成功：{}。", ACTION, file_path);
+                spdlog::debug("{}成功：{}。", ACTION, file_name);
             }
         );
     }
