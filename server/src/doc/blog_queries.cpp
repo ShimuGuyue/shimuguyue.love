@@ -713,19 +713,23 @@ namespace doc
         return "";
     }
 
-    auto valid_blog_file_name(std::string_view file_name) -> bool
+    auto valid_blog_file_name(std::string_view file_name) -> std::optional<std::string>
     {
         if (file_name.empty())
-            return false;
+            return "文件名不能为空";
 
-        return std::all_of(file_name.begin(), file_name.end(),
-            [](char c)
-            {
-                return (c >= 'A' && c <= 'Z')
-                    || (c >= 'a' && c <= 'z')
-                    || (c >= '0' && c <= '9');
-            }
-        );
+        for (char c : file_name)
+        {
+            if (c >= 'A' && c <= 'Z')
+                continue;
+            if (c >= 'a' && c <= 'z')
+                continue;
+            if (c >= '0' && c <= '9')
+                continue;
+            return "文件名只可包含字母和数字";
+        }
+
+        return std::nullopt;
     }
 
     auto get_categories(pqxx::connection& conn) -> std::vector<Category>

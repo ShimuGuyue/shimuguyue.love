@@ -193,6 +193,17 @@ namespace http
                     return;
                 }
 
+                if (auto err = doc::valid_blog_file_name(file_name))
+                {
+                    spdlog::info("{}失败：{}。", ACTION, *err);
+
+                    res.status = 400;
+
+                    json["error"] = *err;
+                    res.set_content(json.dump(), "application/json");
+                    return;
+                }
+
                 // 调用博客保存逻辑
                 doc::BlogContent blog{
                     .title       = title,
@@ -362,6 +373,17 @@ namespace http
                     res.status = 400;
 
                     json["error"] = "缺少或无效的更新时间";
+                    res.set_content(json.dump(), "application/json");
+                    return;
+                }
+
+                if (auto err = doc::valid_blog_file_name(file_name))
+                {
+                    spdlog::info("{}失败：{}。", ACTION, *err);
+
+                    res.status = 400;
+
+                    json["error"] = *err;
                     res.set_content(json.dump(), "application/json");
                     return;
                 }

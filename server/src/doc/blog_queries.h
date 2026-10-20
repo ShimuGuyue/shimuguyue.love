@@ -88,9 +88,9 @@ namespace doc
      * @brief 校验博客存储文件名是否合法。
      * @details 只允许大小写字母与数字，且不能为空。
      * @param file_name 存储文件名（不含 .md 后缀）。
-     * @return 合法返回 true，否则返回 false。
+     * @return 合法返回 std::nullopt，否则返回错误消息字符串。
      */
-    [[nodiscard]] auto valid_blog_file_name(std::string_view file_name) -> bool;
+    [[nodiscard]] auto valid_blog_file_name(std::string_view file_name) -> std::optional<std::string>;
 
     /**
      * @brief 查询分类列表。
