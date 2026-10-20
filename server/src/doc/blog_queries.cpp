@@ -5,6 +5,7 @@
 
 #include "doc/blog_queries.h"
 
+#include <algorithm>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -1010,25 +1011,20 @@ namespace doc
     auto update_blog(
         pqxx::connection& conn,
         BlogContent&      blog,
-        std::string_view  old_file_path,
-        std::string_view  file_path_category,
-        std::string_view  file_path_name)
+        std::string_view  old_file_name)
     -> std::optional<std::string>
     {
         // 校验元信息字段
         if (auto err = validate_all_fields(blog.title, blog.description, blog.categories, blog.tags,
-                                           file_path_category, file_path_name))
+                                           blog.file_name))
             return err;
 
-        const std::string file_path = std::string{ file_path_category } + "/" + std::string{ file_path_name };
-        blog.file_path = file_path;
-
-        const bool path_changed = (old_file_path != blog.file_path);
+        const bool name_changed = (old_file_name != blog.file_name);
 
         pqxx::work txn{ conn };
 
         // 查找旧博客记录（blog_opt 为可选的博客 ID，避免与参数 blog 同名）
-        auto blog_opt = find_blog_row(txn, old_file_path);
+        auto blog_opt = find_blog_row(txn, old_file_name);
         if (!blog_opt)
             return "旧博客不存在";
 
@@ -1053,21 +1049,21 @@ namespace doc
             return "创建标签失败";
         }
 
-        // 路径变更时检查新路径是否已被占用
-        if (path_changed && is_file_path_taken(txn, file_path))
+        // 博客文件名变更时检查新文件名是否已被占用
+        if (name_changed && is_file_name_taken(txn, blog.file_name))
         {
-            spdlog::error("更新博客失败：新路径 {} 已被占用。", file_path);
-            return "新文件路径已被其他博客占用";
+            spdlog::error("更新博客失败：新存储文件名 {} 已被占用。", blog.file_name);
+            return "新博客文件名已被其他博客占用";
         }
 
         // 更新博客数据库记录
         std::string dt{ blog.date };
         txn.exec(
             "UPDATE blogs SET title = $1, description = $2, content = $3, "
-            "update_time = $4::date, file_path = $5 WHERE id = $6",
+            "update_time = $4::date, file_name = $5 WHERE id = $6",
             pqxx::params{ blog.title, blog.description,
                           blog.content, dt,
-                          file_path, blog_id });
+                          blog.file_name, blog_id });
 
         // 重建博客-分类关联（先删后插）
         txn.exec("DELETE FROM blog_categories_relations WHERE blog_id = $1", pqxx::params{ blog_id });
@@ -1093,10 +1089,10 @@ namespace doc
 
         txn.commit();
 
-        // 如果文件路径变更，删除旧 .md 文件
-        if (path_changed)
+        // 如果博客文件名变更，删除旧 .md 文件
+        if (name_changed)
         {
-            if (auto err = delete_blog_md(old_file_path); err)
+            if (auto err = delete_blog_md(old_file_name); err)
                 return err;
         }
 
